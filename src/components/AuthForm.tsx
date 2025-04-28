@@ -45,7 +45,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
     resolver: zodResolver(mode === 'login' ? loginSchema : signupSchema),
     defaultValues: mode === 'login' 
       ? { email: '', password: '', rememberMe: false }
-      : { name: '', email: '', password: '', acceptTerms: false },
+      : { name: '', email: '', password: '' }, // Removed acceptTerms default value
   });
 
   const togglePasswordVisibility = () => {
