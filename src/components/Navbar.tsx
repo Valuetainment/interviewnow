@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, Plus } from 'lucide-react';
+import { Menu, Plus, FileUp } from 'lucide-react';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -27,6 +27,12 @@ const Navbar: React.FC = () => {
               <Button variant="ghost" className="gap-2">
                 <Plus size={16} />
                 Create Position
+              </Button>
+            </Link>
+            <Link to="/candidate" className="text-foreground/80 hover:text-foreground transition-colors">
+              <Button variant="ghost" className="gap-2">
+                <FileUp size={16} />
+                Add Candidate
               </Button>
             </Link>
             <Link to="/login">
@@ -63,6 +69,9 @@ const Navbar: React.FC = () => {
             </a>
             <Link to="/create-position" className="block px-3 py-2 rounded-md text-base font-medium text-foreground/80 hover:text-foreground hover:bg-muted transition-colors">
               Create Position
+            </Link>
+            <Link to="/candidate" className="block px-3 py-2 rounded-md text-base font-medium text-foreground/80 hover:text-foreground hover:bg-muted transition-colors">
+              Add Candidate
             </Link>
             <div className="pt-2 space-y-2">
               <Link to="/login" className="w-full block">
