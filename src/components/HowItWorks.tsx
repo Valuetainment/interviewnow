@@ -4,32 +4,32 @@ import React from 'react';
 const steps = [
   {
     number: "01",
-    title: "Client Layer",
-    description: "VideoSDK.live integration, custom React components for video conferencing, local recording with cloud sync.",
+    title: "User-Friendly Interface",
+    description: "Start using InterviewAI without any complicated setup or downloads - just an intuitive experience for both interviewers and candidates.",
     details: [
-      "Media stream capture and compression",
-      "Video quality adaptation", 
-      "Split-view layouts for video, transcript, and assessments"
+      "One-click interview creation",
+      "Adaptive video quality", 
+      "Simple candidate joining process"
     ]
   },
   {
     number: "02",
-    title: "Supabase Orchestration",
-    description: "Edge functions for WebRTC signaling, transcript processing, session management, and assessment generation.",
+    title: "Secure Cloud Platform",
+    description: "Your interviews run on our secure, reliable cloud infrastructure with enterprise-grade protection for all your sensitive data.",
     details: [
-      "Database schema for organizations and interview data",
-      "WebSocket channels for real-time updates",
-      "Row-level security for data isolation"
+      "Enterprise access controls",
+      "End-to-end encryption",
+      "Automatic synchronization"
     ]
   },
   {
     number: "03",
-    title: "AI Services Layer",
-    description: "OpenAI Realtime for speech-to-text with minimal latency, speaker identification, and technical terminology recognition.",
+    title: "AI-Powered Analysis",
+    description: "Get smart insights during and after interviews with our advanced AI that understands technical context and communication nuances.",
     details: [
-      "Resume parsing and skill extraction",
-      "Answer quality assessment",
-      "Communication effectiveness scoring"
+      "Technical skills assessment",
+      "Communication evaluation",
+      "Candidate comparison"
     ]
   }
 ];
@@ -39,10 +39,10 @@ const HowItWorks: React.FC = () => {
     <section id="how-it-works" className="py-20 bg-gradient-to-b from-background to-muted/30">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold sm:text-4xl">Triangular Architecture</h2>
+          <h2 className="text-3xl font-bold sm:text-4xl">How It Works</h2>
           <p className="mt-4 text-xl text-muted-foreground max-w-3xl mx-auto">
-            Our platform leverages a triangular architecture for minimal client-side processing 
-            with centralized server orchestration, ensuring reliability and security.
+            Our seamless three-step approach combines powerful technology with a simple 
+            user experience to transform your technical interviews.
           </p>
         </div>
 

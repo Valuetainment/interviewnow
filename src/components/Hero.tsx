@@ -17,8 +17,8 @@ const Hero: React.FC = () => {
               </span>
             </h1>
             <p className="mt-6 text-xl text-muted-foreground">
-              Transform technical hiring with a purpose-built AI interview platform that delivers flawless transcripts, 
-              intelligent candidate assessments, and comprehensive video insights—all with enterprise-grade security.
+              Transform your hiring process with our AI-powered interview platform. Get real-time transcription, 
+              smart candidate assessments, and comprehensive video insights—all with enterprise-grade security.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row gap-4">
               <Button size="lg" className="group">
@@ -57,21 +57,21 @@ const Hero: React.FC = () => {
                   {/* Client */}
                   <div className="absolute top-0 left-1/2 transform -translate-x-1/2 bg-white p-4 rounded-lg shadow-lg animate-float" style={{ animationDelay: '0s' }}>
                     <div className="w-32 h-16 flex items-center justify-center bg-gradient-to-r from-primary to-secondary rounded-md">
-                      <span className="text-white font-medium">Client</span>
+                      <span className="text-white font-medium">Interview</span>
                     </div>
                   </div>
                   
                   {/* Supabase */}
                   <div className="absolute bottom-0 left-0 bg-white p-4 rounded-lg shadow-lg animate-float" style={{ animationDelay: '0.5s' }}>
                     <div className="w-32 h-16 flex items-center justify-center bg-black rounded-md">
-                      <span className="text-green-500 font-medium">Supabase</span>
+                      <span className="text-green-500 font-medium">Security</span>
                     </div>
                   </div>
                   
                   {/* OpenAI */}
                   <div className="absolute bottom-0 right-0 bg-white p-4 rounded-lg shadow-lg animate-float" style={{ animationDelay: '1s' }}>
                     <div className="w-32 h-16 flex items-center justify-center bg-[#10a37f] rounded-md">
-                      <span className="text-white font-medium">OpenAI</span>
+                      <span className="text-white font-medium">AI</span>
                     </div>
                   </div>
                   

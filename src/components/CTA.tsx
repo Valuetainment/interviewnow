@@ -9,7 +9,7 @@ const CTA: React.FC = () => {
         <div className="flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="text-center md:text-left">
             <h2 className="text-3xl font-bold text-white sm:text-4xl">
-              Ready to transform your technical interviews?
+              Ready to transform your hiring process?
             </h2>
             <p className="mt-4 text-lg text-white/80">
               Join the 500+ companies already using InterviewAI to make better hiring decisions.

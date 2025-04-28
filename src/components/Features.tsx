@@ -6,22 +6,22 @@ import { Video, Mic, Check, Search } from 'lucide-react';
 const features = [
   {
     title: "Real-Time AI Interview Room",
-    description: "HD video capture with real-time speech-to-text, speaker diarization, and <200ms latency from speech to displayed text.",
+    description: "Conduct seamless interviews with HD video, automatic transcription, and instant AI analysis to focus on what matters most.",
     icon: <Video className="h-10 w-10 text-primary" />,
   },
   {
-    title: "Candidate Assessment System",
-    description: "AI-monitored technical skills evaluation with real-time code execution, resume parsing, and behavioral analysis.",
+    title: "Smart Candidate Assessment",
+    description: "Get objective evaluations with our AI that analyzes technical skills, communication ability, and cultural fit in real-time.",
     icon: <Search className="h-10 w-10 text-secondary" />,
   },
   {
-    title: "Session Recording & Analysis",
-    description: "Cloud recording with automatic compression, chaptered navigation, and multi-modal analysis of audio/video insights.",
+    title: "Complete Interview Recording",
+    description: "Never miss a detail with secure cloud recordings, smart navigation, and comprehensive interview insights and analytics.",
     icon: <Mic className="h-10 w-10 text-accent" />,
   },
   {
-    title: "Enterprise Security",
-    description: "SOC 2 Type II compliance, GDPR data handling, end-to-end encryption, and configurable data retention policies.",
+    title: "Enterprise-Grade Security",
+    description: "Rest easy with SOC 2 compliance, GDPR data handling, end-to-end encryption, and configurable retention policies.",
     icon: <Check className="h-10 w-10 text-green-500" />,
   }
 ];
