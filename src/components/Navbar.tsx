@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu } from 'lucide-react';
 
@@ -12,9 +13,9 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between items-center py-4">
           {/* Logo */}
           <div className="flex items-center">
-            <span className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            <Link to="/" className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               InterviewAI
-            </span>
+            </Link>
           </div>
 
           {/* Desktop Navigation */}
@@ -22,8 +23,12 @@ const Navbar: React.FC = () => {
             <a href="#features" className="text-foreground/80 hover:text-foreground transition-colors">Features</a>
             <a href="#how-it-works" className="text-foreground/80 hover:text-foreground transition-colors">How it Works</a>
             <a href="#pricing" className="text-foreground/80 hover:text-foreground transition-colors">Pricing</a>
-            <Button variant="outline" className="ml-2">Log in</Button>
-            <Button>Get Started</Button>
+            <Link to="/login">
+              <Button variant="outline" className="ml-2">Log in</Button>
+            </Link>
+            <Link to="/signup">
+              <Button>Get Started</Button>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -51,8 +56,12 @@ const Navbar: React.FC = () => {
               Pricing
             </a>
             <div className="pt-2 space-y-2">
-              <Button variant="outline" className="w-full">Log in</Button>
-              <Button className="w-full">Get Started</Button>
+              <Link to="/login" className="w-full block">
+                <Button variant="outline" className="w-full">Log in</Button>
+              </Link>
+              <Link to="/signup" className="w-full block">
+                <Button className="w-full">Get Started</Button>
+              </Link>
             </div>
           </div>
         </div>
