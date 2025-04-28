@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu } from 'lucide-react';
+import { Menu, Plus } from 'lucide-react';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -23,6 +23,12 @@ const Navbar: React.FC = () => {
             <a href="#features" className="text-foreground/80 hover:text-foreground transition-colors">Features</a>
             <a href="#how-it-works" className="text-foreground/80 hover:text-foreground transition-colors">How it Works</a>
             <a href="#pricing" className="text-foreground/80 hover:text-foreground transition-colors">Pricing</a>
+            <Link to="/create-position" className="text-foreground/80 hover:text-foreground transition-colors">
+              <Button variant="ghost" className="gap-2">
+                <Plus size={16} />
+                Create Position
+              </Button>
+            </Link>
             <Link to="/login">
               <Button variant="outline" className="ml-2">Log in</Button>
             </Link>
@@ -55,6 +61,9 @@ const Navbar: React.FC = () => {
             <a href="#pricing" className="block px-3 py-2 rounded-md text-base font-medium text-foreground/80 hover:text-foreground hover:bg-muted transition-colors">
               Pricing
             </a>
+            <Link to="/create-position" className="block px-3 py-2 rounded-md text-base font-medium text-foreground/80 hover:text-foreground hover:bg-muted transition-colors">
+              Create Position
+            </Link>
             <div className="pt-2 space-y-2">
               <Link to="/login" className="w-full block">
                 <Button variant="outline" className="w-full">Log in</Button>
