@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound";
 import CreatePosition from "./pages/CreatePosition";
 import Candidate from "./pages/Candidate";
 import CompanySettings from "./pages/CompanySettings";
+import TestInterview from "./pages/TestInterview";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/create-position" element={<CreatePosition />} />
           <Route path="/candidate" element={<Candidate />} />
           <Route path="/settings" element={<CompanySettings />} />
+          <Route path="/test-interview" element={<TestInterview />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
