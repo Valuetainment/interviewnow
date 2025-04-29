@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -232,7 +231,7 @@ ${shortDesc}
           <CardHeader>
             <CardTitle>Competency Weights</CardTitle>
             <CardDescription>
-              Distribute importance (%) across competencies for this position. Total must equal 100%.
+              Distribute importance (%) across competencies for this position. Total must equal exactly 100%.
             </CardDescription>
           </CardHeader>
           <CardContent>

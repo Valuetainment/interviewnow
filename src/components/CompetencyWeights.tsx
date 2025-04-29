@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
@@ -5,6 +6,7 @@ import { ChartContainer } from '@/components/ui/chart';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import CompetencySelector from './CompetencySelector';
 
 // Define types
 type Competency = {
@@ -37,6 +39,10 @@ export const CompetencyWeights: React.FC<CompetencyWeightsProps> = ({
   const [selectedCompetencies, setSelectedCompetencies] = useState<string[]>([]);
   const [localWeights, setLocalWeights] = useState<Record<string, number>>(weights);
   const [totalWeight, setTotalWeight] = useState(0);
+  const [customCompetencies, setCustomCompetencies] = useState<Competency[]>([]);
+  
+  // Combine provided competencies with custom ones
+  const allCompetencies = [...competencies, ...customCompetencies];
 
   // Initialize selected competencies if weights are provided
   useEffect(() => {
@@ -71,35 +77,9 @@ export const CompetencyWeights: React.FC<CompetencyWeightsProps> = ({
     onChange(localWeights, total === 100);
   }, [localWeights, onChange]);
 
-  // Toggle competency selection
-  const toggleCompetency = (id: string) => {
-    if (selectedCompetencies.includes(id)) {
-      // Remove the competency
-      const newSelected = selectedCompetencies.filter(cId => cId !== id);
-      setSelectedCompetencies(newSelected);
-      
-      // Remove weight
-      const newWeights = { ...localWeights };
-      delete newWeights[id];
-      
-      // Redistribute the removed weight among remaining competencies
-      const removedWeight = localWeights[id] || 0;
-      if (removedWeight > 0 && newSelected.length > 0) {
-        const additionalPerCompetency = Math.floor(removedWeight / newSelected.length);
-        newSelected.forEach((cId, index) => {
-          if (index === newSelected.length - 1) {
-            // Add any remainder to the last competency
-            newWeights[cId] = (newWeights[cId] || 0) + 
-              (removedWeight - (additionalPerCompetency * (newSelected.length - 1)));
-          } else {
-            newWeights[cId] = (newWeights[cId] || 0) + additionalPerCompetency;
-          }
-        });
-      }
-      
-      setLocalWeights(newWeights);
-    } else {
-      // Add the competency
+  // Add a competency from the dropdown
+  const handleAddCompetency = (id: string) => {
+    if (!selectedCompetencies.includes(id)) {
       const newSelected = [...selectedCompetencies, id];
       setSelectedCompetencies(newSelected);
       
@@ -108,10 +88,60 @@ export const CompetencyWeights: React.FC<CompetencyWeightsProps> = ({
     }
   };
 
+  // Add a custom competency
+  const handleAddCustomCompetency = (name: string, description: string) => {
+    const newId = `custom-${Date.now()}`;
+    const newCompetency = {
+      id: newId,
+      name,
+      description
+    };
+    
+    setCustomCompetencies(prev => [...prev, newCompetency]);
+    handleAddCompetency(newId);
+  };
+
+  // Remove a competency
+  const handleRemoveCompetency = (id: string) => {
+    // Remove the competency
+    const newSelected = selectedCompetencies.filter(cId => cId !== id);
+    setSelectedCompetencies(newSelected);
+    
+    // Remove weight
+    const newWeights = { ...localWeights };
+    const removedWeight = newWeights[id] || 0;
+    delete newWeights[id];
+    
+    // Redistribute the removed weight among remaining competencies
+    if (removedWeight > 0 && newSelected.length > 0) {
+      const additionalPerCompetency = Math.floor(removedWeight / newSelected.length);
+      newSelected.forEach((cId, index) => {
+        if (index === newSelected.length - 1) {
+          // Add any remainder to the last competency
+          newWeights[cId] = (newWeights[cId] || 0) + 
+            (removedWeight - (additionalPerCompetency * (newSelected.length - 1)));
+        } else {
+          newWeights[cId] = (newWeights[cId] || 0) + additionalPerCompetency;
+        }
+      });
+    }
+    
+    setLocalWeights(newWeights);
+  };
+
   // Update weight for a specific competency
   const updateWeight = (id: string, value: number) => {
-    // Ensure value is between 0 and 100
-    const clampedValue = Math.max(0, Math.min(100, value));
+    // Ensure weight doesn't make total exceed 100%
+    let clampedValue = Math.max(0, Math.min(100, value));
+    
+    const currentTotal = Object.entries(localWeights)
+      .filter(([key]) => key !== id)
+      .reduce((sum, [, val]) => sum + val, 0);
+    
+    // If new total would exceed 100%, clamp the value
+    if (currentTotal + clampedValue > 100) {
+      clampedValue = 100 - currentTotal;
+    }
     
     setLocalWeights(prev => ({ ...prev, [id]: clampedValue }));
   };
@@ -143,7 +173,7 @@ export const CompetencyWeights: React.FC<CompetencyWeightsProps> = ({
 
   // Prepare data for pie chart
   const chartData = selectedCompetencies.map(id => {
-    const competency = competencies.find(c => c.id === id);
+    const competency = allCompetencies.find(c => c.id === id);
     return {
       name: competency?.name || 'Unknown',
       value: localWeights[id] || 0
@@ -156,6 +186,10 @@ export const CompetencyWeights: React.FC<CompetencyWeightsProps> = ({
         <div className="font-medium">
           Total: <span className={totalWeight === 100 ? "text-green-600" : "text-red-600"}>
             {totalWeight}%
+          </span>
+          <span className="text-sm text-muted-foreground ml-2">
+            {totalWeight < 100 ? `(${100 - totalWeight}% remaining)` : 
+             totalWeight > 100 ? `(${totalWeight - 100}% over limit)` : ''}
           </span>
         </div>
         <div className="space-x-2">
@@ -176,59 +210,71 @@ export const CompetencyWeights: React.FC<CompetencyWeightsProps> = ({
         </div>
       </div>
 
+      <div className="mb-4">
+        <CompetencySelector
+          availableCompetencies={allCompetencies}
+          selectedCompetencies={selectedCompetencies}
+          onAddCompetency={handleAddCompetency}
+          onAddCustomCompetency={handleAddCustomCompetency}
+        />
+      </div>
+
       <div className="grid md:grid-cols-2 gap-8">
         <div className="space-y-4">
-          {competencies.map((competency) => (
-            <div 
-              key={competency.id} 
-              className="border rounded-md p-4 space-y-3"
-            >
-              <div className="flex items-start gap-2">
-                <Checkbox 
-                  id={`competency-${competency.id}`}
-                  checked={selectedCompetencies.includes(competency.id)}
-                  onCheckedChange={() => toggleCompetency(competency.id)}
-                />
-                <div className="space-y-1 w-full">
-                  <label 
-                    htmlFor={`competency-${competency.id}`}
-                    className="font-medium cursor-pointer"
-                  >
-                    {competency.name}
-                  </label>
-                  <p className="text-sm text-muted-foreground">{competency.description}</p>
-                  
-                  {selectedCompetencies.includes(competency.id) && (
+          {selectedCompetencies.map((id) => {
+            const competency = allCompetencies.find(c => c.id === id);
+            if (!competency) return null;
+            
+            return (
+              <div 
+                key={id} 
+                className="border rounded-md p-4 space-y-3"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1 w-full">
+                    <div className="font-medium flex justify-between">
+                      <span>{competency.name}</span>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleRemoveCompetency(id)}
+                        className="h-6 px-2"
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{competency.description}</p>
+                    
                     <div className="space-y-2 pt-2">
                       <div className="flex justify-between">
                         <span className="text-sm">Weight:</span>
                         <span className="text-sm font-medium">
-                          {localWeights[competency.id] || 0}%
+                          {localWeights[id] || 0}%
                         </span>
                       </div>
                       <div className="flex items-center gap-4">
                         <Slider 
-                          value={[localWeights[competency.id] || 0]} 
+                          value={[localWeights[id] || 0]} 
                           min={0} 
                           max={100} 
                           step={1}
-                          onValueChange={(value) => updateWeight(competency.id, value[0])}
+                          onValueChange={(value) => updateWeight(id, value[0])}
                         />
                         <Input
                           type="number"
                           min={0}
                           max={100}
-                          value={localWeights[competency.id] || 0}
-                          onChange={(e) => updateWeight(competency.id, parseInt(e.target.value) || 0)}
+                          value={localWeights[id] || 0}
+                          onChange={(e) => updateWeight(id, parseInt(e.target.value) || 0)}
                           className="w-16 text-right"
                         />
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="h-80 flex flex-col">
@@ -272,7 +318,7 @@ export const CompetencyWeights: React.FC<CompetencyWeightsProps> = ({
           ) : (
             <div className="flex items-center justify-center h-full border rounded-md bg-muted/20">
               <p className="text-muted-foreground text-center">
-                Select competencies and assign weights to see the distribution
+                Add competencies and assign weights to see the distribution
               </p>
             </div>
           )}
