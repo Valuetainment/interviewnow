@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Building, Plus } from "lucide-react";
+import { Building, Plus, Search } from "lucide-react";
 import CompanyList from "@/components/companies/CompanyList";
+import { Input } from "@/components/ui/input";
 
 export type Company = {
   id: string;
@@ -21,11 +22,13 @@ export type Company = {
 };
 
 const Companies = () => {
+  const [searchTerm, setSearchTerm] = useState("");
+  
   const { data: companies, isLoading } = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
-      // This is a mock implementation; it will need to be updated
-      // when the actual Supabase table is created
+      // This is a mock implementation that will need to be updated
+      // when the companies table is created in Supabase
       const { data, error } = await supabase
         .from("companies")
         .select("*")
@@ -36,24 +39,40 @@ const Companies = () => {
     },
   });
 
+  const filteredCompanies = companies?.filter(company => 
+    company.name.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
+
   return (
     <div className="container mx-auto px-4 py-24">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">Companies</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage your organization profiles
-          </p>
+      <div className="max-w-screen-xl mx-auto">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-bold">Companies</h1>
+            <p className="text-muted-foreground mt-2">
+              Manage your organization profiles
+            </p>
+          </div>
+          <Link to="/companies/new">
+            <Button className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              New Company
+            </Button>
+          </Link>
         </div>
-        <Link to="/companies/new">
-          <Button className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            New Company
-          </Button>
-        </Link>
-      </div>
 
-      <CompanyList companies={companies || []} isLoading={isLoading} />
+        <div className="mb-8 relative">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search companies..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+        <CompanyList companies={filteredCompanies} isLoading={isLoading} />
+      </div>
     </div>
   );
 };

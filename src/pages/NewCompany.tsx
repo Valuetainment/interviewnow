@@ -41,12 +41,19 @@ const NewCompany = () => {
   return (
     <div className="container mx-auto px-4 py-24">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Create New Company</h1>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Create New Company</h1>
+          <p className="text-muted-foreground mt-2">
+            Add a new organization to your system
+          </p>
+        </div>
         
-        <CompanyForm 
-          onSubmit={(data) => createCompany.mutate(data)}
-          isSubmitting={createCompany.isPending}
-        />
+        <div className="bg-slate-50 border border-slate-100 rounded-lg p-6">
+          <CompanyForm 
+            onSubmit={(data) => createCompany.mutate(data)}
+            isSubmitting={createCompany.isPending}
+          />
+        </div>
       </div>
     </div>
   );

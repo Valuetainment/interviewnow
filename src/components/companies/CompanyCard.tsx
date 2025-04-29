@@ -5,7 +5,7 @@ import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Building, Calendar, Edit } from "lucide-react";
+import { Building, Calendar, Edit, Users } from "lucide-react";
 import { format } from "date-fns";
 
 interface CompanyCardProps {
@@ -14,11 +14,11 @@ interface CompanyCardProps {
 
 const CompanyCard: React.FC<CompanyCardProps> = ({ company }) => {
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow">
-      <CardHeader className="pb-2">
+    <Card className="overflow-hidden hover:shadow-md transition-shadow border-l-4 border-l-primary">
+      <CardHeader className="pb-2 bg-gradient-to-r from-slate-50 to-transparent">
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-2">
-            <Building className="h-4 w-4 text-muted-foreground" />
+            <Building className="h-5 w-5 text-primary" />
             <h3 className="font-semibold text-lg line-clamp-1">{company.name}</h3>
           </div>
           <Link to={`/companies/${company.id}/edit`}>
@@ -29,7 +29,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company }) => {
           </Link>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 pt-4">
         <p className="text-sm text-muted-foreground line-clamp-2">
           {company.culture || "No company description available."}
         </p>
@@ -42,7 +42,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company }) => {
           ))}
 
           {company.benefits_list?.slice(0, 3).map((benefit, index) => (
-            <Badge key={`benefit-${index}`} variant="outline" className="text-xs">
+            <Badge key={`benefit-${index}`} variant="outline" className="text-xs bg-slate-50">
               {benefit}
             </Badge>
           ))}
@@ -54,9 +54,15 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company }) => {
           )}
         </div>
       </CardContent>
-      <CardFooter className="pt-2 text-xs text-muted-foreground flex items-center gap-1.5">
-        <Calendar className="h-3 w-3" />
-        {company.created_at && format(new Date(company.created_at), "MMM d, yyyy")}
+      <CardFooter className="pt-2 text-xs text-muted-foreground flex items-center justify-between border-t border-slate-100">
+        <div className="flex items-center gap-1.5">
+          <Calendar className="h-3 w-3" />
+          {company.created_at && format(new Date(company.created_at), "MMM d, yyyy")}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Users className="h-3 w-3" />
+          <span>4 positions</span>
+        </div>
       </CardFooter>
     </Card>
   );
