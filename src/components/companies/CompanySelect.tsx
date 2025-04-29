@@ -28,8 +28,9 @@ const CompanySelect: React.FC<CompanySelectProps> = ({
   const { data: companies, isLoading } = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
+      // Use type assertion since we're mocking the DB call for now
       const { data, error } = await supabase
-        .from("companies")
+        .from("companies" as any)
         .select("id, name")
         .order("name", { ascending: true });
 

@@ -7,7 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 // Define the Company type based on the database schema
-type CompanyData = {
+export type CompanyData = {
   name: string;
   culture?: string;
   story?: string;
@@ -26,7 +26,7 @@ const NewCompany = () => {
       // Cast the table name to any to bypass TypeScript error until Supabase types are properly set up
       const { data: result, error } = await supabase
         .from('companies' as any)
-        .insert(data)
+        .insert(data as any)
         .select()
         .single();
 

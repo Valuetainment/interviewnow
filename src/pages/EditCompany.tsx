@@ -30,7 +30,7 @@ const EditCompany = () => {
     queryKey: ["company", id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("companies")
+        .from("companies" as any)
         .select("*")
         .eq("id", id)
         .single();
@@ -43,8 +43,8 @@ const EditCompany = () => {
   const updateCompany = useMutation({
     mutationFn: async (data: any) => {
       const { data: result, error } = await supabase
-        .from("companies")
-        .update(data)
+        .from("companies" as any)
+        .update(data as any)
         .eq("id", id)
         .select()
         .single();
@@ -74,7 +74,7 @@ const EditCompany = () => {
   const deleteCompany = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
-        .from("companies")
+        .from("companies" as any)
         .delete()
         .eq("id", id);
 

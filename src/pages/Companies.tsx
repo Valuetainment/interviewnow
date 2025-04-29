@@ -27,10 +27,9 @@ const Companies = () => {
   const { data: companies, isLoading } = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
-      // This is a mock implementation that will need to be updated
-      // when the companies table is created in Supabase
+      // Use type assertion since we're mocking the DB call for now
       const { data, error } = await supabase
-        .from("companies")
+        .from("companies" as any)
         .select("*")
         .order("name", { ascending: true });
 
