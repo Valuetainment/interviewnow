@@ -12,7 +12,8 @@ import {
   ChevronDown,
   Briefcase,
   LayoutDashboard,
-  Building
+  Building,
+  Users
 } from 'lucide-react';
 import {
   NavigationMenu,
@@ -68,36 +69,56 @@ const Navbar: React.FC = () => {
                   </NavigationMenuContent>
                 </NavigationMenuItem>
 
-                {/* Interview Tools Dropdown */}
+                {/* Dashboard */}
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger>Interview Tools</NavigationMenuTrigger>
+                  <Link to="/dashboard" className="flex items-center gap-1 text-foreground/80 hover:text-foreground transition-colors px-4 py-2">
+                    <LayoutDashboard size={16} />
+                    <span>Dashboard</span>
+                  </Link>
+                </NavigationMenuItem>
+
+                {/* Company Management */}
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger>Companies</NavigationMenuTrigger>
                   <NavigationMenuContent className="bg-background">
-                    <ul className="grid gap-3 p-4 w-[400px]">
+                    <ul className="grid gap-3 p-4 w-[300px]">
                       <li>
-                        <Link to="/dashboard" className="block p-3 rounded-md hover:bg-muted">
+                        <Link to="/companies" className="block p-3 rounded-md hover:bg-muted">
                           <div className="flex items-center gap-2">
-                            <LayoutDashboard className="h-4 w-4" />
-                            <span className="text-sm font-medium">Dashboard</span>
+                            <Building className="h-4 w-4" />
+                            <span className="text-sm font-medium">All Companies</span>
                           </div>
-                          <div className="text-sm text-muted-foreground ml-6">Manage interviews and invitations</div>
+                          <div className="text-sm text-muted-foreground ml-6">View and manage companies</div>
                         </Link>
+                      </li>
+                      <li>
+                        <Link to="/companies/new" className="block p-3 rounded-md hover:bg-muted">
+                          <div className="flex items-center gap-2">
+                            <Plus className="h-4 w-4" />
+                            <span className="text-sm font-medium">Add Company</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground ml-6">Create a new company profile</div>
+                        </Link>
+                      </li>
+                    </ul>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+
+                {/* Candidates & Positions */}
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger>Recruiting</NavigationMenuTrigger>
+                  <NavigationMenuContent className="bg-background">
+                    <ul className="grid gap-3 p-4 md:w-[400px] lg:w-[500px] grid-cols-1 md:grid-cols-2">
+                      <li className="md:col-span-2">
+                        <div className="px-3 py-2 text-sm font-medium text-muted-foreground">Positions</div>
                       </li>
                       <li>
                         <Link to="/positions" className="block p-3 rounded-md hover:bg-muted">
                           <div className="flex items-center gap-2">
                             <Briefcase className="h-4 w-4" />
-                            <span className="text-sm font-medium">Positions</span>
+                            <span className="text-sm font-medium">All Positions</span>
                           </div>
-                          <div className="text-sm text-muted-foreground ml-6">Manage job positions and requirements</div>
-                        </Link>
-                      </li>
-                      <li>
-                        <Link to="/companies" className="block p-3 rounded-md hover:bg-muted">
-                          <div className="flex items-center gap-2">
-                            <Building className="h-4 w-4" />
-                            <span className="text-sm font-medium">Companies</span>
-                          </div>
-                          <div className="text-sm text-muted-foreground ml-6">Manage company profiles</div>
+                          <div className="text-sm text-muted-foreground ml-6">View job positions</div>
                         </Link>
                       </li>
                       <li>
@@ -106,7 +127,19 @@ const Navbar: React.FC = () => {
                             <Plus className="h-4 w-4" />
                             <span className="text-sm font-medium">Create Position</span>
                           </div>
-                          <div className="text-sm text-muted-foreground ml-6">Define job requirements for interviews</div>
+                          <div className="text-sm text-muted-foreground ml-6">Add a new job position</div>
+                        </Link>
+                      </li>
+                      <li className="md:col-span-2 mt-2">
+                        <div className="px-3 py-2 text-sm font-medium text-muted-foreground">Candidates</div>
+                      </li>
+                      <li>
+                        <Link to="/candidate" className="block p-3 rounded-md hover:bg-muted">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            <span className="text-sm font-medium">All Candidates</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground ml-6">View candidates</div>
                         </Link>
                       </li>
                       <li>
@@ -115,9 +148,18 @@ const Navbar: React.FC = () => {
                             <FileUp className="h-4 w-4" />
                             <span className="text-sm font-medium">Add Candidate</span>
                           </div>
-                          <div className="text-sm text-muted-foreground ml-6">Upload candidate profiles and resumes</div>
+                          <div className="text-sm text-muted-foreground ml-6">Upload candidate profiles</div>
                         </Link>
                       </li>
+                    </ul>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+
+                {/* Interviews */}
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger>Interviews</NavigationMenuTrigger>
+                  <NavigationMenuContent className="bg-background">
+                    <ul className="grid gap-3 p-4 w-[300px]">
                       <li>
                         <Link to="/test-interview" className="block p-3 rounded-md hover:bg-muted">
                           <div className="flex items-center gap-2">
@@ -133,14 +175,14 @@ const Navbar: React.FC = () => {
                             <FileText className="h-4 w-4" />
                             <span className="text-sm font-medium">Transcripts</span>
                           </div>
-                          <div className="text-sm text-muted-foreground ml-6">View past interview records</div>
+                          <div className="text-sm text-muted-foreground ml-6">View past interviews</div>
                         </Link>
                       </li>
                     </ul>
                   </NavigationMenuContent>
                 </NavigationMenuItem>
 
-                {/* Settings as direct link */}
+                {/* Settings */}
                 <NavigationMenuItem>
                   <Link to="/settings" className="flex items-center gap-1 text-foreground/80 hover:text-foreground transition-colors px-4 py-2">
                     <Settings size={16} />
@@ -188,24 +230,39 @@ const Navbar: React.FC = () => {
                 Pricing
               </Link>
             </div>
+
+            <Link to="/dashboard" className="block px-3 py-2 rounded-md text-base text-foreground/80 hover:text-foreground hover:bg-muted transition-colors">
+              Dashboard
+            </Link>
             
             <div className="border-b pb-2">
-              <div className="font-medium px-3 py-2">Interview Tools</div>
-              <Link to="/dashboard" className="block px-3 py-2 rounded-md text-base text-foreground/80 hover:text-foreground hover:bg-muted transition-colors">
-                Dashboard
-              </Link>
-              <Link to="/positions" className="block px-3 py-2 rounded-md text-base text-foreground/80 hover:text-foreground hover:bg-muted transition-colors">
-                Positions
-              </Link>
+              <div className="font-medium px-3 py-2">Companies</div>
               <Link to="/companies" className="block px-3 py-2 rounded-md text-base text-foreground/80 hover:text-foreground hover:bg-muted transition-colors">
-                Companies
+                All Companies
+              </Link>
+              <Link to="/companies/new" className="block px-3 py-2 rounded-md text-base text-foreground/80 hover:text-foreground hover:bg-muted transition-colors">
+                Add Company
+              </Link>
+            </div>
+
+            <div className="border-b pb-2">
+              <div className="font-medium px-3 py-2">Recruiting</div>
+              <Link to="/positions" className="block px-3 py-2 rounded-md text-base text-foreground/80 hover:text-foreground hover:bg-muted transition-colors">
+                All Positions
               </Link>
               <Link to="/create-position" className="block px-3 py-2 rounded-md text-base text-foreground/80 hover:text-foreground hover:bg-muted transition-colors">
                 Create Position
               </Link>
               <Link to="/candidate" className="block px-3 py-2 rounded-md text-base text-foreground/80 hover:text-foreground hover:bg-muted transition-colors">
+                All Candidates
+              </Link>
+              <Link to="/candidate" className="block px-3 py-2 rounded-md text-base text-foreground/80 hover:text-foreground hover:bg-muted transition-colors">
                 Add Candidate
               </Link>
+            </div>
+
+            <div className="border-b pb-2">
+              <div className="font-medium px-3 py-2">Interviews</div>
               <Link to="/test-interview" className="block px-3 py-2 rounded-md text-base text-foreground/80 hover:text-foreground hover:bg-muted transition-colors">
                 Test Interview
               </Link>

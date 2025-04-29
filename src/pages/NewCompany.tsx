@@ -6,14 +6,26 @@ import CompanyForm from "@/components/companies/CompanyForm";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+// Define the Company type based on the database schema
+type CompanyData = {
+  name: string;
+  culture?: string;
+  story?: string;
+  values?: string;
+  benefits?: string;
+  core_values?: string[];
+  benefits_list?: string[];
+};
+
 const NewCompany = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const createCompany = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: CompanyData) => {
+      // Cast the table name to any to bypass TypeScript error until Supabase types are properly set up
       const { data: result, error } = await supabase
-        .from("companies")
+        .from('companies' as any)
         .insert(data)
         .select()
         .single();
@@ -50,7 +62,7 @@ const NewCompany = () => {
         
         <div className="bg-slate-50 border border-slate-100 rounded-lg p-6">
           <CompanyForm 
-            onSubmit={(data) => createCompany.mutate(data)}
+            onSubmit={(data) => createCompany.mutate(data as CompanyData)}
             isSubmitting={createCompany.isPending}
           />
         </div>
