@@ -10,7 +10,8 @@ import {
   UserCheck, 
   FileText,
   ChevronDown,
-  Briefcase
+  Briefcase,
+  LayoutDashboard
 } from 'lucide-react';
 import {
   NavigationMenu,
@@ -71,6 +72,15 @@ const Navbar: React.FC = () => {
                   <NavigationMenuTrigger>Interview Tools</NavigationMenuTrigger>
                   <NavigationMenuContent className="bg-background">
                     <ul className="grid gap-3 p-4 w-[400px]">
+                      <li>
+                        <Link to="/dashboard" className="block p-3 rounded-md hover:bg-muted">
+                          <div className="flex items-center gap-2">
+                            <LayoutDashboard className="h-4 w-4" />
+                            <span className="text-sm font-medium">Dashboard</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground ml-6">Manage interviews and invitations</div>
+                        </Link>
+                      </li>
                       <li>
                         <Link to="/positions" className="block p-3 rounded-md hover:bg-muted">
                           <div className="flex items-center gap-2">
@@ -171,6 +181,9 @@ const Navbar: React.FC = () => {
             
             <div className="border-b pb-2">
               <div className="font-medium px-3 py-2">Interview Tools</div>
+              <Link to="/dashboard" className="block px-3 py-2 rounded-md text-base text-foreground/80 hover:text-foreground hover:bg-muted transition-colors">
+                Dashboard
+              </Link>
               <Link to="/positions" className="block px-3 py-2 rounded-md text-base text-foreground/80 hover:text-foreground hover:bg-muted transition-colors">
                 Positions
               </Link>
