@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { toast } from "sonner";
 
 import { Button } from '@/components/ui/button';
@@ -12,16 +12,29 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import Navbar from '@/components/Navbar';
+import { CompetencyWeights } from '@/components/CompetencyWeights';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 type FormData = {
   title: string;
   shortDescription: string;
 };
 
+// Mock competencies data (would come from the database in a real implementation)
+const mockCompetencies = [
+  { id: '1', name: 'Technical Knowledge', description: 'Understanding of programming languages, frameworks, and technical concepts' },
+  { id: '2', name: 'Problem Solving', description: 'Ability to analyze issues and develop effective solutions' },
+  { id: '3', name: 'Communication', description: 'Clarity of expression and ability to convey ideas effectively' },
+  { id: '4', name: 'Teamwork', description: 'Ability to collaborate and work well with others' },
+  { id: '5', name: 'Leadership', description: 'Ability to guide and influence others' },
+];
+
 const CreatePosition = () => {
   const navigate = useNavigate();
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedDescription, setGeneratedDescription] = useState('');
+  const [competencyWeights, setCompetencyWeights] = useState<Record<string, number>>({});
+  const [weightsValid, setWeightsValid] = useState(false);
   
   const form = useForm<FormData>({
     defaultValues: {
@@ -62,9 +75,15 @@ const CreatePosition = () => {
   };
 
   const handleSavePosition = async () => {
-    // In a real implementation, this would save the position to the database
+    // Validate that weights add up to 100%
+    if (!weightsValid) {
+      toast.error("Competency weights must add up to 100% before saving position");
+      return;
+    }
+
+    // In a real implementation, this would save the position and competency weights to the database
     toast.success("Position saved successfully!");
-    navigate('/positions'); // Redirect to positions list (to be implemented)
+    navigate('/positions'); // Redirect to positions list
   };
 
   // Mock function to generate a position description
@@ -207,6 +226,44 @@ ${shortDesc}
             </CardFooter>
           </Card>
         </div>
+
+        {/* Competency Weights Section */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>Competency Weights</CardTitle>
+            <CardDescription>
+              Distribute importance (%) across competencies for this position. Total must equal 100%.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CompetencyWeights 
+              competencies={mockCompetencies}
+              weights={competencyWeights}
+              onChange={(weights, valid) => {
+                setCompetencyWeights(weights);
+                setWeightsValid(valid);
+              }}
+            />
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            {!weightsValid && (
+              <Alert variant="destructive" className="w-full">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Invalid weights</AlertTitle>
+                <AlertDescription>
+                  Competency weights must add up to exactly 100% before saving.
+                </AlertDescription>
+              </Alert>
+            )}
+            <Button 
+              className="w-full" 
+              disabled={!generatedDescription || !weightsValid} 
+              onClick={handleSavePosition}
+            >
+              Save Position with Competencies
+            </Button>
+          </CardFooter>
+        </Card>
       </div>
     </div>
   );
