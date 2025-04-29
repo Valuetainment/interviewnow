@@ -16,6 +16,9 @@ import Transcripts from "./pages/Transcripts";
 import Positions from "./pages/Positions";
 import PositionDetail from "./pages/PositionDetail";
 import Dashboard from "./pages/Dashboard";
+import Companies from "./pages/Companies";
+import NewCompany from "./pages/NewCompany";
+import EditCompany from "./pages/EditCompany";
 
 const queryClient = new QueryClient();
 
@@ -31,13 +34,16 @@ const App = () => (
           <Route path="/signup" element={<Signup />} />
           <Route path="/create-position" element={<CreatePosition />} />
           <Route path="/candidate" element={<Candidate />} />
-          <Route path="/candidates" element={<Candidate />} /> {/* Added this route as an alias */}
+          <Route path="/candidates" element={<Candidate />} />
           <Route path="/settings" element={<CompanySettings />} />
           <Route path="/test-interview" element={<TestInterview />} />
           <Route path="/transcripts" element={<Transcripts />} />
           <Route path="/positions" element={<Positions />} />
           <Route path="/positions/:id" element={<PositionDetail />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/companies" element={<Companies />} />
+          <Route path="/companies/new" element={<NewCompany />} />
+          <Route path="/companies/:id/edit" element={<EditCompany />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
