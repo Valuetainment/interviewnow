@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +8,10 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
 import CreatePosition from "./pages/CreatePosition";
+import CreateSession from "./pages/CreateSession";
+import InterviewRoom from "./pages/InterviewRoom";
+import SessionDetail from "./pages/SessionDetail";
+import Sessions from "./pages/Sessions";
 import Candidate from "./pages/Candidate";
 import CompanySettings from "./pages/CompanySettings";
 import TestInterview from "./pages/TestInterview";
@@ -19,37 +22,67 @@ import Dashboard from "./pages/Dashboard";
 import Companies from "./pages/Companies";
 import NewCompany from "./pages/NewCompany";
 import EditCompany from "./pages/EditCompany";
+import ResetPassword from "./pages/ResetPassword";
+import Profile from "./pages/Profile";
+import { AuthProvider } from './hooks/useAuth';
+
+// Import layout components
+import MainLayout from './components/layouts/MainLayout';
+import AuthLayout from './components/layouts/AuthLayout';
+import DashboardLayout from './components/layouts/DashboardLayout';
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/create-position" element={<CreatePosition />} />
-          <Route path="/candidate" element={<Candidate />} />
-          <Route path="/candidates" element={<Candidate />} />
-          <Route path="/settings" element={<CompanySettings />} />
-          <Route path="/test-interview" element={<TestInterview />} />
-          <Route path="/transcripts" element={<Transcripts />} />
-          <Route path="/positions" element={<Positions />} />
-          <Route path="/positions/:id" element={<PositionDetail />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/companies" element={<Companies />} />
-          <Route path="/companies/new" element={<NewCompany />} />
-          <Route path="/companies/:id/edit" element={<EditCompany />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Public routes with MainLayout */}
+            <Route element={<MainLayout />}>
+              <Route path="/" element={<Index />} />
+            </Route>
+            
+            {/* Auth routes with AuthLayout */}
+            <Route element={<AuthLayout />}>
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+            </Route>
+            
+            {/* Protected routes with DashboardLayout */}
+            <Route element={<DashboardLayout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/create-position" element={<CreatePosition />} />
+              <Route path="/create-session" element={<CreateSession />} />
+              <Route path="/sessions" element={<Sessions />} />
+              <Route path="/sessions/:id" element={<SessionDetail />} />
+              <Route path="/candidate" element={<Candidate />} />
+              <Route path="/candidates" element={<Candidate />} />
+              <Route path="/settings" element={<CompanySettings />} />
+              <Route path="/test-interview" element={<TestInterview />} />
+              <Route path="/transcripts" element={<Transcripts />} />
+              <Route path="/positions" element={<Positions />} />
+              <Route path="/positions/:id" element={<PositionDetail />} />
+              <Route path="/companies" element={<Companies />} />
+              <Route path="/companies/new" element={<NewCompany />} />
+              <Route path="/companies/:id/edit" element={<EditCompany />} />
+            </Route>
+            
+            {/* Full-screen interview room (no dashboard layout) */}
+            <Route path="/interview-room/:id" element={<InterviewRoom />} />
+            
+            {/* Catch-all route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </AuthProvider>
 );
 
 export default App;

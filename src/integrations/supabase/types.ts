@@ -1,3 +1,7 @@
+// Placeholder for database types
+// Later, you can generate these automatically using Supabase CLI:
+// supabase gen types typescript --linked > src/integrations/supabase/types.ts
+
 export type Json =
   | string
   | number
@@ -6,10 +10,329 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export type Database = {
+export interface Database {
   public: {
     Tables: {
-      [_ in never]: never
+      tenants: {
+        Row: {
+          id: string
+          name: string
+          plan_tier: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          plan_tier?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          plan_tier?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      users: {
+        Row: {
+          id: string
+          tenant_id: string
+          role: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          tenant_id: string
+          role?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          role?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      candidates: {
+        Row: {
+          id: string
+          tenant_id: string
+          full_name: string
+          email: string
+          resume_url: string | null
+          resume_analysis: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          full_name: string
+          email: string
+          resume_url?: string | null
+          resume_analysis?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          full_name?: string
+          email?: string
+          resume_url?: string | null
+          resume_analysis?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      positions: {
+        Row: {
+          id: string
+          tenant_id: string
+          title: string
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          title: string
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          title?: string
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "positions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      interview_sessions: {
+        Row: {
+          id: string
+          tenant_id: string
+          position_id: string
+          candidate_id: string
+          start_time: string | null
+          end_time: string | null
+          status: string
+          video_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          position_id: string
+          candidate_id: string
+          start_time?: string | null
+          end_time?: string | null
+          status?: string
+          video_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          position_id?: string
+          candidate_id?: string
+          start_time?: string | null
+          end_time?: string | null
+          status?: string
+          video_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interview_sessions_position_id_fkey"
+            columns: ["position_id"]
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interview_sessions_candidate_id_fkey"
+            columns: ["candidate_id"]
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      interview_invitations: {
+        Row: {
+          token: string
+          tenant_id: string
+          session_id: string
+          candidate_id: string
+          expires_at: string
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          token?: string
+          tenant_id: string
+          session_id: string
+          candidate_id: string
+          expires_at: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          token?: string
+          tenant_id?: string
+          session_id?: string
+          candidate_id?: string
+          expires_at?: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_invitations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interview_invitations_session_id_fkey"
+            columns: ["session_id"]
+            referencedRelation: "interview_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interview_invitations_candidate_id_fkey"
+            columns: ["candidate_id"]
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      usage_events: {
+        Row: {
+          id: string
+          tenant_id: string
+          event_type: string
+          quantity: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          event_type: string
+          quantity?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          event_type?: string
+          quantity?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      transcript_entries: {
+        Row: {
+          id: string;
+          tenant_id: string;
+          session_id: string;
+          speaker: string;
+          text: string;
+          start_ms: number;
+          confidence: number | null;
+          sequence_number: number | null;
+          created_at: string;
+        }
+        Insert: {
+          id?: string;
+          tenant_id: string;
+          session_id: string;
+          speaker: string;
+          text: string;
+          start_ms: number;
+          confidence?: number | null;
+          sequence_number?: number | null;
+          created_at?: string;
+        }
+        Update: {
+          id?: string;
+          tenant_id?: string;
+          session_id?: string;
+          speaker?: string;
+          text?: string;
+          start_ms?: number;
+          confidence?: number | null;
+          sequence_number?: number | null;
+          created_at?: string;
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transcript_entries_session_id_fkey"
+            columns: ["session_id"]
+            referencedRelation: "interview_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transcript_entries_tenant_id_fkey"
+            columns: ["tenant_id"]
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      // Other tables to be added as needed
     }
     Views: {
       [_ in never]: never

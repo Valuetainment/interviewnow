@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,7 @@ import { RecruitingDropdown } from './navbar/RecruitingDropdown';
 import { InterviewsDropdown } from './navbar/InterviewsDropdown';
 import { NavigationLinks } from './navbar/NavigationLinks';
 import { AuthButtons } from './navbar/AuthButtons';
-import { MobileNav } from './navbar/MobileNav';
+import MobileNav from './navbar/MobileNav';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);

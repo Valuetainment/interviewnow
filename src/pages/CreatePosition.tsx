@@ -1,3 +1,9 @@
+/*
+ * Note: This file contains TypeScript errors related to the Database type definitions
+ * which don't include positions, competencies, and position_competencies tables.
+ * These type errors would need to be fixed by updating the types in src/integrations/supabase/types.ts
+ * The code will still work at runtime despite these TypeScript errors.
+ */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -13,29 +19,38 @@ import { supabase } from '@/integrations/supabase/client';
 import Navbar from '@/components/Navbar';
 import { CompetencyWeights } from '@/components/CompetencyWeights';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useAuth } from '@/hooks/useAuth';
+import * as z from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 
-type FormData = {
-  title: string;
-  shortDescription: string;
+// Define the schema for form validation
+const formSchema = z.object({
+  title: z.string().min(3, 'Title must be at least 3 characters'),
+  shortDescription: z.string().min(10, 'Description must be at least 10 characters'),
+});
+
+type FormData = z.infer<typeof formSchema>;
+
+// Define the type for competencies
+type Competency = {
+  id: string;
+  name: string;
+  description: string;
+  suggested_weight?: number;
 };
-
-// Mock competencies data (would come from the database in a real implementation)
-const mockCompetencies = [
-  { id: '1', name: 'Technical Knowledge', description: 'Understanding of programming languages, frameworks, and technical concepts' },
-  { id: '2', name: 'Problem Solving', description: 'Ability to analyze issues and develop effective solutions' },
-  { id: '3', name: 'Communication', description: 'Clarity of expression and ability to convey ideas effectively' },
-  { id: '4', name: 'Teamwork', description: 'Ability to collaborate and work well with others' },
-  { id: '5', name: 'Leadership', description: 'Ability to guide and influence others' },
-];
 
 const CreatePosition = () => {
   const navigate = useNavigate();
+  const { tenantId } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [generatedDescription, setGeneratedDescription] = useState('');
+  const [suggestedCompetencies, setSuggestedCompetencies] = useState<Competency[]>([]);
   const [competencyWeights, setCompetencyWeights] = useState<Record<string, number>>({});
   const [weightsValid, setWeightsValid] = useState(false);
   
   const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       title: '',
       shortDescription: '',
@@ -43,83 +58,165 @@ const CreatePosition = () => {
   });
 
   const onSubmit = async (data: FormData) => {
+    if (!tenantId) {
+      toast.error("You must be logged in to create a position");
+      return;
+    }
+
     setIsGenerating(true);
     try {
-      // In a real implementation, this would call a Supabase Edge Function
-      // that would use OpenAI to generate the position description
-      
-      // Simulate AI generation with a timeout
-      setTimeout(() => {
-        const aiGeneratedDescription = generateMockDescription(data.title, data.shortDescription);
-        setGeneratedDescription(aiGeneratedDescription);
-        setIsGenerating(false);
-        toast.success("Position description generated successfully!");
-      }, 1500);
-      
-      // For a real implementation, you would use:
-      /*
-      const { data: aiResponse, error } = await supabase.functions.invoke('generate-position-description', {
-        body: { title: data.title, shortDescription: data.shortDescription }
+      // Call the Supabase Edge Function
+      const { data: generatedData, error } = await supabase.functions.invoke('generate-position', {
+        body: { 
+          title: data.title, 
+          shortDescription: data.shortDescription 
+        }
       });
       
       if (error) throw error;
-      setGeneratedDescription(aiResponse.description);
-      */
+
+      if (!generatedData || !generatedData.description) {
+        throw new Error("Failed to generate position description");
+      }
       
+      // Set the generated description
+      setGeneratedDescription(generatedData.description);
+      
+      // Process suggested competencies
+      if (generatedData.competencies && Array.isArray(generatedData.competencies)) {
+        // Format competencies with unique IDs
+        const formattedCompetencies = generatedData.competencies.map((comp, index) => ({
+          id: `suggested-${index}`,
+          name: comp.name,
+          description: comp.description,
+          suggested_weight: typeof comp.suggested_weight === 'number' ? comp.suggested_weight : 0,
+        }));
+        
+        setSuggestedCompetencies(formattedCompetencies);
+        
+        // Initialize weights based on suggestions
+        const initialWeights = formattedCompetencies.reduce((acc, comp) => {
+          acc[comp.id] = typeof comp.suggested_weight === 'number' ? comp.suggested_weight : 0;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        setCompetencyWeights(initialWeights);
+        
+        // Check if the weights are valid (sum to 100)
+        const totalWeight = Object.values(initialWeights).reduce((sum, weight) => sum + weight, 0);
+        setWeightsValid(totalWeight === 100);
+      }
+      
+      toast.success("Position description generated successfully!");
     } catch (error) {
       console.error("Error generating position description:", error);
-      toast.error("Failed to generate position description. Please try again.");
+      toast.error(error instanceof Error ? error.message : "Failed to generate position description");
+    } finally {
       setIsGenerating(false);
     }
   };
 
   const handleSavePosition = async () => {
+    if (!tenantId) {
+      toast.error("You must be logged in to create a position");
+      return;
+    }
+
     // Validate that weights add up to 100%
     if (!weightsValid) {
       toast.error("Competency weights must add up to 100% before saving position");
       return;
     }
 
-    // In a real implementation, this would save the position and competency weights to the database
-    toast.success("Position saved successfully!");
-    navigate('/positions'); // Redirect to positions list
-  };
-
-  // Mock function to generate a position description
-  const generateMockDescription = (title: string, shortDesc: string) => {
-    return `
-# ${title}
-
-## Overview
-${shortDesc}
-
-## Responsibilities
-- Design, develop, and maintain high-performance software applications
-- Collaborate with cross-functional teams to define and implement new features
-- Write clean, efficient, and well-documented code
-- Participate in code reviews and provide constructive feedback
-- Troubleshoot and fix bugs in existing applications
-
-## Requirements
-- Bachelor's degree in Computer Science or related field
-- 3+ years of experience in software development
-- Strong proficiency in JavaScript/TypeScript and React
-- Experience with modern frontend frameworks and state management
-- Knowledge of RESTful APIs and HTTP protocols
-- Excellent problem-solving and communication skills
-
-## Preferred Qualifications
-- Experience with Supabase, Firebase, or other backend-as-a-service platforms
-- Familiarity with CI/CD pipelines and DevOps practices
-- Understanding of responsive design principles
-- Experience with AI-powered applications or integrating AI services
-
-## Benefits
-- Competitive salary and benefits package
-- Flexible work arrangements
-- Professional development opportunities
-- Collaborative and inclusive work environment
-    `;
+    const { title, shortDescription } = form.getValues();
+    
+    setIsSaving(true);
+    try {
+      // 1. Create the position
+      // @ts-ignore - Database type definition doesn't include positions table
+      const { data: position, error: positionError } = await supabase
+        .from('positions')
+        .insert({
+          tenant_id: tenantId,
+          title: title,
+          description: generatedDescription,
+        })
+        .select('id')
+        .single();
+        
+      if (positionError) throw positionError;
+      
+      if (!position || !position.id) {
+        throw new Error("Failed to create position");
+      }
+      
+      // 2. Create the competencies and associate them with the position
+      const competencyPromises = Object.entries(competencyWeights).map(async ([compId, weight]) => {
+        // Skip if weight is 0
+        if (weight === 0) return;
+        
+        // Find the competency details
+        const competency = suggestedCompetencies.find(c => c.id === compId);
+        if (!competency) return;
+        
+        // Check if this competency already exists
+        // @ts-ignore - Database type definition doesn't include competencies table
+        const { data: existingComp, error: searchError } = await supabase
+          .from('competencies')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .eq('name', competency.name)
+          .maybeSingle();
+          
+        if (searchError) throw searchError;
+        
+        let competencyId;
+        
+        if (existingComp) {
+          // Use existing competency
+          competencyId = existingComp.id;
+        } else {
+          // Create new competency
+          // @ts-ignore - Database type definition doesn't include competencies table
+          const { data: newComp, error: compError } = await supabase
+            .from('competencies')
+            .insert({
+              tenant_id: tenantId,
+              name: competency.name,
+              description: competency.description,
+            })
+            .select('id')
+            .single();
+            
+          if (compError) throw compError;
+          competencyId = newComp.id;
+        }
+        
+        // Create the position-competency association
+        // @ts-ignore - Database type definition doesn't include position_competencies table
+        const { error: assocError } = await supabase
+          .from('position_competencies')
+          .insert({
+            position_id: position.id,
+            competency_id: competencyId,
+            tenant_id: tenantId,
+            weight: weight,
+          });
+          
+        if (assocError) throw assocError;
+      });
+      
+      // Wait for all competency operations to complete
+      await Promise.all(competencyPromises);
+      
+      toast.success("Position saved successfully!");
+      navigate(`/positions/${position.id}`);
+    } catch (error) {
+      console.error("Error saving position:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to save position");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -214,55 +311,55 @@ ${shortDesc}
                 </div>
               )}
             </CardContent>
-            <CardFooter>
-              <Button 
-                className="w-full" 
-                disabled={!generatedDescription} 
-                onClick={handleSavePosition}
-              >
-                Save Position
-              </Button>
-            </CardFooter>
           </Card>
         </div>
 
-        {/* Competency Weights Section */}
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle>Competency Weights</CardTitle>
-            <CardDescription>
-              Distribute importance (%) across competencies for this position. Total must equal exactly 100%.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <CompetencyWeights 
-              competencies={mockCompetencies}
-              weights={competencyWeights}
-              onChange={(weights, valid) => {
-                setCompetencyWeights(weights);
-                setWeightsValid(valid);
-              }}
-            />
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            {!weightsValid && (
-              <Alert variant="destructive" className="w-full">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Invalid weights</AlertTitle>
-                <AlertDescription>
-                  Competency weights must add up to exactly 100% before saving.
-                </AlertDescription>
-              </Alert>
-            )}
-            <Button 
-              className="w-full" 
-              disabled={!generatedDescription || !weightsValid} 
-              onClick={handleSavePosition}
-            >
-              Save Position with Competencies
-            </Button>
-          </CardFooter>
-        </Card>
+        {/* Competency Weights Section - Only show after generation */}
+        {generatedDescription && (
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle>Competency Weights</CardTitle>
+              <CardDescription>
+                Distribute importance (%) across competencies for this position. Total must equal exactly 100%.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CompetencyWeights 
+                competencies={suggestedCompetencies}
+                weights={competencyWeights}
+                onChange={(weights, valid) => {
+                  setCompetencyWeights(weights);
+                  setWeightsValid(valid);
+                }}
+              />
+            </CardContent>
+            <CardFooter className="flex flex-col space-y-4">
+              {!weightsValid && (
+                <Alert variant="destructive" className="w-full">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Invalid weights</AlertTitle>
+                  <AlertDescription>
+                    Competency weights must add up to exactly 100% before saving.
+                  </AlertDescription>
+                </Alert>
+              )}
+              <Button 
+                className="w-full" 
+                disabled={!generatedDescription || !weightsValid || isSaving} 
+                onClick={handleSavePosition}
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving Position...
+                  </>
+                ) : (
+                  'Save Position with Competencies'
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        )}
       </div>
     </div>
   );
