@@ -1,7 +1,7 @@
 # AI Interview Insights Platform - Active Context
 
 ## Current Project Status
-The project has made significant progress in establishing the frontend foundation. We have set up the project structure, created layout components, and configured authentication. Most importantly, we've established a local Supabase development environment with the complete database schema and storage buckets in place. We have also completed implementation of all navigation components (Navbar, Sidebar, Header), enhanced the authentication UI with proper Supabase integration, and implemented a comprehensive dashboard overview experience. We've now completed the resume processing flow, enabling users to upload, process, and analyze candidate resumes. We've also implemented the position creation feature with AI-powered description generation and competency management. Most recently, we've implemented the interview session management interface with a comprehensive testing infrastructure, enhanced the candidate management system with People Data Labs integration, established a complete CI/CD pipeline with GitHub, Supabase, and Vercel integration, and fixed critical issues with authentication and tenant association in the production environment.
+The project has made significant progress in establishing the frontend foundation. We have set up the project structure, created layout components, and configured authentication. Most importantly, we've established a local Supabase development environment with the complete database schema and storage buckets in place. We have also completed implementation of all navigation components (Navbar, Sidebar, Header), enhanced the authentication UI with proper Supabase integration, and implemented a comprehensive dashboard overview experience. We've now completed the resume processing flow, enabling users to upload, process, and analyze candidate resumes. We've also implemented the position creation feature with AI-powered description generation and competency management. Most recently, we've implemented the interview session management interface with a comprehensive testing infrastructure, enhanced the candidate management system with People Data Labs integration, established a complete CI/CD pipeline with GitHub, Supabase, and Vercel integration, and fixed critical issues with authentication and tenant association in the production environment. The latest improvements include storage configuration in production, RLS policy fixes, and Edge Function optimization to ensure the resume processing workflow works correctly in the production environment.
 
 ## Current Work Focus
 The immediate focus is on further enhancing the frontend user experience and stabilizing the production deployment:
@@ -57,8 +57,25 @@ The immediate focus is on further enhancing the frontend user experience and sta
    - ✅ Set up RLS policies to allow user registration and tenant access
    - ✅ Added database functions and triggers for user-tenant association
    - ✅ Verified authentication flow with email confirmation
+   - ✅ Created storage buckets (resumes, videos, audio) in production
+   - ✅ Fixed RLS policies for users and candidates tables
+   - ✅ Made resumes bucket public for PDF.co access
+   - ✅ Added policy to allow storage objects to be publicly readable
 
 ## Recent Changes
+- Fixed production storage and policy issues:
+  - Created storage buckets (resumes, videos, audio) in production environment
+  - Configured proper RLS policies for storage buckets
+  - Made resumes bucket public for PDF.co API access
+  - Added policy to allow storage objects to be publicly readable
+  - Fixed RLS policy for users table to allow self-data access
+  - Replaced tenant isolation policy for candidates with more permissive one
+- Improved Edge Functions for resume processing:
+  - Updated analyze-resume function to use GPT-4 instead of GPT-4o-mini
+  - Implemented comprehensive prompt for better resume analysis
+  - Improved JSON structure for better candidate data organization
+  - Reduced temperature to 0.1 for more consistent formatting
+  - Ensured proper synchronization between GitHub and Supabase deployments
 - Fixed critical production environment issues:
   - Updated Supabase client to properly detect environment and use production URL in production
   - Created database function to handle new user registration and tenant association
@@ -88,7 +105,8 @@ The immediate focus is on further enhancing the frontend user experience and sta
 - Optimized analyze-resume Edge Function:
   - Added response_format: "json_object" for consistent OpenAI responses
   - Implemented text cleaning for improved analysis
-  - Set temperature to 0.3 for more deterministic results
+  - Set temperature to 0.1 for more deterministic results
+  - Updated to GPT-4 model for better analysis quality
 
 ## Active Decisions
 1. **Supabase Environment Configuration**
@@ -158,6 +176,22 @@ The immediate focus is on further enhancing the frontend user experience and sta
    - Using `--no-verify-jwt` flag for local Edge Function testing to bypass authentication
    - Created `check-env` Edge Function to verify API key access
 
+10. **Production Storage Configuration**
+    - Created separate storage buckets for different file types:
+      - resumes bucket for PDF files with 10MB limit
+      - videos bucket for interview recordings with 1GB limit
+      - audio bucket for audio files with 100MB limit
+    - Configured public access for the resumes bucket to allow PDF.co processing
+    - Implemented storage RLS policies for authenticated users
+    - Added policy to allow objects to be publicly readable for processing
+
+11. **Database RLS Policy Approach**
+    - Fixed user self-data access with "Users can view own data" policy
+    - Simplified candidates table access with permissive policy for authenticated users
+    - Created storage policies to allow authenticated users to perform operations
+    - Used direct SQL execution for policy changes instead of migrations
+    - Documented policy changes in memory bank for future reference
+
 ## Next Steps
 1. **Finalize Production Environment**
    - Complete end-to-end testing of all features in production
@@ -190,9 +224,18 @@ The immediate focus is on further enhancing the frontend user experience and sta
    - Create export functionality
    - Build analytics based on interview data
 
+6. **Database Migration Management**
+   - Create migration file that captures manual policy changes
+   - Establish process for syncing production and local environments
+   - Document database evolution and changes
+   - Implement proper schema versioning
+
 ## Dependencies and Blockers
 - ✅ PDF.co integration issues in local environment (RESOLVED)
 - ✅ Tenant ID association in authentication flow (RESOLVED)
+- ✅ Storage buckets missing in production (RESOLVED)
+- ✅ RLS policy issues with users and candidates tables (RESOLVED)
+- ✅ Resume processing issues with Edge Functions (RESOLVED)
 - Need to complete the Database type definitions to include all tables
 - Need to optimize Edge Functions for better scalability
 - Need to implement fallback mechanisms for API failures
@@ -204,4 +247,5 @@ The immediate focus is on further enhancing the frontend user experience and sta
 - What tabbed sections should be included in the detailed candidate profile page?
 - How should we handle cases where PDL doesn't return data for a candidate?
 - How should we implement caching for transcript processing to reduce OpenAI API calls?
-- What metrics should be included in the assessment engine's weighted scoring? 
+- What metrics should be included in the assessment engine's weighted scoring?
+- How should we document and track manual RLS policy changes? 
