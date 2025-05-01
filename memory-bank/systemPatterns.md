@@ -1,30 +1,357 @@
 # AI Interview Insights Platform - System Patterns
 
-## Triangular Architecture
-The system follows a triangular architecture with three key layers:
+## System Architecture Overview
+
+The AI Interview Insights Platform is built on a multi-tenant architecture using Supabase as the core infrastructure provider. The system follows a client-server model with a React frontend and Supabase-powered backend (PostgreSQL database, authentication, storage, edge functions, and realtime features).
+
+### Architecture Diagram
 
 ```
-Client (Next.js + shadcn/ui)
-  ├─ WebRTC (mediasoup)          • video / audio
-  └─ Supabase Realtime WS        • transcript deltas / presence
+┌─────────────────┐     ┌─────────────────────────────────────┐
+│                 │     │              Supabase               │
+│                 │     │                                     │
+│    Frontend     │     │  ┌─────────┐       ┌────────────┐  │
+│    (React,      │     │  │         │       │            │  │
+│     Vite,       │◄────┼─►│ PostgREST◄───────► PostgreSQL │  │
+│     Tailwind)   │     │  │         │       │            │  │
+│                 │     │  └─────────┘       └────────────┘  │
+│                 │     │                                     │
+│                 │     │  ┌─────────┐       ┌────────────┐  │
+│                 │     │  │         │       │            │  │
+│                 │◄────┼─►│ Auth    │       │ Storage    │  │
+│                 │     │  │         │       │            │  │
+│                 │     │  └─────────┘       └────────────┘  │
+│                 │     │                                     │
+│                 │     │  ┌─────────┐       ┌────────────┐  │
+│                 │     │  │         │       │            │  │
+│                 │◄────┼─►│ Realtime│       │ Edge       │  │
+│                 │     │  │         │       │ Functions  │  │
+└─────────────────┘     │  └─────────┘       └────────────┘  │
+                        │                                     │
+                        └─────────────────────────────────────┘
+                                        │
+                                        ▼
+                        ┌─────────────────────────────────────┐
+                        │        External Services            │
+                        │                                     │
+                        │  ┌─────────┐       ┌────────────┐  │
+                        │  │         │       │            │  │
+                        │  │ OpenAI  │       │ PDF.co     │  │
+                        │  │         │       │            │  │
+                        │  └─────────┘       └────────────┘  │
+                        │                                     │
+                        │  ┌─────────┐       ┌────────────┐  │
+                        │  │         │       │            │  │
+                        │  │ PDL     │       │ VideoSDK   │  │
+                        │  │         │       │            │  │
+                        │  └─────────┘       └────────────┘  │
+                        │                                     │
+                        └─────────────────────────────────────┘
+```
 
-Supabase Project (Orchestration Layer)
-  • Postgres + pgvector   – RLS tenant isolation
-  • Storage buckets       – /resumes /videos /audio
-  • Auth (JWT, OIDC/SAML)
-  • Edge Functions (Deno)
-      · rtc-proxy            · transcript-processor
-      · session-manager      · assessment-generator
-      · process-resume       · enrich-candidate
-      · video-analyzer       · record-usage
-      · generate-position    · analyze-interview
-  • Realtime channels
-      interview:<session_id>  |  audit:<tenant_id>
+## Development and Deployment Workflow
 
-External Services
-  • OpenAI / Anthropic realtime STT & LLM
-  • VideoSDK.live cloud recorder
-  • PDF.co, People Data Labs
+The project follows a structured development and deployment workflow:
+
+### CI/CD Pipeline
+
+```
+┌───────────────┐     ┌───────────────┐     ┌───────────────────────┐
+│               │     │               │     │                       │
+│    Local      │     │    GitHub     │     │ Supabase/Vercel       │
+│  Development  │────►│  Repository   │────►│ Automated Deployment  │
+│               │     │               │     │                       │
+└───────────────┘     └───────────────┘     └───────────────────────┘
+```
+
+1. **Local Development**
+   - Developers work with local Supabase instance
+   - Environment variables in .env and supabase_secrets.env files
+   - Edge functions served locally with --env-file flag
+
+2. **GitHub Integration**
+   - Code pushed to thelabvenice/triangularai repository
+   - Branch-based development workflow
+   - Pull requests for code review
+
+3. **Supabase Integration**
+   - Connected to GitHub repository
+   - Database branching enabled for development
+   - Migrations automatically applied from supabase directory
+   - Edge functions automatically deployed
+
+4. **Vercel Deployment**
+   - Frontend deployed to Vercel
+   - Environment variables synchronized with Supabase
+   - Preview deployments for pull requests
+   - Production deployment from main branch
+
+## Data Flow Patterns
+
+### Authentication Flow
+
+```
+┌──────────┐     ┌───────────────┐     ┌───────────────┐
+│          │     │               │     │               │
+│  Client  │────►│ Supabase Auth │────►│ JWT Creation  │
+│          │     │               │     │               │
+└──────────┘     └───────────────┘     └───────┬───────┘
+                                              │
+┌──────────┐     ┌───────────────┐     ┌──────▼───────┐
+│          │     │               │     │               │
+│Protected │◄────│  RLS Policies │◄────│ JWT with      │
+│Resources │     │               │     │ tenant_id     │
+│          │     │               │     │ claim         │
+└──────────┘     └───────────────┘     └───────────────┘
+```
+
+### Resume Processing Flow
+
+```
+┌──────────┐     ┌───────────────┐     ┌───────────────┐
+│          │     │               │     │               │
+│  Upload  │────►│ Supabase      │────►│ process-resume│
+│Component │     │ Storage       │     │ Edge Function │
+│          │     │               │     │               │
+└──────────┘     └───────────────┘     └───────┬───────┘
+                                              │
+                                              ▼
+                                       ┌──────────────┐
+                                       │              │
+                                       │   PDF.co     │
+                                       │              │
+                                       └──────┬───────┘
+                                              │
+┌──────────┐     ┌───────────────┐     ┌──────▼───────┐
+│          │     │               │     │               │
+│ Candidate│◄────│ analyze-resume│◄────│ Extracted     │
+│ Creation │     │ Edge Function │     │ Text          │
+│          │     │               │     │               │
+└──────────┘     └───────────────┘     └───────────────┘
+                         │
+                         ▼
+                  ┌──────────────┐
+                  │              │
+                  │   OpenAI     │
+                  │              │
+                  └──────┬───────┘
+                         │
+┌──────────┐     ┌──────▼───────┐     ┌───────────────┐
+│          │     │               │     │               │
+│ Candidate│     │ enrich-       │────►│ People Data   │
+│ Profile  │◄────│ candidate     │     │ Labs API      │
+│          │     │ Edge Function │     │               │
+└──────────┘     └───────────────┘     └───────────────┘
+```
+
+### Position Creation Flow
+
+```
+┌──────────┐     ┌───────────────┐     ┌───────────────┐
+│          │     │               │     │               │
+│  Position│────►│ generate-     │────►│ OpenAI API    │
+│  Form    │     │ position      │     │               │
+│          │     │ Edge Function │     │               │
+└──────────┘     └───────┬───────┘     └───────┬───────┘
+                         │                     │
+                         ▼                     ▼
+                  ┌──────────────┐     ┌──────────────┐
+                  │              │     │              │
+                  │  Position    │     │ Competency   │
+                  │  Description │     │ Suggestions  │
+                  │              │     │              │
+                  └──────┬───────┘     └──────┬───────┘
+                         │                    │
+                         ▼                    ▼
+                  ┌─────────────────────────────────┐
+                  │                                 │
+                  │      Database Storage           │
+                  │                                 │
+                  └─────────────────────────────────┘
+```
+
+### Interview Session Flow
+
+```
+┌──────────┐     ┌───────────────┐     ┌───────────────┐
+│          │     │               │     │               │
+│ Session  │────►│ Session       │────►│ Invitation    │
+│ Creation │     │ Storage       │     │ Generation    │
+│          │     │               │     │               │
+└──────────┘     └───────────────┘     └───────────────┘
+       │
+       │
+       ▼
+┌──────────┐     ┌───────────────┐     ┌───────────────┐
+│          │     │               │     │               │
+│ Interview│     │ VideoSDK      │     │ transcript-   │
+│ Room     │────►│ Integration   │────►│ processor     │
+│          │     │               │     │ Edge Function │
+└──────────┘     └───────────────┘     └───────┬───────┘
+                                              │
+                                              ▼
+                                       ┌──────────────┐
+                                       │              │
+                                       │   OpenAI     │
+                                       │              │
+                                       └──────┬───────┘
+                                              │
+┌──────────┐     ┌───────────────┐     ┌──────▼───────┐
+│          │     │               │     │               │
+│Transcript│◄────│ Realtime      │◄────│ Processed     │
+│Display   │     │ Subscription  │     │ Transcript    │
+│          │     │               │     │               │
+└──────────┘     └───────────────┘     └───────────────┘
+```
+
+## Authentication and Authorization
+
+The system uses Supabase Auth combined with Row Level Security (RLS) policies to implement a secure multi-tenant model:
+
+### Multi-tenant Isolation
+
+```sql
+CREATE POLICY "Tenants can only access their own data" ON table_name
+    USING (tenant_id = auth.jwt() -> 'tenant_id');
+```
+
+### Role-Based Access
+
+```sql
+CREATE POLICY "Role-based access" ON table_name
+    USING (auth.jwt() -> 'role' = 'admin');
+```
+
+### User Identity
+
+```sql
+CREATE POLICY "Users can access their own data" ON table_name
+    USING (user_id = auth.uid());
+```
+
+## Database Schema Patterns
+
+The database schema follows several key patterns:
+
+### Multi-tenant Design
+
+All major tables include a `tenant_id` column that links to the `tenants` table.
+
+### Relationship Design
+
+Foreign key relationships are used to maintain data integrity:
+
+```sql
+CREATE TABLE child_table (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    parent_id UUID REFERENCES parent_table(id),
+    tenant_id UUID REFERENCES tenants(id),
+    ...
+);
+```
+
+### Metadata Storage
+
+JSON columns are used for flexible metadata storage:
+
+```sql
+CREATE TABLE table_name (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    metadata JSONB DEFAULT '{}',
+    ...
+);
+```
+
+### Transaction History
+
+Triggers are used to maintain transaction history:
+
+```sql
+CREATE TRIGGER track_changes
+AFTER INSERT OR UPDATE OR DELETE ON table_name
+FOR EACH ROW EXECUTE FUNCTION audit_trail();
+```
+
+## Error Handling Patterns
+
+### Edge Function Error Handling
+
+```typescript
+try {
+  // Function logic
+  return new Response(
+    JSON.stringify({ status: 'ok', data: result }),
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+} catch (error) {
+  return new Response(
+    JSON.stringify({ error: error.message || "Unknown error" }),
+    { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+```
+
+### Frontend Error Handling
+
+```typescript
+const fetchData = async () => {
+  setLoading(true);
+  try {
+    const { data, error } = await supabase.from('table').select('*');
+    if (error) throw error;
+    setData(data);
+  } catch (error) {
+    setError(error.message);
+  } finally {
+    setLoading(false);
+  }
+};
+```
+
+## Frontend Component Patterns
+
+### Layout Components
+
+```tsx
+const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <div className="flex min-h-screen">
+      <Sidebar />
+      <div className="flex-1">
+        <Header />
+        <main className="p-4">{children}</main>
+      </div>
+    </div>
+  );
+};
+```
+
+### Data Fetching with Hooks
+
+```tsx
+const useFetchData = (table: string) => {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const { data, error } = await supabase.from(table).select('*');
+        if (error) throw error;
+        setData(data);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [table]);
+  
+  return { data, loading, error };
+};
 ```
 
 ## Core Architectural Patterns

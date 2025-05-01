@@ -1,10 +1,10 @@
 # AI Interview Insights Platform - Active Context
 
 ## Current Project Status
-The project has made significant progress in establishing the frontend foundation. We have set up the project structure, created layout components, and configured authentication. Most importantly, we've established a local Supabase development environment with the complete database schema and storage buckets in place. We have also completed implementation of all navigation components (Navbar, Sidebar, Header), enhanced the authentication UI with proper Supabase integration, and implemented a comprehensive dashboard overview experience. We've now completed the resume processing flow, enabling users to upload, process, and analyze candidate resumes. We've also implemented the position creation feature with AI-powered description generation and competency management. Most recently, we've implemented the interview session management interface with a comprehensive testing infrastructure, and we've enhanced the candidate management system with People Data Labs integration.
+The project has made significant progress in establishing the frontend foundation. We have set up the project structure, created layout components, and configured authentication. Most importantly, we've established a local Supabase development environment with the complete database schema and storage buckets in place. We have also completed implementation of all navigation components (Navbar, Sidebar, Header), enhanced the authentication UI with proper Supabase integration, and implemented a comprehensive dashboard overview experience. We've now completed the resume processing flow, enabling users to upload, process, and analyze candidate resumes. We've also implemented the position creation feature with AI-powered description generation and competency management. Most recently, we've implemented the interview session management interface with a comprehensive testing infrastructure, enhanced the candidate management system with People Data Labs integration, established a complete CI/CD pipeline with GitHub, Supabase, and Vercel integration, and fixed critical issues with authentication and tenant association in the production environment.
 
 ## Current Work Focus
-The immediate focus is on further enhancing the frontend user experience:
+The immediate focus is on further enhancing the frontend user experience and stabilizing the production deployment:
 
 1. ✅ **Resume Processing Flow**
    - ✅ Created resume upload component with file validation
@@ -41,7 +41,39 @@ The immediate focus is on further enhancing the frontend user experience:
    - ✅ Set up local environment with proper env file configuration
    - ✅ Documented environment variable requirements in testing guides
 
+5. ✅ **CI/CD Pipeline Setup**
+   - ✅ Created new GitHub repository (thelabvenice/triangularai)
+   - ✅ Migrated codebase to the new repository
+   - ✅ Updated project README with comprehensive documentation
+   - ✅ Connected Supabase to GitHub repository with branching enabled
+   - ✅ Configured Vercel deployment integration
+   - ✅ Established automated deployment workflow
+   - ✅ Fixed Git author configuration for proper deployments
+
+6. ✅ **Production Environment Fixes**
+   - ✅ Fixed Supabase client to properly detect environment (development vs production)
+   - ✅ Implemented tenant creation and association for new users
+   - ✅ Created default tenants (Acme Corp and Stark Industries)
+   - ✅ Set up RLS policies to allow user registration and tenant access
+   - ✅ Added database functions and triggers for user-tenant association
+   - ✅ Verified authentication flow with email confirmation
+
 ## Recent Changes
+- Fixed critical production environment issues:
+  - Updated Supabase client to properly detect environment and use production URL in production
+  - Created database function to handle new user registration and tenant association
+  - Added trigger to automatically associate new users with the Acme Corp tenant
+  - Configured RLS policies to allow proper tenant access
+  - Set up Git author information for proper Vercel deployments
+  - Verified complete authentication flow with email confirmation
+- Established comprehensive CI/CD pipeline:
+  - Created new GitHub repository at thelabvenice/triangularai
+  - Updated .gitignore to properly exclude sensitive files
+  - Created comprehensive README.md with project documentation
+  - Connected Supabase project to GitHub repository
+  - Enabled database branching for development environments
+  - Set up Vercel for frontend deployment
+  - Configured environment variables across all platforms
 - Implemented complete PDL integration for candidate enrichment:
   - Created database migration for candidate_profiles table
   - Implemented enrich-candidate Edge Function to integrate with PDL API
@@ -59,7 +91,26 @@ The immediate focus is on further enhancing the frontend user experience:
   - Set temperature to 0.3 for more deterministic results
 
 ## Active Decisions
-1. **Edge Function Architecture**
+1. **Supabase Environment Configuration**
+   - Updated Supabase client to automatically detect environment
+   - Uses environment variables to determine production vs development
+   - Falls back to production mode if detection fails
+   - Ensures proper database connectivity in all environments
+
+2. **Multi-tenant User Management**
+   - Created default tenants (Acme Corp and Stark Industries)
+   - Implemented database trigger to associate new users with default tenant
+   - Added RLS policies to ensure proper tenant isolation and access
+   - Set up JWT claims to include tenant_id for authentication context
+
+3. **CI/CD Workflow Architecture**
+   - Using GitHub as the central source control repository
+   - Implementing Supabase branching for development environments
+   - Configuring Supabase to track changes in the `supabase` directory
+   - Setting up Vercel for automated frontend deployments
+   - Creating a complete workflow: Local → GitHub → Supabase/Vercel
+
+4. **Edge Function Architecture**
    - Using Deno.serve as recommended by Supabase guidelines 
    - Following npm: prefixed imports for dependencies (e.g., `npm:openai@4.29.0`)
    - Providing proper CORS headers for browser compatibility
@@ -68,7 +119,7 @@ The immediate focus is on further enhancing the frontend user experience:
    - Using `--env-file` flag with `supabase_secrets.env` for local development
    - Configured Edge Function secrets in Supabase dashboard for production
 
-2. **PDL Integration Approach**
+5. **PDL Integration Approach**
    - Created separate candidate_profiles table for PDL-enriched data
    - Implemented enrich-candidate Edge Function for PDL API integration
    - Using PDL_API_KEY as a Supabase secret
@@ -76,7 +127,7 @@ The immediate focus is on further enhancing the frontend user experience:
    - Implementing fallback logic to use resume data when PDL data is unavailable
    - Adding "Enhanced" badge to indicate profiles with PDL enrichment
 
-3. **Candidate Display Architecture**
+6. **Candidate Display Architecture**
    - Created dedicated components for different aspects of candidate display:
      - CandidateCard for list views with responsive design
      - CandidateList with filtering and sorting capabilities
@@ -84,7 +135,7 @@ The immediate focus is on further enhancing the frontend user experience:
    - Adding interactive elements like social media links
    - Visual distinction for PDL-enriched data (blue text color)
 
-4. **Position Creation Architecture**
+7. **Position Creation Architecture**
    - Using a dedicated Edge Function (`generate-position`) for AI-powered description generation
    - Implementing a two-step process:
      1. User provides basic position information
@@ -92,14 +143,14 @@ The immediate focus is on further enhancing the frontend user experience:
    - Using OpenAI's GPT-4o-mini for generating structured position data
    - Implementing client-side validation with zod schema
 
-5. **Interview Session Management Approach**
+8. **Interview Session Management Approach**
    - Storing session data with references to candidates and positions
    - Implementing status tracking (scheduled, in_progress, completed, cancelled)
    - Using real-time updates for transcript display
    - Separating invitation management from session creation
    - Building dedicated interview room with media controls
 
-6. **Testing and Environment Infrastructure**
+9. **Testing and Environment Infrastructure**
    - Creating interactive setup scripts for environment variables
    - Implementing verification tools for API connectivity
    - Developing comprehensive testing documentation
@@ -108,40 +159,49 @@ The immediate focus is on further enhancing the frontend user experience:
    - Created `check-env` Edge Function to verify API key access
 
 ## Next Steps
-1. **Detailed Candidate Profile Page**
+1. **Finalize Production Environment**
+   - Complete end-to-end testing of all features in production
+   - Monitor application performance and error rates
+   - Set up logging and monitoring tools
+   - Create proper error handling for all edge cases
+   - Document production deployment and maintenance procedures
+
+2. **Detailed Candidate Profile Page**
    - Create tabbed interface for different sections of candidate data
    - Implement comprehensive profile view with all PDL-enriched data
    - Add interactive elements for contact information
    - Include resume viewer integration
 
-2. **Assessment Engine**
+3. **Assessment Engine**
    - Design assessment generation UI
    - Implement weighted scoring algorithm
    - Create assessment results visualization
    - Build comparative analysis tools
 
-3. **Transcription Improvements**
+4. **Transcription Improvements**
    - Optimize transcript processor for performance
    - Implement caching mechanism for audio chunks
    - Add speaker diarization for multi-participant interviews
    - Improve real-time performance
 
-4. **Reporting and Analytics**
+5. **Reporting and Analytics**
    - Design reporting dashboard UI
    - Implement data visualization components
    - Create export functionality
    - Build analytics based on interview data
 
 ## Dependencies and Blockers
+- ✅ PDF.co integration issues in local environment (RESOLVED)
+- ✅ Tenant ID association in authentication flow (RESOLVED)
 - Need to complete the Database type definitions to include all tables
 - Need to optimize Edge Functions for better scalability
 - Need to implement fallback mechanisms for API failures
-- Need to implement robust error logging
 
 ## Open Questions
+- Should we implement a staging environment before making more production changes?
+- What monitoring and logging tools should we implement for production?
+- How should we handle database migrations in production vs. development?
 - What tabbed sections should be included in the detailed candidate profile page?
 - How should we handle cases where PDL doesn't return data for a candidate?
 - How should we implement caching for transcript processing to reduce OpenAI API calls?
-- What metrics should be included in the assessment engine's weighted scoring?
-- How can we optimize the video/audio streaming for better performance?
-- What is the best approach for implementing search across multiple data types? 
+- What metrics should be included in the assessment engine's weighted scoring? 
