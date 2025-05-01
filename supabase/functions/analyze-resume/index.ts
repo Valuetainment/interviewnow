@@ -53,38 +53,52 @@ Deno.serve(async (req) => {
         'Authorization': `Bearer ${openaiApiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4',
         messages: [
           {
             role: 'system',
-            content: `You are an expert resume parser. Extract structured information from the resume text. 
-                      Return a JSON object with the following structure:
-                      {
-                        "personal_info": {
-                          "full_name": "",
-                          "email": "",
-                          "phone": "",
-                          "location": ""
-                        },
-                        "summary": "Professional summary or objective statement",
-                        "skills": ["skill1", "skill2", ...],
-                        "experience": [
-                          {
-                            "title": "Job Title",
-                            "company": "Company Name",
-                            "dates": "Start - End",
-                            "responsibilities": ["responsibility1", "responsibility2", ...]
-                          }
-                        ],
-                        "education": [
-                          {
-                            "degree": "Degree Name",
-                            "institution": "Institution Name",
-                            "dates": "Start - End"
-                          }
-                        ]
-                      }
-                      Ensure all text is properly formatted and don't include any explanations, just the JSON.`,
+            content: `You are a professional resume analyzer and formatter. Analyze the provided resume text and extract key information in a clean, structured JSON format. Focus on:
+
+1. Personal Information (name, contact details)
+2. Skills (technical and soft skills)
+3. Work Experience (properly formatted with standardized dates, clear responsibilities)
+4. Education
+5. Professional Summary
+
+For experience entries, ensure:
+- Extract ALL positions with their full details
+- Dates are standardized (MM/YYYY format when possible)
+- Job titles and companies are clearly separated
+- Responsibilities are formatted as clear, action-oriented bullet points
+- Include achievements and impact metrics
+- Preserve the chronological order
+
+Return the data in this exact JSON format:
+{
+  "personal_info": {
+    "full_name": string,
+    "email": string | null,
+    "phone": string | null
+  },
+  "skills": string[],
+  "experience": {
+    "positions_held": [{
+      "title": string,
+      "company": string,
+      "dates": string,
+      "responsibilities": string[],
+      "achievements": string[]
+    }],
+    "years": string,
+    "industries": string[]
+  },
+  "education": string[],
+  "geographic_location": string | null,
+  "professional_summary": string,
+  "areas_specialization": string[],
+  "certifications_licenses": string[],
+  "notable_achievements": string[]
+}`,
           },
           {
             role: 'user',
@@ -92,7 +106,7 @@ Deno.serve(async (req) => {
           },
         ],
         response_format: { "type": "json_object" },
-        temperature: 0.3,
+        temperature: 0.1,
       }),
     });
 
