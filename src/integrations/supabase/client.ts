@@ -2,9 +2,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from './types';
 
-// Local Supabase credentials (for development)
-// const isDevelopment = import.meta.env.DEV; // Check if in development mode
-const isDevelopment = true; // TEMPORARY: Force local development mode for testing
+// Environment detection
+const isDevelopment = import.meta.env.DEV || false; // Check if in development mode, default to false
+// const isDevelopment = true; // TEMPORARY: Force local development mode for testing
 
 // Production credentials (remote Supabase)
 const REMOTE_SUPABASE_URL = "https://gypnutyegqxelvsqjedu.supabase.co";
