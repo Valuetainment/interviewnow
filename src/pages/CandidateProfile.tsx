@@ -18,8 +18,13 @@ interface Candidate {
   email: string;
   phone?: string;
   resume_url?: string;
+  resume_text?: string;
   skills?: string[];
+  experience?: JobPosition[] | { positions_held?: JobPosition[]; years?: string; industries?: string[] } | string;
+  education?: Education[] | string;
   resume_analysis?: ResumeAnalysis;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface ResumeAnalysis {
@@ -30,8 +35,12 @@ interface ResumeAnalysis {
     geographic_location?: string;
   };
   professional_summary?: string;
-  key_skills_expertise?: string[];
-  positions_held?: JobPosition[];
+  skills?: string[];
+  experience?: {
+    positions_held?: JobPosition[];
+    years?: string;
+    industries?: string[];
+  };
   education?: Education[];
 }
 
@@ -40,7 +49,8 @@ interface JobPosition {
   company: string;
   start_date?: string;
   end_date?: string;
-  responsibilities?: string;
+  responsibilities?: string | string[];
+  achievements?: string[];
 }
 
 interface Education {
@@ -54,17 +64,47 @@ interface CandidateProfile {
   id: string;
   candidate_id: string;
   tenant_id: string;
+  created_at?: string;
+  updated_at?: string;
+  pdl_id?: string;
+  pdl_likelihood?: number;
+  last_enriched_at?: string;
   first_name?: string;
+  middle_name?: string;
   last_name?: string;
+  gender?: string;
+  birth_year?: number;
   location_name?: string;
-  mobile_phone?: string;
+  location_locality?: string;
+  location_region?: string;
+  location_country?: string;
+  location_continent?: string;
+  location_postal_code?: string;
+  location_street_address?: string;
+  location_geo?: string;
   job_title?: string;
   job_company_name?: string;
+  job_company_size?: string;
+  job_company_industry?: string;
+  job_start_date?: string;
+  job_last_updated?: string;
   linkedin_url?: string;
+  linkedin_username?: string;
+  linkedin_id?: string;
+  twitter_url?: string;
+  twitter_username?: string;
+  facebook_url?: string;
+  facebook_username?: string;
   github_url?: string;
+  github_username?: string;
   skills?: string[];
-  experience?: any; // JSON data
-  education?: any; // JSON data
+  interests?: string[];
+  countries?: string[];
+  experience?: JobPosition[] | { positions_held?: JobPosition[] } | string;
+  education?: Education[] | string;
+  industry?: string;
+  job_title_levels?: string[];
+  phone?: string;
 }
 
 // Helper function to get initials from name
@@ -75,6 +115,19 @@ const getInitials = (name: string) => {
     .map(n => n[0])
     .join('')
     .toUpperCase();
+};
+
+// Helper functions for parsing JSON data
+const parseJsonSafely = <T,>(data: string | T | null | undefined): T | null => {
+  if (!data) return null;
+  if (typeof data !== 'string') return data as T;
+  
+  try {
+    return JSON.parse(data) as T;
+  } catch (error) {
+    console.error('Error parsing JSON:', error);
+    return null;
+  }
 };
 
 const CandidateProfile = () => {
@@ -94,44 +147,46 @@ const CandidateProfile = () => {
       setError(null);
       
       try {
-        // Fetch candidate data first
-        const candidateResult = await supabase
-          .from('candidates')
-          .select('*')
-          .eq('id', id)
-          .single();
+        // Fetch candidate and profile data in parallel using Promise.all
+        const [candidateResult, profileResult] = await Promise.all([
+          supabase
+            .from('candidates')
+            .select('*')
+            .eq('id', id)
+            .single(),
+          supabase
+            .from('candidate_profiles')
+            .select('*')
+            .eq('candidate_id', id)
+            .maybeSingle()
+        ]);
         
-        if (candidateResult.error) throw candidateResult.error;
+        // Handle candidate fetch error
+        if (candidateResult.error) {
+          throw candidateResult.error;
+        }
         
-        // Log candidate data to help with debugging
+        // Log data for debugging
         console.log('Fetched candidate data:', candidateResult.data);
         
         // Store candidate data
         setCandidate(candidateResult.data);
         
-        // Try to fetch profile data, but handle the case where table doesn't exist yet
-        try {
-          const profileResult = await supabase
-            .from('candidate_profiles')
-            .select('*')
-            .eq('candidate_id', id)
-            .maybeSingle();
-          
-          // If successful, store profile data
-          if (profileResult.data) {
-            console.log('Fetched profile data:', profileResult.data);
-            setEnrichedProfile(profileResult.data);
+        // Handle profile data (won't throw error if not found)
+        if (profileResult.data) {
+          console.log('Fetched profile data:', profileResult.data);
+          setEnrichedProfile(profileResult.data);
+        } else if (profileResult.error) {
+          // Only log error if it's not a "not found" error
+          if (!profileResult.error.message?.includes('No rows found')) {
+            console.warn('Error fetching profile data:', profileResult.error);
+            
+            // Check if table doesn't exist
+            if (profileResult.error.message?.includes('relation "public.candidate_profiles" does not exist')) {
+              console.log('candidate_profiles table does not exist yet');
+              setProfileTableExists(false);
+            }
           }
-        } catch (profileError: any) {
-          console.warn('Error fetching profile data:', profileError);
-          
-          // If the error is that the table doesn't exist, set the flag
-          if (profileError.message && profileError.message.includes('relation "public.candidate_profiles" does not exist')) {
-            console.log('candidate_profiles table does not exist yet');
-            setProfileTableExists(false);
-          }
-          
-          // Don't set error since this is optional data
         }
       } catch (err) {
         console.error('Error fetching candidate:', err);
@@ -148,6 +203,25 @@ const CandidateProfile = () => {
     
     fetchCandidateData();
   }, [id, toast]);
+
+  // Parse resume_analysis if it's a string
+  useEffect(() => {
+    if (candidate && candidate.resume_analysis) {
+      try {
+        // Parse if it's a string, otherwise keep as is
+        const parsedAnalysis = typeof candidate.resume_analysis === 'string' 
+          ? JSON.parse(candidate.resume_analysis) 
+          : candidate.resume_analysis;
+        
+        setCandidate(prev => prev ? {
+          ...prev,
+          resume_analysis: parsedAnalysis
+        } : null);
+      } catch (error) {
+        console.error('Error parsing resume_analysis:', error);
+      }
+    }
+  }, [candidate?.id]);
 
   // If loading, show skeleton
   if (isLoading) {
@@ -197,6 +271,47 @@ const CandidateProfile = () => {
     );
   }
 
+  // Helper functions for data fallbacks
+  
+  // Get positions with fallbacks in priority order
+  const getPositions = (): JobPosition[] => {
+    // 1. Use enriched experience if available
+    if (enrichedProfile?.experience) {
+      const expData = parseJsonSafely<JobPosition[] | { positions_held?: JobPosition[] }>(
+        typeof enrichedProfile.experience === 'string' 
+          ? enrichedProfile.experience 
+          : enrichedProfile.experience
+      );
+      
+      if (expData) {
+        if (Array.isArray(expData)) return expData;
+        if (expData.positions_held && Array.isArray(expData.positions_held)) return expData.positions_held;
+      }
+    }
+    
+    // 2. Use candidate experience if available
+    if (candidate?.experience) {
+      const expData = parseJsonSafely<JobPosition[] | { positions_held?: JobPosition[] }>(
+        typeof candidate.experience === 'string' 
+          ? candidate.experience 
+          : candidate.experience
+      );
+      
+      if (expData) {
+        if (Array.isArray(expData)) return expData;
+        if (expData.positions_held && Array.isArray(expData.positions_held)) return expData.positions_held;
+      }
+    }
+    
+    // 3. Use resume_analysis.experience.positions_held if available
+    if (candidate?.resume_analysis?.experience?.positions_held) {
+      return candidate.resume_analysis.experience.positions_held;
+    }
+    
+    // 4. Fallback to empty array
+    return [];
+  };
+
   // Extract data from candidate and enriched profile (if available)
   const hasEnrichedData = !!enrichedProfile;
   const name = candidate.full_name || '';
@@ -207,21 +322,21 @@ const CandidateProfile = () => {
                   candidate.resume_analysis?.personal_info.geographic_location || '';
   
   // Contact info - prefer candidate record, then enriched data
-  const email = candidate.email || candidate.resume_analysis?.personal_info.email || '';
+  const email = candidate.email || candidate.resume_analysis?.personal_info?.email || '';
   const phone = candidate.phone || 
-                enrichedProfile?.mobile_phone || 
-                candidate.resume_analysis?.personal_info.phone || '';
+                enrichedProfile?.phone ||
+                candidate.resume_analysis?.personal_info?.phone || '';
   
   // Current position - try enriched profile first, then resume_analysis
   const jobTitle = enrichedProfile?.job_title || 
-                  (candidate.resume_analysis?.positions_held && 
-                   candidate.resume_analysis.positions_held.length > 0 ? 
-                   candidate.resume_analysis.positions_held[0].title : '');
+                  (candidate.resume_analysis?.experience?.positions_held && 
+                   candidate.resume_analysis.experience.positions_held.length > 0 ? 
+                   candidate.resume_analysis.experience.positions_held[0].title : '');
                    
   const company = enrichedProfile?.job_company_name || 
-                  (candidate.resume_analysis?.positions_held && 
-                   candidate.resume_analysis.positions_held.length > 0 ? 
-                   candidate.resume_analysis.positions_held[0].company : '');
+                  (candidate.resume_analysis?.experience?.positions_held && 
+                   candidate.resume_analysis.experience.positions_held.length > 0 ? 
+                   candidate.resume_analysis.experience.positions_held[0].company : '');
   
   // Professional summary from resume_analysis
   const summary = candidate.resume_analysis?.professional_summary || '';
@@ -229,8 +344,8 @@ const CandidateProfile = () => {
   // Skills - combine from all sources
   // Ensure we're working with arrays to avoid errors
   const candidateSkills = Array.isArray(candidate.skills) ? candidate.skills : [];
-  const resumeSkills = Array.isArray(candidate.resume_analysis?.key_skills_expertise) ? 
-                      candidate.resume_analysis.key_skills_expertise : [];
+  const resumeSkills = Array.isArray(candidate.resume_analysis?.skills) ? 
+                      candidate.resume_analysis.skills : [];
   const enrichedSkills = Array.isArray(enrichedProfile?.skills) ? enrichedProfile.skills : [];
   
   // Combine skills from all sources and remove duplicates
@@ -240,37 +355,42 @@ const CandidateProfile = () => {
   const linkedinUrl = enrichedProfile?.linkedin_url || '';
   const githubUrl = enrichedProfile?.github_url || '';
   
-  // Work experience - use enriched profile or resume_analysis
-  const experienceFromEnriched = enrichedProfile?.experience ? 
-                                (typeof enrichedProfile.experience === 'string' ? 
-                                  JSON.parse(enrichedProfile.experience) : 
-                                  enrichedProfile.experience) : 
-                                [];
-  
-  const experienceFromResume = Array.isArray(candidate.resume_analysis?.positions_held) ? 
-                              candidate.resume_analysis.positions_held : 
-                              [];
-  
-  // Use enriched experience if available, otherwise use resume_analysis
-  const experience = experienceFromEnriched.length > 0 ? 
-                    experienceFromEnriched : 
-                    experienceFromResume;
+  // Experience data
+  const experience = getPositions();
   
   // Education data - similar approach as experience
-  const educationFromEnriched = enrichedProfile?.education ? 
-                              (typeof enrichedProfile.education === 'string' ? 
-                                JSON.parse(enrichedProfile.education) : 
-                                enrichedProfile.education) : 
-                              [];
+  const getEducation = (): Education[] => {
+    // First try enriched profile
+    if (enrichedProfile?.education) {
+      const eduData = parseJsonSafely<Education[]>(
+        typeof enrichedProfile.education === 'string'
+          ? enrichedProfile.education
+          : enrichedProfile.education
+      );
+      
+      if (eduData && Array.isArray(eduData)) return eduData;
+    }
+    
+    // Then try candidate education
+    if (candidate?.education) {
+      const eduData = parseJsonSafely<Education[]>(
+        typeof candidate.education === 'string'
+          ? candidate.education
+          : candidate.education
+      );
+      
+      if (eduData && Array.isArray(eduData)) return eduData;
+    }
+    
+    // Finally try resume_analysis
+    if (candidate?.resume_analysis?.education && Array.isArray(candidate.resume_analysis.education)) {
+      return candidate.resume_analysis.education;
+    }
+    
+    return [];
+  };
   
-  const educationFromResume = Array.isArray(candidate.resume_analysis?.education) ? 
-                            candidate.resume_analysis.education : 
-                            [];
-  
-  // Use enriched education if available, otherwise use resume_analysis
-  const education = educationFromEnriched.length > 0 ? 
-                  educationFromEnriched : 
-                  educationFromResume;
+  const education = getEducation();
 
   // Add debug log for development
   console.log('Rendering with data:', { 
@@ -440,7 +560,22 @@ const CandidateProfile = () => {
                           {job.start_date || ''} {job.end_date ? `- ${job.end_date}` : '- Present'}
                         </p>
                         {job.responsibilities && (
-                          <p className="text-sm mt-2">{job.responsibilities}</p>
+                          <p className="text-sm mt-2">{typeof job.responsibilities === 'string' 
+                            ? job.responsibilities 
+                            : Array.isArray(job.responsibilities) 
+                              ? job.responsibilities.join('. ') 
+                              : ''}
+                          </p>
+                        )}
+                        {job.achievements && Array.isArray(job.achievements) && job.achievements.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-sm font-medium">Achievements:</p>
+                            <ul className="list-disc list-inside text-sm pl-2">
+                              {job.achievements.map((achievement, idx) => (
+                                <li key={idx} className="text-blue-500">{achievement}</li>
+                              ))}
+                            </ul>
+                          </div>
                         )}
                       </div>
                     ))}

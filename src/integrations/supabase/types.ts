@@ -75,6 +75,11 @@ export interface Database {
           full_name: string
           email: string
           resume_url: string | null
+          resume_text?: string | null
+          phone?: string | null
+          skills?: string[] | null
+          experience?: Json | null
+          education?: string | null
           resume_analysis: Json | null
           created_at: string
           updated_at: string
@@ -85,6 +90,11 @@ export interface Database {
           full_name: string
           email: string
           resume_url?: string | null
+          resume_text?: string | null
+          phone?: string | null
+          skills?: string[] | null
+          experience?: Json | null
+          education?: string | null
           resume_analysis?: Json | null
           created_at?: string
           updated_at?: string
@@ -95,6 +105,11 @@ export interface Database {
           full_name?: string
           email?: string
           resume_url?: string | null
+          resume_text?: string | null
+          phone?: string | null
+          skills?: string[] | null
+          experience?: Json | null
+          education?: string | null
           resume_analysis?: Json | null
           created_at?: string
           updated_at?: string
@@ -102,6 +117,160 @@ export interface Database {
         Relationships: [
           {
             foreignKeyName: "candidates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      candidate_profiles: {
+        Row: {
+          id: string
+          candidate_id: string
+          tenant_id: string
+          created_at: string
+          updated_at: string
+          pdl_id?: string | null
+          pdl_likelihood?: number | null
+          last_enriched_at?: string | null
+          first_name?: string | null
+          middle_name?: string | null
+          last_name?: string | null
+          gender?: string | null
+          birth_year?: number | null
+          location_name?: string | null
+          location_locality?: string | null
+          location_region?: string | null
+          location_country?: string | null
+          location_continent?: string | null
+          location_postal_code?: string | null
+          location_street_address?: string | null
+          location_geo?: string | null
+          job_title?: string | null
+          job_company_name?: string | null
+          job_company_size?: string | null
+          job_company_industry?: string | null
+          job_start_date?: string | null
+          job_last_updated?: string | null
+          linkedin_url?: string | null
+          linkedin_username?: string | null
+          linkedin_id?: string | null
+          twitter_url?: string | null
+          twitter_username?: string | null
+          facebook_url?: string | null
+          facebook_username?: string | null
+          github_url?: string | null
+          github_username?: string | null
+          skills?: string[] | null
+          interests?: string[] | null
+          countries?: string[] | null
+          experience?: Json | null
+          education?: Json | null
+          industry?: string | null
+          job_title_levels?: string[] | null
+          phone?: string | null
+        }
+        Insert: {
+          id?: string
+          candidate_id: string
+          tenant_id: string
+          created_at?: string
+          updated_at?: string
+          pdl_id?: string | null
+          pdl_likelihood?: number | null
+          last_enriched_at?: string | null
+          first_name?: string | null
+          middle_name?: string | null
+          last_name?: string | null
+          gender?: string | null
+          birth_year?: number | null
+          location_name?: string | null
+          location_locality?: string | null
+          location_region?: string | null
+          location_country?: string | null
+          location_continent?: string | null
+          location_postal_code?: string | null
+          location_street_address?: string | null
+          location_geo?: string | null
+          job_title?: string | null
+          job_company_name?: string | null
+          job_company_size?: string | null
+          job_company_industry?: string | null
+          job_start_date?: string | null
+          job_last_updated?: string | null
+          linkedin_url?: string | null
+          linkedin_username?: string | null
+          linkedin_id?: string | null
+          twitter_url?: string | null
+          twitter_username?: string | null
+          facebook_url?: string | null
+          facebook_username?: string | null
+          github_url?: string | null
+          github_username?: string | null
+          skills?: string[] | null
+          interests?: string[] | null
+          countries?: string[] | null
+          experience?: Json | null
+          education?: Json | null
+          industry?: string | null
+          job_title_levels?: string[] | null
+          phone?: string | null
+        }
+        Update: {
+          id?: string
+          candidate_id?: string
+          tenant_id?: string
+          created_at?: string
+          updated_at?: string
+          pdl_id?: string | null
+          pdl_likelihood?: number | null
+          last_enriched_at?: string | null
+          first_name?: string | null
+          middle_name?: string | null
+          last_name?: string | null
+          gender?: string | null
+          birth_year?: number | null
+          location_name?: string | null
+          location_locality?: string | null
+          location_region?: string | null
+          location_country?: string | null
+          location_continent?: string | null
+          location_postal_code?: string | null
+          location_street_address?: string | null
+          location_geo?: string | null
+          job_title?: string | null
+          job_company_name?: string | null
+          job_company_size?: string | null
+          job_company_industry?: string | null
+          job_start_date?: string | null
+          job_last_updated?: string | null
+          linkedin_url?: string | null
+          linkedin_username?: string | null
+          linkedin_id?: string | null
+          twitter_url?: string | null
+          twitter_username?: string | null
+          facebook_url?: string | null
+          facebook_username?: string | null
+          github_url?: string | null
+          github_username?: string | null
+          skills?: string[] | null
+          interests?: string[] | null
+          countries?: string[] | null
+          experience?: Json | null
+          education?: Json | null
+          industry?: string | null
+          job_title_levels?: string[] | null
+          phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_profiles_candidate_id_fkey"
+            columns: ["candidate_id"]
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_profiles_tenant_id_fkey"
             columns: ["tenant_id"]
             referencedRelation: "tenants"
             referencedColumns: ["id"]
