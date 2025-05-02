@@ -9,46 +9,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MapPin, Mail, Phone, Briefcase, FileText, ExternalLink, LinkedinIcon, GithubIcon, AlertCircle } from 'lucide-react';
+import { Json } from '@/integrations/supabase/types';
 
 // Define types for better type safety
-interface Candidate {
-  id: string;
-  tenant_id: string;
-  full_name: string;
-  email: string;
-  phone?: string;
-  resume_url?: string;
-  resume_text?: string;
-  skills?: string[];
-  experience?: JobPosition[] | { positions_held?: JobPosition[]; years?: string; industries?: string[] } | string;
-  education?: Education[] | string;
-  resume_analysis?: ResumeAnalysis;
-  created_at?: string;
-  updated_at?: string;
-}
-
-interface ResumeAnalysis {
-  personal_info: {
-    full_name: string;
-    email: string;
-    phone?: string;
-    geographic_location?: string;
-  };
-  professional_summary?: string;
-  skills?: string[];
-  experience?: {
-    positions_held?: JobPosition[];
-    years?: string;
-    industries?: string[];
-  };
-  education?: Education[];
-}
-
 interface JobPosition {
   title: string;
   company: string;
   start_date?: string;
   end_date?: string;
+  dates?: string;
   responsibilities?: string | string[];
   achievements?: string[];
 }
@@ -60,51 +29,94 @@ interface Education {
   end_date?: string;
 }
 
+// Add type for raw education string format from OpenAI
+type RawEducation = string | Education;
+
+interface ResumeAnalysis {
+  personal_info: {
+    full_name: string;
+    email: string;
+    phone?: string;
+    geographic_location?: string;
+  } | Record<string, unknown>; // Allow flexible structure for personal_info
+  professional_summary?: string;
+  skills?: string[];
+  experience?: {
+    positions_held?: JobPosition[];
+    years?: string;
+    industries?: string[];
+  } | Record<string, unknown>; // Allow flexible structure for experience
+  education?: RawEducation[] | Record<string, unknown>; // Allow flexible structure for education
+  areas_specialization?: string[];
+  notable_achievements?: string[];
+  [key: string]: unknown; // Allow any additional fields with unknown type
+}
+
+// Database type
+type ExperienceData = JobPosition[] | { positions_held?: JobPosition[]; years?: string; industries?: string[] } | string;
+type EducationData = Education[] | string;
+
+interface Candidate {
+  id: string;
+  tenant_id: string;
+  full_name: string;
+  email: string;
+  phone?: string | null;
+  resume_url?: string | null;
+  resume_text?: string | null;
+  skills?: string[] | null;
+  experience?: ExperienceData | null;
+  education?: EducationData | null;
+  resume_analysis?: ResumeAnalysis | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 interface CandidateProfile {
   id: string;
   candidate_id: string;
   tenant_id: string;
   created_at?: string;
   updated_at?: string;
-  pdl_id?: string;
-  pdl_likelihood?: number;
-  last_enriched_at?: string;
-  first_name?: string;
-  middle_name?: string;
-  last_name?: string;
-  gender?: string;
-  birth_year?: number;
-  location_name?: string;
-  location_locality?: string;
-  location_region?: string;
-  location_country?: string;
-  location_continent?: string;
-  location_postal_code?: string;
-  location_street_address?: string;
-  location_geo?: string;
-  job_title?: string;
-  job_company_name?: string;
-  job_company_size?: string;
-  job_company_industry?: string;
-  job_start_date?: string;
-  job_last_updated?: string;
-  linkedin_url?: string;
-  linkedin_username?: string;
-  linkedin_id?: string;
-  twitter_url?: string;
-  twitter_username?: string;
-  facebook_url?: string;
-  facebook_username?: string;
-  github_url?: string;
-  github_username?: string;
-  skills?: string[];
-  interests?: string[];
-  countries?: string[];
-  experience?: JobPosition[] | { positions_held?: JobPosition[] } | string;
-  education?: Education[] | string;
-  industry?: string;
-  job_title_levels?: string[];
-  phone?: string;
+  pdl_id?: string | null;
+  pdl_likelihood?: number | null;
+  last_enriched_at?: string | null;
+  first_name?: string | null;
+  middle_name?: string | null;
+  last_name?: string | null;
+  gender?: string | null;
+  birth_year?: number | null;
+  location_name?: string | null;
+  location_locality?: string | null;
+  location_region?: string | null;
+  location_country?: string | null;
+  location_continent?: string | null;
+  location_postal_code?: string | null;
+  location_street_address?: string | null;
+  location_geo?: string | null;
+  job_title?: string | null;
+  job_company_name?: string | null;
+  job_company_size?: string | null;
+  job_company_industry?: string | null;
+  job_start_date?: string | null;
+  job_last_updated?: string | null;
+  linkedin_url?: string | null;
+  linkedin_username?: string | null;
+  linkedin_id?: string | null;
+  twitter_url?: string | null;
+  twitter_username?: string | null;
+  facebook_url?: string | null;
+  facebook_username?: string | null;
+  github_url?: string | null;
+  github_username?: string | null;
+  skills?: string[] | null;
+  interests?: string[] | null;
+  countries?: string[] | null;
+  experience?: ExperienceData | null;
+  education?: EducationData | null;
+  industry?: string | null;
+  job_title_levels?: string[] | null;
+  phone?: string | null;
 }
 
 // Helper function to get initials from name
@@ -169,13 +181,16 @@ const CandidateProfile = () => {
         // Log data for debugging
         console.log('Fetched candidate data:', candidateResult.data);
         
-        // Store candidate data
-        setCandidate(candidateResult.data);
+        // Store candidate data with proper type casting
+        // We need to use 'unknown' as an intermediate type to satisfy TypeScript
+        const candidateData = candidateResult.data as unknown as Candidate;
+        setCandidate(candidateData);
         
         // Handle profile data (won't throw error if not found)
         if (profileResult.data) {
           console.log('Fetched profile data:', profileResult.data);
-          setEnrichedProfile(profileResult.data);
+          const profileData = profileResult.data as unknown as CandidateProfile;
+          setEnrichedProfile(profileData);
         } else if (profileResult.error) {
           // Only log error if it's not a "not found" error
           if (!profileResult.error.message?.includes('No rows found')) {
@@ -312,6 +327,36 @@ const CandidateProfile = () => {
     return [];
   };
 
+  // Format date string from either dates field (e.g., "09/2022 - Present") or separate start/end fields
+  const formatDateRange = (job: JobPosition): string => {
+    // If dates field exists (from OpenAI), use it directly
+    if (job.dates) {
+      return job.dates;
+    }
+    
+    // Otherwise use start_date and end_date if available
+    const startDate = job.start_date || '';
+    const endDate = job.end_date || 'Present';
+    
+    if (!startDate && !endDate) return '';
+    if (startDate && !endDate) return startDate;
+    return `${startDate} - ${endDate}`;
+  };
+
+  // Format responsibilities as a list or paragraph
+  const formatResponsibilities = (responsibilities: string | string[] | undefined): string[] => {
+    if (!responsibilities) return [];
+    
+    if (typeof responsibilities === 'string') {
+      // Split by periods, new lines, or bullet points
+      return responsibilities.split(/[.•\n]/)
+        .map(item => item.trim())
+        .filter(item => item.length > 0);
+    }
+    
+    return responsibilities;
+  };
+
   // Extract data from candidate and enriched profile (if available)
   const hasEnrichedData = !!enrichedProfile;
   const name = candidate.full_name || '';
@@ -383,8 +428,37 @@ const CandidateProfile = () => {
     }
     
     // Finally try resume_analysis
-    if (candidate?.resume_analysis?.education && Array.isArray(candidate.resume_analysis.education)) {
-      return candidate.resume_analysis.education;
+    if (candidate?.resume_analysis?.education) {
+      // Check if it's already structured data
+      if (Array.isArray(candidate.resume_analysis.education) && 
+          typeof candidate.resume_analysis.education[0] === 'object') {
+        return candidate.resume_analysis.education as Education[];
+      }
+      
+      // Handle array of strings case (e.g., ["Degree, Institution", ...])
+      if (Array.isArray(candidate.resume_analysis.education)) {
+        return candidate.resume_analysis.education.map((edu: RawEducation) => {
+          if (typeof edu !== 'string') {
+            return edu; // Already an Education object
+          }
+          
+          // Process string format
+          const parts = edu.split(',').map(part => part.trim());
+          
+          if (parts.length >= 2) {
+            return {
+              degree: parts[0],
+              institution: parts.slice(1).join(', ') // Combine the rest in case there are multiple commas
+            };
+          } else {
+            // If no comma, just use the whole string as the degree
+            return {
+              degree: edu,
+              institution: ''
+            };
+          }
+        });
+      }
     }
     
     return [];
@@ -532,9 +606,13 @@ const CandidateProfile = () => {
               </CardHeader>
               <CardContent>
                 {skills.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-2">
                     {skills.map((skill: string, index: number) => (
-                      <Badge key={`${skill}-${index}`} variant="secondary">
+                      <Badge
+                        key={`${skill}-${index}`}
+                        variant="secondary"
+                        className="px-2.5 py-1 text-sm"
+                      >
                         {skill}
                       </Badge>
                     ))}
@@ -545,6 +623,44 @@ const CandidateProfile = () => {
               </CardContent>
             </Card>
             
+            {/* Areas of Specialization */}
+            {candidate.resume_analysis?.areas_specialization && candidate.resume_analysis.areas_specialization.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Areas of Specialization</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {candidate.resume_analysis.areas_specialization.map((area: string, index: number) => (
+                      <Badge
+                        key={`${area}-${index}`}
+                        variant="outline"
+                        className="px-2.5 py-1 text-sm border-blue-500 text-blue-600"
+                      >
+                        {area}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Notable Achievements */}
+            {candidate.resume_analysis?.notable_achievements && candidate.resume_analysis.notable_achievements.length > 0 && (
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle>Notable Achievements</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="list-disc list-inside space-y-2 pl-2">
+                    {candidate.resume_analysis.notable_achievements.map((achievement: string, index: number) => (
+                      <li key={index} className="text-blue-600">{achievement}</li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+            
             {/* Experience */}
             <Card className="md:col-span-2">
               <CardHeader>
@@ -552,27 +668,41 @@ const CandidateProfile = () => {
               </CardHeader>
               <CardContent>
                 {experience.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {experience.map((job: JobPosition, index: number) => (
-                      <div key={index} className="border-b pb-3 last:border-0">
-                        <h3 className="font-medium">{job.title} at {job.company}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {job.start_date || ''} {job.end_date ? `- ${job.end_date}` : '- Present'}
-                        </p>
-                        {job.responsibilities && (
-                          <p className="text-sm mt-2">{typeof job.responsibilities === 'string' 
-                            ? job.responsibilities 
-                            : Array.isArray(job.responsibilities) 
-                              ? job.responsibilities.join('. ') 
-                              : ''}
+                      <div key={index} className="border-b pb-4 last:border-0">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2">
+                          <h3 className="font-medium text-lg">{job.title}</h3>
+                          <p className="text-sm text-muted-foreground flex items-center">
+                            <span className="inline-block mr-1">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar">
+                                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                                <line x1="16" x2="16" y1="2" y2="6"></line>
+                                <line x1="8" x2="8" y1="2" y2="6"></line>
+                                <line x1="3" x2="21" y1="10" y2="10"></line>
+                              </svg>
+                            </span>
+                            {formatDateRange(job)}
                           </p>
-                        )}
-                        {job.achievements && Array.isArray(job.achievements) && job.achievements.length > 0 && (
+                        </div>
+                        <p className="font-medium text-blue-600">{job.company}</p>
+                        
+                        {formatResponsibilities(job.responsibilities).length > 0 && (
                           <div className="mt-2">
-                            <p className="text-sm font-medium">Achievements:</p>
-                            <ul className="list-disc list-inside text-sm pl-2">
+                            <ul className="list-disc list-inside text-sm space-y-1 pl-2">
+                              {formatResponsibilities(job.responsibilities).map((item, idx) => (
+                                <li key={idx}>{item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
+                        {job.achievements && Array.isArray(job.achievements) && job.achievements.length > 0 && (
+                          <div className="mt-3">
+                            <p className="text-sm font-medium">Key Achievements:</p>
+                            <ul className="list-disc list-inside text-sm space-y-1 pl-2">
                               {job.achievements.map((achievement, idx) => (
-                                <li key={idx} className="text-blue-500">{achievement}</li>
+                                <li key={idx} className="text-blue-600">{achievement}</li>
                               ))}
                             </ul>
                           </div>
@@ -596,11 +726,23 @@ const CandidateProfile = () => {
                   <div className="space-y-4">
                     {education.map((edu: Education, index: number) => (
                       <div key={index} className="border-b pb-3 last:border-0">
-                        <h3 className="font-medium">{edu.degree}</h3>
-                        <p className="text-sm">{edu.institution}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {edu.start_date || ''} {edu.end_date ? `- ${edu.end_date}` : ''}
-                        </p>
+                        <h3 className="font-medium text-lg">{edu.degree}</h3>
+                        <p className="text-blue-600 font-medium">{edu.institution}</p>
+                        {(edu.start_date || edu.end_date) && (
+                          <div className="flex items-center mt-1">
+                            <span className="inline-block mr-1">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar">
+                                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                                <line x1="16" x2="16" y1="2" y2="6"></line>
+                                <line x1="8" x2="8" y1="2" y2="6"></line>
+                                <line x1="3" x2="21" y1="10" y2="10"></line>
+                              </svg>
+                            </span>
+                            <p className="text-sm text-muted-foreground">
+                              {edu.start_date || ''} {edu.end_date ? `- ${edu.end_date}` : edu.start_date ? '- Present' : ''}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
