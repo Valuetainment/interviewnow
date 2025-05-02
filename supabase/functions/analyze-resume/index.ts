@@ -21,6 +21,7 @@ Deno.serve(async (req) => {
     const { resumeText } = await req.json() as RequestBody;
 
     if (!resumeText) {
+      console.error('No resume text provided');
       return new Response(
         JSON.stringify({ error: 'Resume text is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -28,8 +29,8 @@ Deno.serve(async (req) => {
     }
 
     // Get API key from environment variables with fallbacks
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY') || 
-                        Deno.env.get('OPENAI_RESUME_API_KEY') || 
+    const openaiApiKey = Deno.env.get('OPENAI_RESUME_API_KEY') || 
+                        Deno.env.get('OPENAI_API_KEY') || 
                         Deno.env.get('VITE_OPENAI_API_KEY');
                         
     if (!openaiApiKey) {
@@ -43,7 +44,8 @@ Deno.serve(async (req) => {
     console.log('OpenAI API key found, analyzing resume text...');
     
     // Clean the resume text to improve analysis quality
-    const cleanedText = resumeText.trim().replace(/\s+/g, ' ');
+    const cleanedText = resumeText.replace(/```[a-z]*\n/g, '').replace(/```/g, '').trim();
+    console.log('Text length:', cleanedText.length);
 
     // Call OpenAI API to analyze the resume text
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -53,7 +55,7 @@ Deno.serve(async (req) => {
         'Authorization': `Bearer ${openaiApiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -106,35 +108,70 @@ Return the data in this exact JSON format:
           },
         ],
         response_format: { "type": "json_object" },
-        temperature: 0.1,
+        temperature: 0.3,
       }),
     });
 
+    // Check if the response is OK before processing
+    if (!openaiResponse.ok) {
+      const errorText = await openaiResponse.text();
+      console.error('OpenAI API error response:', errorText);
+      return new Response(
+        JSON.stringify({ 
+          error: `OpenAI API error: ${openaiResponse.status}`, 
+          details: errorText 
+        }),
+        { status: openaiResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const openaiData = await openaiResponse.json();
     
-    if (!openaiData.choices || !openaiData.choices[0]) {
-      console.error('OpenAI API error:', openaiData);
+    if (!openaiData.choices || !openaiData.choices[0] || !openaiData.choices[0].message?.content) {
+      console.error('Unexpected OpenAI response format:', openaiData);
       return new Response(
-        JSON.stringify({ error: 'Error analyzing resume text', details: openaiData }),
+        JSON.stringify({ error: 'Invalid response format from OpenAI', details: openaiData }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     console.log('OpenAI response received, processing response...');
 
-    // With response_format: "json_object", we can directly use the content
-    const analysisJson = openaiData.choices[0].message.content;
+    // Parse the JSON content from the response
+    let analysis;
+    try {
+      analysis = JSON.parse(openaiData.choices[0].message.content);
+    } catch (parseError) {
+      console.error('Error parsing OpenAI response:', parseError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to parse OpenAI response', details: parseError.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    console.log('Resume analysis complete');
+    // Ensure experience object has all required fields
+    if (!analysis.experience) {
+      analysis.experience = {
+        positions_held: [],
+        years: "0",
+        industries: []
+      };
+    }
+
+    console.log('Resume analysis complete. Experience entries:', analysis.experience?.positions_held?.length || 0);
+    console.log('Final experience data:', JSON.stringify(analysis.experience, null, 2));
 
     return new Response(
-      JSON.stringify({ analysis: analysisJson }),
+      JSON.stringify({ analysis }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Error in analyze-resume function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
