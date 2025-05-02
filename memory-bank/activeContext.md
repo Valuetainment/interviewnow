@@ -63,6 +63,12 @@ The immediate focus is on further enhancing the frontend user experience and sta
    - ✅ Added policy to allow storage objects to be publicly readable
 
 ## Recent Changes
+- Enhanced Edge Functions for candidate processing:
+  - Updated analyze-resume function to use GPT-4o for improved analysis
+  - Created _shared/cors.ts for consistent CORS headers across functions
+  - Implemented and deployed enrich-candidate Edge Function for PDL integration
+  - Improved structure and error handling in all functions
+  - Committed changes to GitHub repository for CI/CD pipeline
 - Fixed production storage and policy issues:
   - Created storage buckets (resumes, videos, audio) in production environment
   - Configured proper RLS policies for storage buckets
@@ -71,7 +77,7 @@ The immediate focus is on further enhancing the frontend user experience and sta
   - Fixed RLS policy for users table to allow self-data access
   - Replaced tenant isolation policy for candidates with more permissive one
 - Improved Edge Functions for resume processing:
-  - Updated analyze-resume function to use GPT-4 instead of GPT-4o-mini
+  - Updated analyze-resume function to use GPT-4o instead of GPT-3.5-turbo
   - Implemented comprehensive prompt for better resume analysis
   - Improved JSON structure for better candidate data organization
   - Reduced temperature to 0.1 for more consistent formatting
@@ -236,6 +242,7 @@ The immediate focus is on further enhancing the frontend user experience and sta
 - ✅ Storage buckets missing in production (RESOLVED)
 - ✅ RLS policy issues with users and candidates tables (RESOLVED)
 - ✅ Resume processing issues with Edge Functions (RESOLVED)
+- ✅ Missing enrich-candidate function in production (RESOLVED)
 - Need to complete the Database type definitions to include all tables
 - Need to optimize Edge Functions for better scalability
 - Need to implement fallback mechanisms for API failures

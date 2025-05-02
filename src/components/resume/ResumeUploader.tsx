@@ -252,10 +252,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
 
       const { data: processedData, error: processError } = await supabase.functions
         .invoke('process-resume', { 
-          body: { pdfUrl: fileUrl },
-          headers: {
-            Authorization: `Bearer ${accessToken}`
-          }
+          body: { pdfUrl: fileUrl }
         });
         
       if (processError) throw processError;
@@ -267,10 +264,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
       // Step 2: Call analyze-resume function to structure the resume data
       const { data: analysisData, error: analysisError } = await supabase.functions
         .invoke('analyze-resume', { 
-          body: { resumeText: processedData.text },
-          headers: {
-            Authorization: `Bearer ${accessToken}`
-          }
+          body: { resumeText: processedData.text }
         });
         
       if (analysisError) throw analysisError;
@@ -355,9 +349,6 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
               email: parsedAnalysis.personal_info.email,
               name: parsedAnalysis.personal_info.full_name,
               phone: parsedAnalysis.personal_info.phone
-            },
-            headers: {
-              Authorization: `Bearer ${accessToken}`
             }
           });
         
