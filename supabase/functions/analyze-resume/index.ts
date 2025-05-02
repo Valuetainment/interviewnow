@@ -10,6 +10,17 @@ interface RequestBody {
   resumeText: string;
 }
 
+// Create Supabase client with service role key (for any database operations)
+const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('Missing Supabase credentials');
+}
+
+// Create client with service role key
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
 // Using Deno.serve as recommended
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -18,6 +29,7 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log('Analyze resume function invoked');
     const { resumeText } = await req.json() as RequestBody;
 
     if (!resumeText) {

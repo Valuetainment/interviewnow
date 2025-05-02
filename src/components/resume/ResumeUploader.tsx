@@ -246,28 +246,51 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
   // Process the resume (mock function for now)
   const processResume = async (fileUrl: string, fileName: string) => {
     try {
-      // Step 1: Call process-resume function to extract text from PDF
-      const session = await supabase.auth.getSession();
-      const accessToken = session.data.session?.access_token || '';
-
-      const { data: processedData, error: processError } = await supabase.functions
-        .invoke('process-resume', { 
-          body: { pdfUrl: fileUrl }
-        });
-        
-      if (processError) throw processError;
+      // Get the Supabase URL and key
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://gypnutyegqxelvsqjedu.supabase.co';
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5cG51dHllZ3F4ZWx2c3FqZWR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU4NzQ1MTUsImV4cCI6MjA2MTQ1MDUxNX0.1GnoF-EZ5jr_DJgcgeCJcqy-NASlEFGt1XavwbiIELA';
+      
+      console.log('Processing resume using direct fetch instead of client.functions.invoke');
+      
+      // Step 1: Call process-resume function directly with fetch to extract text from PDF
+      const processResumeResponse = await fetch(`${supabaseUrl}/functions/v1/process-resume`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey
+        },
+        body: JSON.stringify({ pdfUrl: fileUrl })
+      });
+      
+      if (!processResumeResponse.ok) {
+        const errorText = await processResumeResponse.text();
+        console.error('Process resume error:', processResumeResponse.status, errorText);
+        throw new Error(`Failed to extract text from resume: ${processResumeResponse.status}`);
+      }
+      
+      const processedData = await processResumeResponse.json();
       
       if (!processedData?.success || !processedData?.text) {
         throw new Error('Failed to extract text from resume');
       }
       
-      // Step 2: Call analyze-resume function to structure the resume data
-      const { data: analysisData, error: analysisError } = await supabase.functions
-        .invoke('analyze-resume', { 
-          body: { resumeText: processedData.text }
-        });
-        
-      if (analysisError) throw analysisError;
+      // Step 2: Call analyze-resume function directly with fetch to structure the resume data
+      const analyzeResumeResponse = await fetch(`${supabaseUrl}/functions/v1/analyze-resume`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey
+        },
+        body: JSON.stringify({ resumeText: processedData.text })
+      });
+      
+      if (!analyzeResumeResponse.ok) {
+        const errorText = await analyzeResumeResponse.text();
+        console.error('Analyze resume error:', analyzeResumeResponse.status, errorText);
+        throw new Error(`Failed to analyze resume: ${analyzeResumeResponse.status}`);
+      }
+      
+      const analysisData = await analyzeResumeResponse.json();
       
       if (!analysisData?.analysis) {
         throw new Error('Failed to analyze resume data');
@@ -342,24 +365,30 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
           description: 'Enhancing candidate profile with additional data...',
         });
         
-        const { data: enrichmentData, error: enrichmentError } = await supabase.functions
-          .invoke('enrich-candidate', {
-            body: {
-              candidate_id: candidate.id,
-              email: parsedAnalysis.personal_info.email,
-              name: parsedAnalysis.personal_info.full_name,
-              phone: parsedAnalysis.personal_info.phone
-            }
-          });
+        // Step 4: Call enrich-candidate function directly with fetch
+        const enrichCandidateResponse = await fetch(`${supabaseUrl}/functions/v1/enrich-candidate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey
+          },
+          body: JSON.stringify({
+            candidate_id: candidate.id,
+            email: parsedAnalysis.personal_info.email,
+            name: parsedAnalysis.personal_info.full_name,
+            phone: parsedAnalysis.personal_info.phone
+          })
+        });
         
-        if (enrichmentError) {
-          console.error('Profile enrichment error (non-critical):', enrichmentError);
+        if (!enrichCandidateResponse.ok) {
+          console.error('Profile enrichment error (non-critical):', enrichCandidateResponse.status);
           toast({
             title: 'Enrichment Notice',
             description: 'Basic profile created. Additional data enrichment unavailable.',
             variant: 'default'
           });
         } else {
+          const enrichmentData = await enrichCandidateResponse.json();
           console.log('Profile enrichment completed:', enrichmentData);
           toast({
             title: 'Profile Enriched',
