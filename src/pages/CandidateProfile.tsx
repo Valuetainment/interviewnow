@@ -8,7 +8,64 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MapPin, Mail, Phone, Briefcase, FileText, ExternalLink, LinkedinIcon, GithubIcon } from 'lucide-react';
+import { MapPin, Mail, Phone, Briefcase, FileText, ExternalLink, LinkedinIcon, GithubIcon, AlertCircle } from 'lucide-react';
+
+// Define types for better type safety
+interface Candidate {
+  id: string;
+  tenant_id: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  resume_url?: string;
+  skills?: string[];
+  resume_analysis?: ResumeAnalysis;
+}
+
+interface ResumeAnalysis {
+  personal_info: {
+    full_name: string;
+    email: string;
+    phone?: string;
+    geographic_location?: string;
+  };
+  professional_summary?: string;
+  key_skills_expertise?: string[];
+  positions_held?: JobPosition[];
+  education?: Education[];
+}
+
+interface JobPosition {
+  title: string;
+  company: string;
+  start_date?: string;
+  end_date?: string;
+  responsibilities?: string;
+}
+
+interface Education {
+  degree: string;
+  institution: string;
+  start_date?: string;
+  end_date?: string;
+}
+
+interface CandidateProfile {
+  id: string;
+  candidate_id: string;
+  tenant_id: string;
+  first_name?: string;
+  last_name?: string;
+  location_name?: string;
+  mobile_phone?: string;
+  job_title?: string;
+  job_company_name?: string;
+  linkedin_url?: string;
+  github_url?: string;
+  skills?: string[];
+  experience?: any; // JSON data
+  education?: any; // JSON data
+}
 
 // Helper function to get initials from name
 const getInitials = (name: string) => {
@@ -23,10 +80,11 @@ const getInitials = (name: string) => {
 const CandidateProfile = () => {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const [candidate, setCandidate] = useState<any | null>(null);
-  const [enrichedProfile, setEnrichedProfile] = useState<any | null>(null);
+  const [candidate, setCandidate] = useState<Candidate | null>(null);
+  const [enrichedProfile, setEnrichedProfile] = useState<CandidateProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [profileTableExists, setProfileTableExists] = useState(true);
 
   useEffect(() => {
     const fetchCandidateData = async () => {
@@ -36,18 +94,45 @@ const CandidateProfile = () => {
       setError(null);
       
       try {
-        // Fetch both candidate and profile data in parallel
-        const [candidateResult, profileResult] = await Promise.all([
-          supabase.from('candidates').select('*').eq('id', id).single(),
-          supabase.from('candidate_profiles').select('*').eq('candidate_id', id).maybeSingle()
-        ]);
+        // Fetch candidate data first
+        const candidateResult = await supabase
+          .from('candidates')
+          .select('*')
+          .eq('id', id)
+          .single();
         
         if (candidateResult.error) throw candidateResult.error;
         
-        // Profile might not exist, so we don't throw on that error
+        // Log candidate data to help with debugging
+        console.log('Fetched candidate data:', candidateResult.data);
         
+        // Store candidate data
         setCandidate(candidateResult.data);
-        setEnrichedProfile(profileResult.data || null);
+        
+        // Try to fetch profile data, but handle the case where table doesn't exist yet
+        try {
+          const profileResult = await supabase
+            .from('candidate_profiles')
+            .select('*')
+            .eq('candidate_id', id)
+            .maybeSingle();
+          
+          // If successful, store profile data
+          if (profileResult.data) {
+            console.log('Fetched profile data:', profileResult.data);
+            setEnrichedProfile(profileResult.data);
+          }
+        } catch (profileError: any) {
+          console.warn('Error fetching profile data:', profileError);
+          
+          // If the error is that the table doesn't exist, set the flag
+          if (profileError.message && profileError.message.includes('relation "public.candidate_profiles" does not exist')) {
+            console.log('candidate_profiles table does not exist yet');
+            setProfileTableExists(false);
+          }
+          
+          // Don't set error since this is optional data
+        }
       } catch (err) {
         console.error('Error fetching candidate:', err);
         setError('Failed to load candidate data');
@@ -112,35 +197,90 @@ const CandidateProfile = () => {
     );
   }
 
-  // Extract data from candidate
+  // Extract data from candidate and enriched profile (if available)
   const hasEnrichedData = !!enrichedProfile;
   const name = candidate.full_name || '';
   const avatarInitials = getInitials(name);
+  
+  // Location - try enriched profile first, then resume_analysis
   const location = enrichedProfile?.location_name || 
-                  (candidate.resume_analysis?.geographic_location || '');
-  const email = candidate.email || '';
-  const phone = enrichedProfile?.mobile_phone || candidate.phone || '';
+                  candidate.resume_analysis?.personal_info.geographic_location || '';
+  
+  // Contact info - prefer candidate record, then enriched data
+  const email = candidate.email || candidate.resume_analysis?.personal_info.email || '';
+  const phone = candidate.phone || 
+                enrichedProfile?.mobile_phone || 
+                candidate.resume_analysis?.personal_info.phone || '';
+  
+  // Current position - try enriched profile first, then resume_analysis
   const jobTitle = enrichedProfile?.job_title || 
-                  (candidate.resume_analysis?.positions_held?.[0]?.title || '');
+                  (candidate.resume_analysis?.positions_held && 
+                   candidate.resume_analysis.positions_held.length > 0 ? 
+                   candidate.resume_analysis.positions_held[0].title : '');
+                   
   const company = enrichedProfile?.job_company_name || 
-                  (candidate.resume_analysis?.positions_held?.[0]?.company || '');
+                  (candidate.resume_analysis?.positions_held && 
+                   candidate.resume_analysis.positions_held.length > 0 ? 
+                   candidate.resume_analysis.positions_held[0].company : '');
+  
+  // Professional summary from resume_analysis
   const summary = candidate.resume_analysis?.professional_summary || '';
   
-  // Get skills - combine both sources if available
-  const baseSkills = candidate.skills || 
-                    (candidate.resume_analysis?.key_skills_expertise || []);
-  const enrichedSkills = enrichedProfile?.skills || [];
-  const skills = [...new Set([...baseSkills, ...enrichedSkills])];
+  // Skills - combine from all sources
+  // Ensure we're working with arrays to avoid errors
+  const candidateSkills = Array.isArray(candidate.skills) ? candidate.skills : [];
+  const resumeSkills = Array.isArray(candidate.resume_analysis?.key_skills_expertise) ? 
+                      candidate.resume_analysis.key_skills_expertise : [];
+  const enrichedSkills = Array.isArray(enrichedProfile?.skills) ? enrichedProfile.skills : [];
+  
+  // Combine skills from all sources and remove duplicates
+  const skills = [...new Set([...candidateSkills, ...resumeSkills, ...enrichedSkills])];
   
   // Social links from enriched data
   const linkedinUrl = enrichedProfile?.linkedin_url || '';
   const githubUrl = enrichedProfile?.github_url || '';
   
-  // Experience data
-  const experience = candidate.resume_analysis?.positions_held || [];
+  // Work experience - use enriched profile or resume_analysis
+  const experienceFromEnriched = enrichedProfile?.experience ? 
+                                (typeof enrichedProfile.experience === 'string' ? 
+                                  JSON.parse(enrichedProfile.experience) : 
+                                  enrichedProfile.experience) : 
+                                [];
   
-  // Education data
-  const education = candidate.resume_analysis?.education || [];
+  const experienceFromResume = Array.isArray(candidate.resume_analysis?.positions_held) ? 
+                              candidate.resume_analysis.positions_held : 
+                              [];
+  
+  // Use enriched experience if available, otherwise use resume_analysis
+  const experience = experienceFromEnriched.length > 0 ? 
+                    experienceFromEnriched : 
+                    experienceFromResume;
+  
+  // Education data - similar approach as experience
+  const educationFromEnriched = enrichedProfile?.education ? 
+                              (typeof enrichedProfile.education === 'string' ? 
+                                JSON.parse(enrichedProfile.education) : 
+                                enrichedProfile.education) : 
+                              [];
+  
+  const educationFromResume = Array.isArray(candidate.resume_analysis?.education) ? 
+                            candidate.resume_analysis.education : 
+                            [];
+  
+  // Use enriched education if available, otherwise use resume_analysis
+  const education = educationFromEnriched.length > 0 ? 
+                  educationFromEnriched : 
+                  educationFromResume;
+
+  // Add debug log for development
+  console.log('Rendering with data:', { 
+    name, 
+    skills: skills.length, 
+    experience: experience.length, 
+    education: education.length,
+    resumeAnalysis: candidate.resume_analysis,
+    enrichedProfile
+  });
 
   return (
     <div className="container py-6 space-y-8">
@@ -227,9 +367,16 @@ const CandidateProfile = () => {
           </div>
           
           {/* Profile status badge */}
-          <div>
+          <div className="flex gap-2">
             {hasEnrichedData && (
               <Badge className="bg-blue-500">Enhanced Profile</Badge>
+            )}
+            
+            {!profileTableExists && (
+              <Badge variant="outline" className="border-amber-500 text-amber-500 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                <span>Database Upgrade Pending</span>
+              </Badge>
             )}
           </div>
         </div>
@@ -286,7 +433,7 @@ const CandidateProfile = () => {
               <CardContent>
                 {experience.length > 0 ? (
                   <div className="space-y-4">
-                    {experience.map((job: any, index: number) => (
+                    {experience.map((job: JobPosition, index: number) => (
                       <div key={index} className="border-b pb-3 last:border-0">
                         <h3 className="font-medium">{job.title} at {job.company}</h3>
                         <p className="text-sm text-muted-foreground">
@@ -312,7 +459,7 @@ const CandidateProfile = () => {
               <CardContent>
                 {education.length > 0 ? (
                   <div className="space-y-4">
-                    {education.map((edu: any, index: number) => (
+                    {education.map((edu: Education, index: number) => (
                       <div key={index} className="border-b pb-3 last:border-0">
                         <h3 className="font-medium">{edu.degree}</h3>
                         <p className="text-sm">{edu.institution}</p>
@@ -340,15 +487,15 @@ const CandidateProfile = () => {
                 <CardContent>
                   <div className="grid gap-6 md:grid-cols-2">
                     {/* Personal Info */}
-                    {(enrichedProfile.age || enrichedProfile.gender) && (
+                    {(enrichedProfile.first_name || enrichedProfile.last_name) && (
                       <div>
                         <h3 className="font-medium mb-2">Personal Information</h3>
                         <div className="space-y-1 text-sm">
-                          {enrichedProfile.age && (
-                            <p>Age: <span className="text-blue-500">{enrichedProfile.age}</span></p>
+                          {enrichedProfile.first_name && (
+                            <p>First Name: <span className="text-blue-500">{enrichedProfile.first_name}</span></p>
                           )}
-                          {enrichedProfile.gender && (
-                            <p>Gender: <span className="text-blue-500">{enrichedProfile.gender}</span></p>
+                          {enrichedProfile.last_name && (
+                            <p>Last Name: <span className="text-blue-500">{enrichedProfile.last_name}</span></p>
                           )}
                         </div>
                       </div>
@@ -362,11 +509,11 @@ const CandidateProfile = () => {
                           <p>
                             <span className="text-blue-500">{enrichedProfile.location_name}</span>
                           </p>
-                          {enrichedProfile.region && (
-                            <p>Region: <span className="text-blue-500">{enrichedProfile.region}</span></p>
+                          {enrichedProfile.location_region && (
+                            <p>Region: <span className="text-blue-500">{enrichedProfile.location_region}</span></p>
                           )}
-                          {enrichedProfile.country && (
-                            <p>Country: <span className="text-blue-500">{enrichedProfile.country}</span></p>
+                          {enrichedProfile.location_country && (
+                            <p>Country: <span className="text-blue-500">{enrichedProfile.location_country}</span></p>
                           )}
                         </div>
                       </div>
