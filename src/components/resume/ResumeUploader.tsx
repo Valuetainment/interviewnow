@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const { toast } = useToast();
   const { user, tenantId } = useAuth();
+  const navigate = useNavigate();
   
   // For tracking upload progress
   const uploadProgressInterval = useRef<NodeJS.Timeout | null>(null);
@@ -358,6 +360,8 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
         
       if (dbError) throw dbError;
       
+      console.log('Candidate created with ID:', candidate.id);
+      
       // Step 4: Enrich candidate profile with PDL data
       try {
         toast({
@@ -411,6 +415,9 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
         title: 'Resume Processed',
         description: 'Resume analysis complete and candidate created.',
       });
+      
+      // After successful candidate creation, navigate to the candidate profile
+      navigate(`/candidates/${candidate.id}`);
       
       return candidate.id;
     } catch (error) {

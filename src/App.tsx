@@ -13,6 +13,7 @@ import InterviewRoom from "./pages/InterviewRoom";
 import SessionDetail from "./pages/SessionDetail";
 import Sessions from "./pages/Sessions";
 import Candidate from "./pages/Candidate";
+import CandidateProfile from "./pages/CandidateProfile";
 import CompanySettings from "./pages/CompanySettings";
 import TestInterview from "./pages/TestInterview";
 import Transcripts from "./pages/Transcripts";
@@ -63,6 +64,7 @@ const App = () => (
               <Route path="/sessions/:id" element={<SessionDetail />} />
               <Route path="/candidate" element={<Candidate />} />
               <Route path="/candidates" element={<Candidate />} />
+              <Route path="/candidates/:id" element={<CandidateProfile />} />
               <Route path="/settings" element={<CompanySettings />} />
               <Route path="/test-interview" element={<TestInterview />} />
               <Route path="/transcripts" element={<Transcripts />} />
