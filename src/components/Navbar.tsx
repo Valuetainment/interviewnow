@@ -2,17 +2,6 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu } from 'lucide-react';
-import {
-  NavigationMenu,
-  NavigationMenuList,
-} from "@/components/ui/navigation-menu";
-
-// Import our newly created components
-import { AboutDropdown } from './navbar/AboutDropdown';
-import { CompaniesDropdown } from './navbar/CompaniesDropdown';
-import { RecruitingDropdown } from './navbar/RecruitingDropdown';
-import { InterviewsDropdown } from './navbar/InterviewsDropdown';
-import { NavigationLinks } from './navbar/NavigationLinks';
 import { AuthButtons } from './navbar/AuthButtons';
 import MobileNav from './navbar/MobileNav';
 
@@ -20,54 +9,74 @@ const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const isHomePage = location.pathname === '/';
+  
+  // Don't display the navbar in dashboard routes to avoid navigation redundancy
+  const isDashboardRoute = location.pathname.startsWith('/dashboard') || 
+                          location.pathname.startsWith('/candidates') ||
+                          location.pathname.startsWith('/positions') ||
+                          location.pathname.startsWith('/sessions') ||
+                          location.pathname.startsWith('/company');
+  
+  if (isDashboardRoute) {
+    return null;
+  }
 
   return (
-    <nav className="fixed w-full z-50 bg-background/80 backdrop-blur-sm border-b">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-4">
-          {/* Logo */}
-          <div className="flex items-center">
-            <Link to="/" className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex h-14 items-center">
+        <div className="mr-4 hidden md:flex">
+          <Link to="/" className="mr-6 flex items-center space-x-2">
+            <span className="hidden font-bold sm:inline-block">
               InterviewAI
-            </Link>
-          </div>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-4">
-            {/* Public pages */}
-            <NavigationMenu>
-              <NavigationMenuList>
-                {/* About dropdown always visible */}
-                <AboutDropdown />
-
-                {/* Admin navigation - only show when not on homepage */}
-                <NavigationLinks isHomePage={isHomePage} />
-                <CompaniesDropdown isHomePage={isHomePage} />
-                <RecruitingDropdown isHomePage={isHomePage} />
-                <InterviewsDropdown isHomePage={isHomePage} />
-              </NavigationMenuList>
-            </NavigationMenu>
-            
-            {/* Auth buttons */}
-            <AuthButtons />
-          </div>
-
-          {/* Mobile Menu Button */}
-          <div className="md:hidden">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              <Menu className="h-6 w-6" />
-            </Button>
-          </div>
+            </span>
+          </Link>
+          {!isHomePage && (
+            <nav className="flex items-center space-x-6 text-sm font-medium">
+              <Link
+                to="/"
+                className="transition-colors hover:text-foreground/80"
+              >
+                Home
+              </Link>
+              <Link
+                to="/about"
+                className="transition-colors hover:text-foreground/80"
+              >
+                About
+              </Link>
+              <Link
+                to="/pricing"
+                className="transition-colors hover:text-foreground/80"
+              >
+                Pricing
+              </Link>
+              <Link
+                to="/contact"
+                className="transition-colors hover:text-foreground/80"
+              >
+                Contact
+              </Link>
+            </nav>
+          )}
         </div>
-
-        {/* Mobile Navigation */}
-        <MobileNav isMenuOpen={isMenuOpen} isHomePage={isHomePage} />
+        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
+          <div className="w-full flex-1 md:grow-0">
+            <div className="md:hidden">
+              <Button
+                variant="ghost"
+                className="mr-2 px-0 text-base hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+              >
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Toggle Menu</span>
+              </Button>
+              <MobileNav isMenuOpen={isMenuOpen} isHomePage={isHomePage} />
+            </div>
+          </div>
+          <AuthButtons />
+        </div>
       </div>
-    </nav>
+    </header>
   );
 };
 
