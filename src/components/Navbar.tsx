@@ -2,17 +2,6 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu } from 'lucide-react';
-import {
-  NavigationMenu,
-  NavigationMenuList,
-} from "@/components/ui/navigation-menu";
-
-// Import our newly created components
-import { AboutDropdown } from './navbar/AboutDropdown';
-import { CompaniesDropdown } from './navbar/CompaniesDropdown';
-import { RecruitingDropdown } from './navbar/RecruitingDropdown';
-import { InterviewsDropdown } from './navbar/InterviewsDropdown';
-import { NavigationLinks } from './navbar/NavigationLinks';
 import { AuthButtons } from './navbar/AuthButtons';
 import MobileNav from './navbar/MobileNav';
 
@@ -20,6 +9,18 @@ const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const isHomePage = location.pathname === '/';
+  
+  // Don't display the navbar in dashboard routes to avoid navigation redundancy
+  const isDashboardRoute = location.pathname.startsWith('/dashboard') || 
+                          location.pathname.startsWith('/candidates') ||
+                          location.pathname.startsWith('/positions') ||
+                          location.pathname.startsWith('/companies') ||
+                          location.pathname.startsWith('/sessions') ||
+                          location.pathname.startsWith('/reports');
+  
+  if (isDashboardRoute) {
+    return null; // Don't render the navbar on dashboard routes
+  }
 
   return (
     <nav className="fixed w-full z-50 bg-background/80 backdrop-blur-sm border-b">
@@ -32,22 +33,8 @@ const Navbar: React.FC = () => {
             </Link>
           </div>
 
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation - Only for public pages */}
           <div className="hidden md:flex items-center space-x-4">
-            {/* Public pages */}
-            <NavigationMenu>
-              <NavigationMenuList>
-                {/* About dropdown always visible */}
-                <AboutDropdown />
-
-                {/* Admin navigation - only show when not on homepage */}
-                <NavigationLinks isHomePage={isHomePage} />
-                <CompaniesDropdown isHomePage={isHomePage} />
-                <RecruitingDropdown isHomePage={isHomePage} />
-                <InterviewsDropdown isHomePage={isHomePage} />
-              </NavigationMenuList>
-            </NavigationMenu>
-            
             {/* Auth buttons */}
             <AuthButtons />
           </div>
