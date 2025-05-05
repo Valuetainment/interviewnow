@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import CompanyForm from "@/components/companies/CompanyForm";
@@ -15,18 +14,61 @@ export type CompanyData = {
   benefits?: string;
   core_values?: string[];
   benefits_list?: string[];
+  tenant_id?: string;
 };
 
 const NewCompany = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [tenantId, setTenantId] = useState<string | null>(null);
+
+  // Fetch tenant ID when component mounts
+  useEffect(() => {
+    const fetchTenantId = async () => {
+      // First try to get from auth session
+      const { data } = await supabase.auth.getSession();
+      let tenant = data.session?.user?.app_metadata?.tenant_id;
+      
+      if (!tenant) {
+        // If not in auth metadata, get from database
+        console.log("Tenant ID not found in app_metadata, checking database...");
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('tenant_id')
+          .eq('id', data.session?.user?.id)
+          .single();
+          
+        if (error) {
+          console.error("Error fetching tenant_id:", error);
+          return;
+        }
+        
+        if (userData?.tenant_id) {
+          tenant = userData.tenant_id;
+          console.log("Found tenant ID in database:", tenant);
+        }
+      }
+      
+      setTenantId(tenant);
+    };
+    
+    fetchTenantId();
+  }, []);
 
   const createCompany = useMutation({
     mutationFn: async (data: CompanyData) => {
+      // Include the tenant_id in the data
+      const companyData = {
+        ...data,
+        tenant_id: tenantId
+      };
+      
+      console.log("Creating company with data:", companyData);
+      
       // Cast the table name to any to bypass TypeScript error until Supabase types are properly set up
       const { data: result, error } = await supabase
         .from('companies' as any)
-        .insert(data as any)
+        .insert(companyData as any)
         .select()
         .single();
 
