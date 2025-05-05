@@ -17,8 +17,8 @@ import CandidateProfile from "./pages/CandidateProfile";
 import CompanySettings from "./pages/CompanySettings";
 import TestInterview from "./pages/TestInterview";
 import Transcripts from "./pages/Transcripts";
-import Positions from "./pages/Positions";
-import PositionDetail from "./pages/PositionDetail";
+import Positions2 from "./pages/Positions2";
+import PositionDetail2 from "./pages/PositionDetail2";
 import Dashboard from "./pages/Dashboard";
 import Companies from "./pages/Companies";
 import NewCompany from "./pages/NewCompany";
@@ -68,8 +68,8 @@ const App = () => (
               <Route path="/settings" element={<CompanySettings />} />
               <Route path="/test-interview" element={<TestInterview />} />
               <Route path="/transcripts" element={<Transcripts />} />
-              <Route path="/positions" element={<Positions />} />
-              <Route path="/positions/:id" element={<PositionDetail />} />
+              <Route path="/positions" element={<Positions2 />} />
+              <Route path="/positions/:id" element={<PositionDetail2 />} />
               <Route path="/companies" element={<Companies />} />
               <Route path="/companies/new" element={<NewCompany />} />
               <Route path="/companies/:id/edit" element={<EditCompany />} />
