@@ -20,6 +20,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 // Mock position data with enhanced fields
 const mockPositions = [
@@ -86,23 +88,87 @@ const mockCompetencies = [
 
 const PositionDetail2 = () => {
   const { id } = useParams<{ id: string }>();
+  const { tenantId } = useAuth();
   const [position, setPosition] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<any[]>([]);
   const [competencies, setCompetencies] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Fetch position and candidates
+  // Fetch position and candidates from the database
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const foundPosition = mockPositions.find(p => p.id === id);
-      setPosition(foundPosition);
-      setCandidates(mockCandidates.sort((a, b) => b.matchScore - a.matchScore)); // Sort by match score
-      setCompetencies(mockCompetencies);
-      setLoading(false);
-    }, 500);
-  }, [id]);
+    const fetchPosition = async () => {
+      try {
+        if (!id) return;
+        
+        console.log("Fetching position with ID:", id);
+        
+        // Fetch the position from the database
+        const { data: positionData, error: positionError } = await supabase
+          .from('positions')
+          .select('*')
+          .eq('id', id)
+          .single();
+          
+        if (positionError) {
+          console.error("Error fetching position:", positionError);
+          setLoadError("Failed to load position data");
+          setPosition(null);
+          setLoading(false);
+          return;
+        }
+        
+        console.log("Position data:", positionData);
+        
+        if (!positionData) {
+          setLoadError("Position not found");
+          setPosition(null);
+          setLoading(false);
+          return;
+        }
+        
+        setPosition(positionData);
+        
+        // Fetch related competencies
+        const { data: positionCompetencies, error: compError } = await supabase
+          .from('position_competencies')
+          .select(`
+            weight,
+            competencies:competency_id(id, name, description)
+          `)
+          .eq('position_id', id);
+          
+        if (compError) {
+          console.error("Error fetching competencies:", compError);
+        } else if (positionCompetencies && positionCompetencies.length > 0) {
+          // Transform the data to match expected format
+          const formattedCompetencies = positionCompetencies.map(pc => ({
+            id: pc.competencies.id,
+            name: pc.competencies.name,
+            description: pc.competencies.description,
+            weight: pc.weight
+          }));
+          
+          setCompetencies(formattedCompetencies);
+        } else {
+          // Fallback to mock data if no competencies found
+          setCompetencies(mockCompetencies);
+        }
+        
+        // For now, just use mock candidates data
+        setCandidates(mockCandidates.sort((a, b) => b.matchScore - a.matchScore));
+        
+      } catch (error) {
+        console.error("Unexpected error fetching position:", error);
+        setLoadError("An unexpected error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPosition();
+  }, [id, tenantId]);
 
   if (loading) {
     return (
@@ -120,7 +186,7 @@ const PositionDetail2 = () => {
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="container max-w-6xl pt-24 pb-16 flex flex-col items-center">
-          <p className="text-xl mb-4">Position not found</p>
+          <p className="text-xl mb-4">{loadError || "Position not found"}</p>
           <Button asChild>
             <Link to="/positions">Back to Positions</Link>
           </Button>
