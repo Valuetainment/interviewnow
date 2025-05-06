@@ -14,7 +14,9 @@ This directory contains documentation related to the application's APIs, includi
 
 ## Current Documentation
 
-None yet. See the Todo section below.
+The main API documentation is now available in the development directory:
+
+- [Edge Function API Endpoints](../development/api-endpoints.md) - Comprehensive documentation of all Edge Function APIs with request/response formats and examples.
 
 ## Todo
 
