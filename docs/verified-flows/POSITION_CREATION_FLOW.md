@@ -302,6 +302,78 @@ Key features of the position detail UI:
 - Candidate matching display (using mock data for now)
 - Loading states and error handling
 
+## Competency Weighting System
+
+The competency weighting system is a core feature of the position creation flow, enabling recruiters to define the relative importance of different skills and attributes for a position.
+
+### Importance of Weighting
+
+Competency weights serve several important purposes:
+- They guide the interview assessment process by prioritizing key areas
+- They provide a foundation for candidate scoring and ranking
+- They enable objective comparison between candidates
+- They ensure alignment between job requirements and evaluation criteria
+
+### How Weighting Works
+
+1. **Initial Suggestion**: When a position is generated, the AI suggests 5 competencies with recommended weights based on the position description.
+2. **Weight Distribution**: Each competency is assigned a percentage weight, with all weights summing to exactly 100%.
+3. **Validation**: The system enforces that:
+   - Exactly 5 competencies are selected
+   - Weights sum to exactly 100%
+   - Each weight is a positive integer
+
+### Interactive Weight UI
+
+The competency weighting UI provides an intuitive interface for managing weights:
+
+```
+┌────────────────────────────────────────────────────────────┐
+│ Competency Weights                                         │
+├────────────────┬───────────────────────────────┬───────────┤
+│ Technical      │ ██████████████████████        │ 30%       │
+│ Knowledge      │                               │           │
+├────────────────┼───────────────────────────────┼───────────┤
+│ Communication  │ ███████████████               │ 20%       │
+│ Skills         │                               │           │
+├────────────────┼───────────────────────────────┼───────────┤
+│ Problem        │ ███████████████████           │ 25%       │
+│ Solving        │                               │           │
+├────────────────┼───────────────────────────────┼───────────┤
+│ Leadership     │ ███████                       │ 10%       │
+│                │                               │           │
+├────────────────┼───────────────────────────────┼───────────┤
+│ Adaptability   │ ███████████                   │ 15%       │
+│                │                               │           │
+└────────────────┴───────────────────────────────┴───────────┘
+                                                      100%
+```
+
+Key features of the UI include:
+- Visual progress bars showing relative weights
+- Numerical input fields for direct weight entry
+- Real-time validation feedback
+- Running total calculation
+- Reset and auto-balance options
+
+### Implementation Details
+
+1. **State Management**: The competency weights are managed in a React state array with validation logic
+2. **Database Storage**: Weights are stored in the position_competencies junction table
+3. **Visual Feedback**: Users receive immediate feedback when:
+   - Adding/removing competencies
+   - Adjusting weights
+   - The total deviates from 100%
+4. **Error Prevention**: The save button is disabled until validation passes
+
+### Usage in Assessment
+
+These weights become crucial during the upcoming assessment engine development:
+- They determine scoring formulas for candidate evaluation
+- They guide question generation for each competency area
+- They influence the transcript analysis process
+- They provide weighting factors for final candidate ranking
+
 ## Common Failure Points and Solutions
 
 ### RLS Policy Issues
