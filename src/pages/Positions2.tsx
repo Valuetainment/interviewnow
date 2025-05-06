@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import Navbar from '@/components/Navbar';
@@ -19,8 +19,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { format } from 'date-fns';
 
-// Mock data for positions (we'll replace with real data later)
+// Keep mock data for fallback
 const mockPositions = [
   {
     id: '1',
@@ -80,15 +83,97 @@ const mockPositions = [
 ];
 
 const Positions2 = () => {
+  const { tenantId } = useAuth();
+  const [positions, setPositions] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Define types
+  type Position = {
+    id: string;
+    title: string;
+    description: string | null;
+    role_overview: string | null;
+    key_responsibilities: string | null;
+    required_qualifications: string | null;
+    preferred_qualifications: string | null;
+    benefits: string | null;
+    key_competencies_section: string | null;
+    experience_level: string | null;
+    company_id: string | null;
+    created_at: string;
+    updated_at: string;
+    tenant_id: string;
+  };
+  
+  type DisplayPosition = {
+    id: string;
+    title: string;
+    department: string;
+    location: string;
+    company: string;
+    experienceLevel: string;
+    applicants: number;
+    created: string;
+    status: string;
+  };
+
+  // Fetch positions from database
+  useEffect(() => {
+    const fetchPositions = async () => {
+      try {
+        if (!tenantId) return;
+        
+        console.log("Fetching positions for tenant:", tenantId);
+        
+        const { data, error } = await supabase
+          .from('positions')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .order('created_at', { ascending: false });
+          
+        if (error) {
+          console.error("Error fetching positions:", error);
+          setError("Failed to load positions");
+          setPositions([]);
+        } else if (data) {
+          console.log("Fetched positions:", data);
+          
+          // Transform data to match expected format
+          const formattedPositions = (data as Position[]).map(pos => ({
+            id: pos.id,
+            title: pos.title,
+            department: 'General', // Default value since we don't have a department column
+            location: 'Remote', // Default value since we don't have a location column
+            company: 'Your Company', // Default since we're not joining with companies table yet
+            experienceLevel: pos.experience_level || 'Not specified',
+            applicants: 0, // We'll need to implement this with a real count later
+            created: pos.created_at ? format(new Date(pos.created_at), 'yyyy-MM-dd') : 'Unknown',
+            status: 'Active'
+          }));
+          
+          setPositions(formattedPositions);
+        }
+      } catch (err) {
+        console.error("Unexpected error fetching positions:", err);
+        setError("An unexpected error occurred");
+        setPositions([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPositions();
+  }, [tenantId]);
 
   // Filter positions based on search query
-  const filteredPositions = mockPositions.filter(position => 
+  const filteredPositions = positions.filter(position => 
     position.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     position.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
     position.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
     position.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    position.experienceLevel.toLowerCase().includes(searchQuery.toLowerCase())
+    (position.experienceLevel && position.experienceLevel.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -128,57 +213,66 @@ const Positions2 = () => {
             <CardDescription>Enhanced positions with company and experience level</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Position Title</TableHead>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Experience Level</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead className="text-center">Applicants</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPositions.length > 0 ? (
-                  filteredPositions.map((position) => (
-                    <TableRow key={position.id} className="hover:cursor-pointer">
-                      <TableCell className="font-medium">
-                        <Link to={`/positions/${position.id}`} className="text-primary hover:underline">
-                          {position.title}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{position.company}</TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
-                          ${position.experienceLevel === 'Entry-level' ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20' : 
-                            position.experienceLevel === 'Mid-level' ? 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20' :
-                            'bg-purple-50 text-purple-700 ring-1 ring-inset ring-purple-600/20'}`}>
-                          {position.experienceLevel}
-                        </span>
-                      </TableCell>
-                      <TableCell>{position.department}</TableCell>
-                      <TableCell>{position.location}</TableCell>
-                      <TableCell className="text-center">{position.applicants}</TableCell>
-                      <TableCell>{position.created}</TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                          {position.status}
-                        </span>
+            {loading ? (
+              <div className="py-10 text-center">Loading positions...</div>
+            ) : error ? (
+              <div className="py-10 text-center text-destructive">{error}</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Position Title</TableHead>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Experience Level</TableHead>
+                    <TableHead>Department</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead className="text-center">Applicants</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPositions.length > 0 ? (
+                    filteredPositions.map((position) => (
+                      <TableRow key={position.id} className="hover:cursor-pointer">
+                        <TableCell className="font-medium">
+                          <Link to={`/positions/${position.id}`} className="text-primary hover:underline">
+                            {position.title}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{position.company}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
+                            ${position.experienceLevel === 'Entry-level' ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20' : 
+                              position.experienceLevel === 'Mid-level' ? 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20' :
+                              position.experienceLevel === 'Senior' ? 'bg-purple-50 text-purple-700 ring-1 ring-inset ring-purple-600/20' :
+                              'bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-600/20'}`}>
+                            {position.experienceLevel}
+                          </span>
+                        </TableCell>
+                        <TableCell>{position.department}</TableCell>
+                        <TableCell>{position.location}</TableCell>
+                        <TableCell className="text-center">{position.applicants}</TableCell>
+                        <TableCell>{position.created}</TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                            {position.status}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        {positions.length === 0 ? 
+                          "No positions found. Create your first position!" :
+                          "No positions found matching your search criteria."}
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      No positions found matching your search criteria.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>
