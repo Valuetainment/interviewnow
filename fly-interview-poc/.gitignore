@@ -1,0 +1,30 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Environment variables
+.env
+.env.local
+
+# Temporary files
+temp_*.webm
+*.mp3
+*.wav
+*.webm
+
+# Logs
+logs
+*.log
+
+# Build output
+dist/
+build/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Fly.io specific
+.fly/ 
