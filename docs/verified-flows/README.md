@@ -16,6 +16,7 @@ A flow is considered "verified" when it meets the following criteria:
 - [Candidate Creation Flow](./CANDIDATE_FLOW.md) - The end-to-end process from resume upload to candidate profile display.
 - [Tenant and Company Flow](./TENANT_COMPANY_FLOW.md) - The multi-tenant system design with company creation and management.
 - [Company API Flow](./COMPANY_API_FLOW.md) - The direct API approach for company CRUD operations without Edge Functions.
+- [Position Creation Flow](./POSITION_CREATION_FLOW.md) - The complete workflow for creating positions with AI-generated descriptions and competency management.
 
 ## Using These Documents
 
