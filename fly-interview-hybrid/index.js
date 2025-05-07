@@ -7,6 +7,9 @@ const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const pino = require('pino');
+const pinoHttp = require('pino-http');
+const promBundle = require('express-prom-bundle');
 
 // Initialize Express app
 const app = express();
@@ -50,6 +53,16 @@ const corsHeaders = {
 
 // Store active sessions
 const sessions = new Map();
+
+// Add Prometheus metrics
+const metricsMiddleware = promBundle({
+  includeMethod: true,
+  includePath: true,
+  promClient: {
+    collectDefaultMetrics: {},
+  },
+});
+app.use(metricsMiddleware);
 
 // Handle WebSocket connections
 wss.on('connection', (ws, req) => {

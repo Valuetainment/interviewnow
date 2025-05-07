@@ -1,129 +1,167 @@
 # WebRTC SDP Proxy for AI Interview Platform
 
-This is a proof-of-concept implementation of the hybrid architecture approach for the AI Interview Platform. The implementation focuses on SDP proxying rather than full audio processing, allowing direct WebRTC connections between clients and OpenAI's services while maintaining security through Fly.io's proxying capabilities.
+This service acts as a secure proxy between the client browser and OpenAI's WebRTC API, handling signaling and SDP exchange without exposing API keys to the client.
 
-## Architecture Overview
+## Architecture
 
-This implementation follows the hybrid architecture pattern:
+```
+┌─────────────────┐     ┌────────────────┐     ┌──────────────┐
+│                 │     │                │     │              │
+│  Client Browser │────►│   SDP Proxy    │────►│  OpenAI API  │
+│                 │     │   (Fly.io)     │     │              │
+└────────┬────────┘     └────────────────┘     └──────────────┘
+         │                                              ▲
+         │                                              │
+         └──────────────────────────────────────────────┘
+         Direct WebRTC connection after initial signaling
+```
 
-1. **SDP Exchange Proxy**: Secure exchange of SDP offers/answers between client and OpenAI
-2. **Direct WebRTC Connection**: Audio streams flow directly between client and OpenAI
-3. **Security Layer**: API keys and sensitive credentials stay on the server
-4. **Session Management**: Each interview has isolated credentials and resources
+1. Client connects to SDP proxy via WebSocket
+2. Client generates SDP offer and sends it to proxy
+3. Proxy forwards offer to OpenAI API with API key
+4. Proxy receives SDP answer and sends it back to client
+5. Client establishes direct WebRTC connection with OpenAI
+6. Audio streams directly between client and OpenAI
 
-## Running the Application
+## Local Development
 
 ### Prerequisites
 
-- Node.js 16+
-- npm
-- Fly.io CLI (for deployment)
-- OpenAI API key
+- Node.js 18+
+- OpenAI API key with access to WebRTC API
 
-### Local Development
+### Setup
 
-1. Clone this repository
+1. Clone the repository
 2. Install dependencies:
-   ```bash
+   ```
+   cd fly-interview-hybrid
    npm install
    ```
-3. Create a `.env` file with the following content:
+3. Create a `.env` file:
    ```
-   OPENAI_API_KEY=your_openai_api_key_here
-   PORT=3000
-   SIMULATION_MODE=true
-   JWT_SECRET=your_jwt_secret_here
+   PORT=8080
+   OPENAI_API_KEY=your_api_key_here
+   LOG_LEVEL=debug
+   SIMULATION_MODE=true  # Set to false to use real OpenAI API
    ```
-4. Start the server in simulation mode:
-   ```bash
-   npm run dev:sim
-   ```
-5. Or in production mode (requires valid OpenAI API key):
-   ```bash
-   npm run dev
-   ```
-6. Open your browser to `http://localhost:3000` to access the test client
 
-### Simulation Mode
+### Running locally
 
-When `SIMULATION_MODE=true`, the server will:
+```bash
+# Start the server
+npm start
 
-- Accept SDP offers from clients
-- Return mock SDP answers (no actual OpenAI API calls)
-- Acknowledge ICE candidates without forwarding them
-- Allow testing the flow without an OpenAI API key
+# Development mode with auto-reload
+npm run dev
 
-### Deployment to Fly.io
+# Simulation mode (no OpenAI API needed)
+npm run dev:sim
+```
 
-1. Install the Fly.io CLI
-2. Log in to Fly.io:
+The server will be available at `http://localhost:8080`
+
+## Deployment to Fly.io
+
+### Prerequisites
+
+- Fly.io account
+- Fly CLI installed
+
+### Deployment steps
+
+1. Log in to Fly.io:
    ```bash
    fly auth login
    ```
-3. Launch the app:
+
+2. Set your OpenAI API key as an environment variable:
    ```bash
-   fly launch
-   ```
-4. Set secrets:
-   ```bash
-   fly secrets set OPENAI_API_KEY=your_openai_api_key_here JWT_SECRET=your_strong_jwt_secret
-   ```
-5. Deploy:
-   ```bash
-   fly deploy
+   export OPENAI_API_KEY=your_api_key_here
    ```
 
-## API Documentation
+3. Run the deployment script:
+   ```bash
+   ./deploy.sh
+   ```
 
-### WebSocket Messages
+4. Verify deployment:
+   ```bash
+   fly status -a interview-sdp-proxy
+   ```
 
-#### Client to Server
+## Testing the Integration
 
-| Message Type | Description | Payload |
-|--------------|-------------|---------|
-| `sdp_offer` | WebRTC SDP offer | `{ offer: RTCSessionDescriptionInit }` |
-| `ice_candidate` | ICE candidate | `{ candidate: RTCIceCandidateInit }` |
-| `get_api_key` | Request API key availability | `{}` |
-| `end_session` | End the session | `{}` |
+1. Deploy the SDP proxy to Fly.io
+2. Update the `interview-start` Edge Function to use your deployed proxy URL
+3. Test with the WebRTCManager component in your React application
 
-#### Server to Client
+## Simulation Mode
 
-| Message Type | Description | Payload |
-|--------------|-------------|---------|
-| `session` | Session established | `{ sessionId: string }` |
-| `sdp_answer` | WebRTC SDP answer | `{ answer: RTCSessionDescriptionInit }` |
-| `ice_acknowledge` | ICE candidate received | `{}` |
-| `api_key_status` | API key status | `{ status: 'available' }` |
-| `error` | Error message | `{ message: string }` |
-| `session_ended` | Session terminated | `{ sessionId: string }` |
+For development without an OpenAI API key, set `SIMULATION_MODE=true` in environment variables. This will generate simulated SDP answers locally.
 
-### HTTP Endpoints
+## WebSocket API
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Health check endpoint |
-| `/api/key-status` | GET | Check if API key is configured |
-| `/api/sessions/:sessionId` | GET | Get session information |
+### Connection
+
+```javascript
+const ws = new WebSocket('wss://interview-sdp-proxy.fly.dev');
+```
+
+### Messages
+
+**Initialize session:**
+```javascript
+ws.send(JSON.stringify({
+  type: 'init',
+  sessionId: 'your-session-id', // Optional, will be generated if not provided
+  aiPersona: 'alloy' // Optional
+}));
+```
+
+**Send SDP offer:**
+```javascript
+ws.send(JSON.stringify({
+  type: 'sdp_offer',
+  offer: peerConnection.localDescription
+}));
+```
+
+**End session:**
+```javascript
+ws.send(JSON.stringify({
+  type: 'disconnect',
+  sessionId: 'your-session-id'
+}));
+```
+
+## HTTP API
+
+You can also use the HTTP API instead of WebSockets:
+
+**Exchange SDP:**
+```
+POST /api/sdp-exchange
+Content-Type: application/json
+
+{
+  "sessionId": "your-session-id",
+  "sdpOffer": "v=0\no=- ...",
+  "aiPersona": "alloy"
+}
+```
 
 ## Security Considerations
 
-This implementation:
+- OpenAI API keys are never exposed to clients
+- WebSocket connections are secured with TLS
+- Each session has a unique identifier for isolation
+- SDP offers/answers are validated before processing
 
-- Never exposes the OpenAI API key to the client
-- Uses WebSockets with proper CORS settings
-- Implements session isolation
-- Uses helmet.js for HTTP security headers
-- Supports JWT validation (not fully implemented in this POC)
+## Troubleshooting
 
-## Next Steps
-
-1. Implement proper authentication via JWT
-2. Add multi-tenant isolation
-3. Integrate with the main application
-4. Implement more robust error handling
-5. Add connection recovery mechanisms
-6. Create React components for the main frontend
-
-## License
-
-ISC 
+- Check logs: `fly logs -a interview-sdp-proxy`
+- Verify OpenAI API key is valid
+- Check for WebSocket connection errors in browser console
+- Ensure proper CORS configuration
+- Use simulation mode to test without OpenAI API 

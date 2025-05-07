@@ -25,6 +25,7 @@ import NewCompany from "./pages/NewCompany";
 import EditCompany from "./pages/EditCompany";
 import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
+import InterviewTestProduction from "./pages/InterviewTestProduction";
 import { AuthProvider } from './hooks/useAuth';
 
 // Import layout components
@@ -67,6 +68,7 @@ const App = () => (
               <Route path="/candidates/:id" element={<CandidateProfile />} />
               <Route path="/settings" element={<CompanySettings />} />
               <Route path="/test-interview" element={<TestInterview />} />
+              <Route path="/interview-test-production" element={<InterviewTestProduction />} />
               <Route path="/transcripts" element={<Transcripts />} />
               <Route path="/positions" element={<Positions2 />} />
               <Route path="/positions/:id" element={<PositionDetail2 />} />
