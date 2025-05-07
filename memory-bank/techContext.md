@@ -198,8 +198,21 @@ VITE_SUPABASE_ANON_KEY="your-production-anon-key"
 ### Database Migrations
 1. Make changes to local database
 2. Generate migration with `npx supabase db diff -f migration_name`
-3. Apply migration with `npx supabase migration up`
-4. Commit migration files to repository
+3. Apply migrations to local database with `npx supabase db push`
+4. Commit migrations to git
+5. Migrations are automatically applied in CI/CD pipeline
+
+### Branching Workflow
+1. Create a feature branch: `git checkout -b feat/feature-name`
+2. Make changes to code and database
+3. Commit and push: `git push -u origin feat/feature-name`
+4. Open a pull request on GitHub
+5. Supabase automatically creates a database branch
+6. Vercel automatically creates a preview deployment with appropriate env variables
+7. Test changes in the isolated environment
+8. Merge to main when ready
+9. Migrations are automatically applied to production
+10. For detailed information, see `docs/development/supabase-branching-guide.md`
 
 ### Edge Functions
 1. Create function in supabase/functions directory
@@ -368,4 +381,60 @@ Documentation is maintained in the following locations:
 - Exploring Fly.io's horizontal scaling capabilities for interview processing
 - Improving WebRTC connection resilience in poor network conditions
 - Implementing fallback mechanisms for connection failures
-- Testing compatibility across different browsers and devices 
+- Testing compatibility across different browsers and devices
+
+### Database Migration Best Practices
+
+When creating SQL migrations, follow these guidelines for reliability:
+
+1. **Schema Qualification**: Always fully qualify table and column names:
+   ```sql
+   -- Good
+   SELECT * FROM public.my_table WHERE public.my_table.column_name = 'value';
+   
+   -- Bad
+   SELECT * FROM my_table WHERE column_name = 'value';
+   ```
+
+2. **Object Dependency Order**: Create objects in the correct dependency order:
+   - Extensions first
+   - Then tables
+   - Then indexes, constraints, triggers
+   - Finally policies
+   
+3. **Conditional Creation**: Use IF EXISTS/IF NOT EXISTS for safer migrations:
+   ```sql
+   CREATE TABLE IF NOT EXISTS public.my_table (...);
+   DROP POLICY IF EXISTS "Policy name" ON public.my_table;
+   ```
+   
+4. **Auth Function Wrapping**: Wrap auth functions in SELECT for better performance:
+   ```sql
+   -- Good
+   WHERE user_id = (SELECT auth.uid())
+   
+   -- Less efficient
+   WHERE user_id = auth.uid()
+   ```
+   
+5. **Atomic Migrations**: For complex changes, use a single atomic migration that:
+   - Drops dependent objects first
+   - Creates tables in dependency order
+   - Recreates policies after tables exist
+   
+6. **Migration Documentation**: Always include detailed comments:
+   ```sql
+   -- Migration: Purpose of migration
+   -- Description: What this migration does
+   -- Date: YYYY-MM-DD
+   --
+   -- Additional context about changes...
+   ```
+   
+7. **Naming Conventions**: Use timestamp-prefixed names for proper sequencing:
+   ```
+   20250507144000_create_tables.sql
+   20250507144100_create_policies.sql
+   ```
+
+For a complete guide, see `docs/development/supabase-branching-guide.md` 
