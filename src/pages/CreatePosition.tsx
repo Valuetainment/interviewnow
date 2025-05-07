@@ -164,8 +164,25 @@ const CreatePosition = () => {
       return;
     }
     
+    // DEBUG: Check JWT and session
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      console.log("Current session:", session);
+      console.log("JWT claims:", session?.session?.access_token);
+      console.log("Tenant ID used for insert:", tenantId);
+    } catch (sessionError) {
+      console.error("Error fetching session:", sessionError);
+    }
+    
     setIsSaving(true);
     try {
+      console.log("Starting position save with:", { 
+        tenantId, 
+        title, 
+        description: generatedData.description?.substring(0, 20) + "...",
+        companyId 
+      });
+      
       // 1. Create the position with enhanced fields
       // @ts-ignore - Database type definition might not include all fields
       const { data: position, error: positionError } = await supabase
@@ -186,6 +203,8 @@ const CreatePosition = () => {
         .select('id')
         .single();
         
+      console.log("Position insert result:", { position, error: positionError });
+      
       if (positionError) throw positionError;
       
       if (!position || !position.id) {

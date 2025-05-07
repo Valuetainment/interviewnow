@@ -1,0 +1,71 @@
+AI Prompts in the Application
+1. Resume Processing Prompts
+1.1 Parse Resume Prompt
+File: supabase/functions/parse-resume/openai-parser.ts Model: gpt-4o-mini Purpose: Initial parsing of uploaded resumes Key Features:
+
+Extracts basic information (name, contact details)
+Identifies skills (technical and soft skills)
+Formats work experience with dates and companies
+Parses education information
+Returns structured JSON format
+1.2 Analyze Resume Prompt
+File: supabase/functions/analyze-resume/index.ts Model: gpt-4o-mini Purpose: Deeper analysis and standardization of resume data Key Features:
+
+Standardizes dates in MM/YYYY format
+Formats job responsibilities as action-oriented bullet points
+Extracts achievements and impact metrics
+Maintains chronological ordering
+More comprehensive structure than initial parsing
+2. Position-Related Prompts
+2.1 Generate Position Prompt
+File: supabase/functions/generate-position/index.ts Model: gpt-4o-mini Purpose: Creates detailed job descriptions based on title, level, and competencies Key Features:
+
+Uses a two-part prompt (system + user message)
+System message establishes tone as "expert technical recruiter"
+Incorporates competencies with weights into the description
+Structures output as JSON with specific sections
+Emphasizes competencies based on their weights
+Temperature: 0.7 (moderate creativity)
+3. Interview Evaluation Prompts
+3.1 Generate Interview Summary Prompt
+File: supabase/functions/generate-interview-summary/index.ts Model: gpt-4o-mini Purpose: Creates a summary of interview transcripts Key Features:
+
+Provides candidate and position context
+Includes position requirements
+Analyzes the full interview transcript
+Generates 5 specific sections (summary, skills evaluation, strengths, improvements, recommendation)
+Temperature: 0.7
+3.2 Generate Candidate Assessment Prompt
+File: supabase/functions/generate-candidate-assessment/index.ts Model: gpt-4o-mini Purpose: Evaluates candidates against specific competencies Key Features:
+
+Assesses based on defined competencies and weights
+Provides numerical scoring (0-10) for each competency
+Includes justification based on transcript evidence
+Identifies strengths and areas for improvement
+Calculates weighted average score
+Temperature: 0.7
+4. Realtime Interview System
+4.1 Realtime Interview Configuration
+File: supabase/functions/realtime-interview/index.ts Model: gpt-4o-realtime-preview-2024-12-17 Purpose: Conducts realtime voice interviews using OpenAI's Realtime API Key Features:
+
+No explicit prompt in this file - connection setup only
+Acts as secure relay between client and OpenAI
+Handles WebRTC connection establishment
+4.2 Realtime Session Configuration
+File: supabase/functions/realtime-session/index.ts Model: gpt-4o-realtime-preview-2024-12-17 Purpose: Creates sessions for realtime interviews Key Features:
+
+Sets up initial session with OpenAI
+Detailed instructions are sent after connection via session.update
+No explicit prompt in this file - connection initialization only
+5. Candidate Enrichment
+5.1 PDL Data Enrichment
+File: supabase/functions/enrich-candidate/index.ts Purpose: Enriches candidate data using People Data Labs API Key Features:
+
+Not an AI prompt - uses structured API calls
+Enhances candidate profiles with additional data
+Special handling for specific test cases
+Summary of Model Usage
+gpt-4o-mini: Used for most text processing tasks (resume parsing, position generation, interview assessment)
+gpt-4o-realtime-preview-2024-12-17: Used for realtime voice interviews
+All text-based prompts use temperature 0.7 for balanced creativity/consistency
+This organized structure shows the complete prompt ecosystem within your application, highlighting the specific purpose and implementation details for each prompt type.

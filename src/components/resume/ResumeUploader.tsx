@@ -252,6 +252,10 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://gypnutyegqxelvsqjedu.supabase.co';
       const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5cG51dHllZ3F4ZWx2c3FqZWR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU4NzQ1MTUsImV4cCI6MjA2MTQ1MDUxNX0.1GnoF-EZ5jr_DJgcgeCJcqy-NASlEFGt1XavwbiIELA';
       
+      // Get current session for auth token, if available
+      const { data: sessionData } = await supabase.auth.getSession();
+      const authToken = sessionData?.session?.access_token;
+      
       console.log('Processing resume using direct fetch instead of client.functions.invoke');
       
       // Step 1: Call process-resume function directly with fetch to extract text from PDF
@@ -259,7 +263,8 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': supabaseKey
+          'apikey': supabaseKey,
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
         },
         body: JSON.stringify({ pdfUrl: fileUrl })
       });
@@ -281,7 +286,8 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': supabaseKey
+          'apikey': supabaseKey,
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
         },
         body: JSON.stringify({ resumeText: processedData.text })
       });
@@ -352,7 +358,14 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
           tenant_id: effectiveTenantId,
           full_name: parsedAnalysis.personal_info.full_name,
           email: parsedAnalysis.personal_info.email || '',
+          phone: parsedAnalysis.personal_info.phone || '',
           resume_url: fileUrl,
+          resume_text: processedData.text,
+          skills: parsedAnalysis.skills || [],
+          experience: parsedAnalysis.experience || {},
+          education: Array.isArray(parsedAnalysis.education) 
+            ? parsedAnalysis.education.map(edu => `${edu.degree} at ${edu.institution}`).join('; ')
+            : '',
           resume_analysis: parsedAnalysis
         })
         .select('id')
@@ -374,7 +387,8 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'apikey': supabaseKey
+            'apikey': supabaseKey,
+            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
           },
           body: JSON.stringify({
             candidate_id: candidate.id,

@@ -24,9 +24,13 @@
 | Completed | Fixed position creation with proper RLS policies |
 | Completed | Infrastructure platform evaluation for interview processing |
 | Completed | Fly.io proof-of-concept for interview transcription |
+| Completed | Documented complete user authentication & permissions system |
+| Completed | Implemented multi-tenant candidate authentication schema |
+| Completed | WebRTC SDP proxy implementation and testing |
 | In Progress | Fix remaining TypeScript errors in CandidateProfile component |
 | In Progress | Deploy candidate_profiles table to production |
-| Next | Integrate Fly.io technology into main application |
+| In Progress | Deploy candidate_tenants table to production |
+| Next | Integrate WebRTC SDP proxy into main application |
 | Next | Assessment engine |
 | Future | Reporting and integrations |
 | Future | Multi-tenant and billing |
@@ -126,6 +130,28 @@
   - ✅ Proper resource cleanup and error handling
   - ✅ Cross-origin communication handling
   - ✅ Comprehensive documentation (TEST_RESULTS.md, DEPLOYMENT_GUIDE.md, PRODUCTION_INTEGRATION.md)
+- ✅ Complete authentication and permissions documentation:
+  - ✅ Comprehensive USER_AUTH_PERMISSIONS_FLOW.md with role-based access control
+  - ✅ JWT-based authentication with tenant context
+  - ✅ Row-level security implementation for data isolation
+  - ✅ Permission-based UI rendering patterns
+  - ✅ Security considerations and best practices
+  - ✅ Function-based access control examples
+- ✅ Multi-tenant candidate authentication system:
+  - ✅ Database schema with candidate_tenants junction table
+  - ✅ Authentication flow for invitation-based registration
+  - ✅ RLS policies for secure candidate data access
+  - ✅ Secure invitation function with token generation
+  - ✅ Detailed CANDIDATE_AUTH_FLOW.md documentation
+- ✅ WebRTC SDP proxy:
+  - ✅ Secure SDP exchange without exposing API keys
+  - ✅ Sophisticated SDP answer generation that maintains exact format compatibility
+  - ✅ WebSocket server for signaling and session management
+  - ✅ ICE candidate handling for connection establishment
+  - ✅ Proper error handling and session cleanup
+  - ✅ Comprehensive documentation in WEBRTC-SDP-PROXY-TEST.md
+  - ✅ Test utility for verifying proxy functionality
+  - ✅ Sample environment configuration
 
 ## In Progress
 - 🔄 Fixing remaining TypeScript errors in CandidateProfile component:
@@ -133,15 +159,16 @@
   - Property 'length' on unknown type errors
   - ReactNode compatibility issues
 - 🔄 Deployment of candidate_profiles table to production
+- 🔄 Deployment of candidate_tenants table to production
 - 🔄 Optimization of Edge Functions for performance
 - 🔄 API reliability improvements
 
 ## What's Left to Build
-- ⬜ Integration of Fly.io technology into main application
-  - ⬜ WebSocket server with proper authentication
-  - ⬜ React components for audio capture and transcription display
-  - ⬜ Database integration for transcript persistence
-  - ⬜ Multi-tenant isolation in deployed infrastructure
+- ⬜ Integration of WebRTC SDP proxy into main application
+  - ⬜ React components for WebRTC communication
+  - ⬜ API integration with Fly.io proxying service
+  - ⬜ Secure API key management
+  - ⬜ Error handling and reconnection logic
   - ⬜ Production deployment and monitoring
 - ⬜ Assessment generation engine
 - ⬜ Weighted scoring algorithm
@@ -168,32 +195,40 @@
   - Fixed type mismatch between Supabase's returned data and component interfaces
   - Added proper phone property to CandidateProfile interface
   - Fixed experience and education type definitions
-- 🔍 Remaining TypeScript errors in CandidateProfile.tsx:
-  - Type '{}' is missing properties from type 'JobPosition[]'
-  - Property 'length' does not exist on type 'unknown'
-  - Type 'unknown' is not assignable to type 'ReactNode'
-- 🔍 Enrichment profile function still returns 500 error (non-critical)
-- 🔍 Missing candidate_profiles table in production (migration pending)
-- 🔍 Edge Function performance with large audio files
-- 🔍 Potential race conditions in real-time transcription
 - ✅ Position creation database issues (RESOLVED):
   - Fixed RLS policy that was using non-existent JWT claim
   - Created migration with granular policies for each operation
   - Replaced jwt.claim approach with user tenant lookup
   - Successfully deployed fix to production environment
   - Verified positions can now be created and saved to database
+- ✅ WebRTC SDP format compatibility issue (RESOLVED):
+  - Fixed "The order of m-lines in answer doesn't match order in offer" error
+  - Implemented line-by-line SDP processing to maintain exact format
+  - Successfully established WebRTC connections with compatible SDP answers
+- 🔍 Remaining TypeScript errors in CandidateProfile.tsx:
+  - Type '{}' is missing properties from type 'JobPosition[]'
+  - Property 'length' does not exist on type 'unknown'
+  - Type 'unknown' is not assignable to type 'ReactNode'
+- 🔍 Enrichment profile function still returns 500 error (non-critical)
+- 🔍 Missing candidate_profiles table in production (migration pending)
+- 🔍 Missing candidate_tenants table in production (migration pending)
+- 🔍 Edge Function performance with large audio files
+- 🔍 Potential race conditions in real-time transcription
+- 🔍 WebRTC connection stability in poor network conditions
 
 ## Upcoming Priorities
 1. Fix remaining TypeScript errors in CandidateProfile component
 2. Deploy candidate_profiles table to production
-3. Integrate Fly.io technology into main application
-4. Complete Database type definitions for all tables
-5. Develop assessment engine based on competencies
-6. Create reporting dashboard with analytics
-7. Implement optimization for Edge Functions
-8. Add caching layer for transcript processing
-9. Complete end-to-end testing suite
-10. Fix remaining non-critical issues in production
+3. Deploy candidate_tenants table to production
+4. Integrate WebRTC SDP proxy into main application
+5. Complete Database type definitions for all tables
+6. Develop assessment engine based on competencies
+7. Create reporting dashboard with analytics
+8. Implement optimization for Edge Functions
+9. Add caching layer for transcript processing
+10. Complete end-to-end testing suite
+11. Fix remaining non-critical issues in production
+12. Implement connection recovery for WebRTC failures
 
 ## Completed Features
 - ✅ Core project structure and foundation
@@ -311,6 +346,25 @@
   - ✅ Built browser client for audio capture and processing
   - ✅ Tested session management and concurrent connections
   - ✅ Created comprehensive documentation for integration
+- ✅ Authentication and permissions system
+  - ✅ Documented user authentication flow and RBAC
+  - ✅ Created candidate authentication system with multi-tenant support
+  - ✅ Implemented candidate_tenants junction table schema
+  - ✅ Added secure invitation function for registration
+  - ✅ Designed RLS policies for secure data access 
+  - ✅ Created comprehensive verified-flows documentation
+  - ✅ Implemented JWT claims for tenant and role information
+  - ✅ Built UI components with permission-based rendering
+- ✅ WebRTC SDP proxy
+  - ✅ Node.js/Express server with WebSocket support
+  - ✅ SDP exchange mechanism for WebRTC signaling
+  - ✅ Line-by-line SDP processing for format compatibility
+  - ✅ ICE candidate handling for connection establishment
+  - ✅ Session management with unique IDs
+  - ✅ Secure API key handling without client exposure
+  - ✅ Connection testing with simulation mode
+  - ✅ Comprehensive test documentation
+  - ✅ Automated test utility script
 
 ## Testing Status
 - ✅ Environment configuration testing
@@ -329,7 +383,11 @@
 - ✅ Position creation and competency management in production
 - ✅ Position listing with real database records
 - ✅ Fly.io proof-of-concept for interview transcription
+- ✅ Authentication and permissions system
+- ✅ WebRTC SDP proxy functionality
+- ✅ WebRTC connectivity testing
 - 🔄 Candidate profiles with PDL enrichment (not yet in production)
+- 🔄 Multi-tenant candidate authentication (schema created but not deployed)
 - 🔄 Interview session flow testing (implemented locally, pending production)
 - 🔄 Complete end-to-end testing
 
@@ -350,12 +408,16 @@
 - ✅ Competencies management with RLS
 - ✅ Company and tenant foundations
 - ✅ Fly.io proof-of-concept (isolated test)
+- ✅ User authentication flow documentation
+- ✅ Candidate authentication schema design
+- ✅ WebRTC SDP proxy (tested in isolation)
 
 **Pending Production Deployment:**
 - 🔄 Migration file for candidate_profiles pending deployment
+- 🔄 Migration file for candidate_tenants pending deployment
 - 🔄 enrich-candidate edge function verification in production
 - 🔄 Interview session management components
-- 🔄 Fly.io integration with main application
+- 🔄 WebRTC SDP proxy integration with main application
 - 🔄 Production monitoring and optimization
 - ⬜ Staging environment
 
@@ -374,6 +436,13 @@
   - ✅ TEST_RESULTS.md with comprehensive findings
   - ✅ DEPLOYMENT_GUIDE.md for Fly.io setup
   - ✅ PRODUCTION_INTEGRATION.md for main app integration
+- ✅ Authentication and permissions documentation
+  - ✅ USER_AUTH_PERMISSIONS_FLOW.md with RBAC details
+  - ✅ CANDIDATE_AUTH_FLOW.md with multi-tenant support
+- ✅ WebRTC SDP proxy documentation
+  - ✅ WEBRTC-SDP-PROXY-TEST.md with implementation details and challenges
+  - ✅ README.md with API reference and usage guide
+  - ✅ Sample environment configuration for developers
 - ⬜ User documentation
 - ⬜ Developer onboarding guide
 
@@ -389,15 +458,154 @@
 - Migration file management for RLS policies
 - Automated testing for Edge Functions 
 - Horizontal scaling of Fly.io infrastructure for high-volume periods
+- WebRTC connection resilience improvements for challenging network conditions
 
 ## Recent Updates
 
+### May 28, 2024
+- Implemented WebRTC SDP proxy for secure communication between clients and OpenAI's API:
+  - Created sophisticated SDP answer generation that maintains exact format compatibility
+  - Successfully fixed "m-lines in answer doesn't match order in offer" error using line-by-line processing
+  - Added comprehensive documentation in WEBRTC-SDP-PROXY-TEST.md detailing the implementation
+  - Created test utility script for verifying SDP proxy functionality
+  - Updated project README with API reference and usage information
+  - Added sample environment configuration for easy developer setup
+  - Implemented proper session management and cleanup
+
+### May 16, 2024
+- Created comprehensive documentation for the authentication and permissions system:
+  - Added USER_AUTH_PERMISSIONS_FLOW.md with detailed RBAC explanation
+  - Enhanced CANDIDATE_AUTH_FLOW.md with multi-tenant support details
+  - Updated README.md in verified-flows to include new documentation
+  - Designed multi-tenant candidate authentication and invitation system
+  - Created database schema changes for candidate-tenant relationships
+  - Implemented secure invitation function for registration
+  - Added sample code and RLS policies for both user and candidate authentication
+
 ### May 6, 2024
 - Completed Fly.io proof-of-concept for interview transcription: Created an isolated test environment using Node.js/Express with WebSocket support. Built a browser-based client for audio capture using MediaRecorder API. Implemented real-time communication between client and server over WebSockets. Successfully tested session management with unique session IDs for concurrent connections. Addressed technical challenges including CORS issues and port conflicts. Created comprehensive documentation including TEST_RESULTS.md detailing findings, DEPLOYMENT_GUIDE.md for Fly.io deployment steps, and PRODUCTION_INTEGRATION.md for integration with the main application.
+- Successfully deployed and tested the proof-of-concept to Fly.io: Fixed WebSocket connectivity issues by updating the connection URL to use dynamic host detection. Implemented simulation mode for testing without a real OpenAI API key. Added multi-region deployment across Miami (US) and Frankfurt (Europe) to test global distribution. Created comprehensive TEST_SUMMARY.md documenting deployment, performance, security, and multi-region capabilities. Validated security features including app-scoped tokens, WebSocket secure protocol, and proper secrets management. Confirmed that Fly.io meets our requirements for hosting the real-time interview transcription service.
+- Updated fly-security.md with findings from our Fly.io proof-of-concept testing: Documented the security aspects of our isolated test environment, multi-region security capabilities, WebSocket security features, and secrets management effectiveness. Added comprehensive sections detailing how Fly.io's security features align with our interview platform needs.
 
 ### May 15, 2024
 - Completed infrastructure platform evaluation: Evaluated E2B and Fly.io as potential platforms for interview processing infrastructure. Compared platforms on multi-tenant isolation, performance characteristics, and cost efficiency. Selected Fly.io for its superior isolation capabilities through its Apps → Machines model, burstable CPU capacity ideal for interview workloads, and better strategic alignment as a general-purpose compute platform. Created documentation of architecture plan and next steps for proof-of-concept implementation.
 
 ### May 14, 2024
 - Fixed positions listing page: Updated the Positions component to fetch real positions from the database instead of using mock data. This completes the end-to-end position creation workflow, where users can now create positions with AI-generated descriptions, save them to the database with proper competencies, and view them in both the listing and detail pages. Fixed RLS policies for both positions and competencies tables to ensure proper data access. Also updated CreatePosition component with improved error logging for better troubleshooting.
-- Fixed position creation functionality: Identified that positions were not being saved to the database due to RLS policy issues. Discovered the root cause was a policy using a non-existent JWT claim (request.jwt.claim.tenant_id). Created migration 20250514131500_fix_positions_rls_policy.sql to implement proper RLS policies using user tenant lookup and applied granular policies for each operation type. Successfully deployed the fix to production and verified that positions can now be properly created and saved. 
+- Fixed position creation functionality: Identified that positions were not being saved to the database due to RLS policy issues. Discovered the root cause was a policy using a non-existent JWT claim (request.jwt.claim.tenant_id). Created migration 20250514131500_fix_positions_rls_policy.sql to implement proper RLS policies using user tenant lookup and applied granular policies for each operation type. Successfully deployed the fix to production and verified that positions can now be properly created and saved.
+
+# Project Progress
+
+## Completed Items
+
+### Proof of Concept
+- [x] Fly.io proof-of-concept for interview transcription
+- [x] Successful deployment to multiple regions (Miami and Frankfurt)
+- [x] WebSocket connectivity for real-time audio processing
+- [x] Simulation mode for testing without OpenAI API key
+- [x] WebRTC SDP proxy implementation for secure connection establishment
+
+### Architecture Design
+- [x] Hybrid architecture specification combining Fly.io and OpenAI WebRTC
+- [x] api.video integration plan for recording
+- [x] Data model for candidate-tenant relationships
+- [x] Account-based authentication design
+- [x] Detailed OpenAI WebRTC API integration documentation
+- [x] Comprehensive technical flow documentation
+- [x] Detailed implementation checklist
+- [x] Architecture comparison (hybrid vs. triangular)
+- [x] Authentication & permissions system documentation
+- [x] Multi-tenant candidate authentication schema
+- [x] WebRTC SDP proxy architecture design
+
+## In-Progress Items
+
+### Infrastructure Integration
+- [x] Modifying fly-interview-poc to implement SDP proxying
+- [ ] Integrating WebRTC SDP proxy into main application
+- [ ] Implementing secure API key management on Fly.io
+- [ ] Creating deployment templates for infrastructure
+
+### Database Setup
+- [ ] Implementing schema with WebRTC status fields
+- [ ] Creating transcript_entries table 
+- [ ] Creating video_segments table
+- [ ] Implementing RLS policies for tenant isolation
+- [ ] Deploying candidate authentication schema to production
+
+## Upcoming Work
+
+### Client Components
+- [ ] Creating WebRTC connection manager component
+- [ ] Implementing OpenAI WebRTC data channel communication
+- [ ] Building transcript display and management UI
+- [ ] Developing video recording integration with api.video
+
+### Authentication & Security
+- [ ] Implementing invitation flow with account creation
+- [ ] Building Magic Link and Google Auth signup flows
+- [ ] Securing WebSocket connections with JWT validation
+- [ ] Creating candidate portal for accessing multiple interviews
+
+### Backend Services
+- [x] Building SDP exchange endpoint for OpenAI WebRTC
+- [ ] Creating video token generation for api.video
+- [ ] Implementing transcript storage and persistence
+- [ ] Developing session management endpoints
+
+## Project Timeline
+
+| Date | Milestone |
+|------|-----------|
+| Completed | Initial architecture evaluation |
+| Completed | Fly.io proof-of-concept |
+| Completed | Multi-region deployment testing |
+| Completed | Architecture design documentation |
+| Completed | Hybrid vs. triangular architecture comparison |
+| Completed | Technical flow documentation |
+| Completed | Implementation checklist |
+| Completed | Authentication and permissions documentation |
+| Completed | Multi-tenant candidate schema design |
+| Completed | SDP proxying implementation |
+| In Progress | Database schema updates |
+| Planned | React WebRTC component development |
+| Planned | Full interview flow implementation |
+| Planned | Production deployment |
+
+## Open Issues
+
+- Connection reliability in challenging network conditions
+- Optimal buffer size configuration for audio quality
+- Multi-tenant isolation testing methodology
+- Error recovery strategy during interview sessions
+- Cross-tenant authentication flow testing
+- Permission enforcement for candidates with multiple companies
+- WebRTC connection resilience in poor network conditions
+
+## Next Steps
+
+According to our implementation checklist (see memory-bank/hybrid-implementation-checklist.md), the immediate next steps are:
+
+1. ✅ Modify existing fly-interview-poc to implement SDP proxying
+2. Integrate the WebRTC SDP proxy with the main application
+3. Create database schema updates for the new architecture
+4. Develop a React WebRTC component for testing
+5. Implement secure API key management on Fly.io VMs
+6. Deploy candidate authentication schema to production environment
+7. Add proper error handling and reconnection logic for WebRTC connections
+
+## Known Issues
+- Connection stability in certain network conditions needs improvement
+- WebRTC setup can be slow on some client devices
+- Handling reconnection gracefully during interviews requires careful implementation
+- Multi-tenant isolation needs rigorous security testing
+- Cross-tenant authentication with multiple active tenant relationships needs UI testing
+- SDP format compatibility may vary across browser implementations
+
+## Upcoming Milestones
+
+1. **Core Triangular Flow**: Implementing complete end-to-end interview flow with Fly.io
+2. **Invitation System**: Completing account-based interviews with proper transcript saving
+3. **Video Recording**: Adding api.video recording capabilities
+4. **Multi-Tenant Support**: Finalizing candidate-tenant relationships
+5. **Production Deployment**: Deploying updated architecture to production 

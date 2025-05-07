@@ -46,7 +46,11 @@ const NewCompany = () => {
         if (userData?.tenant_id) {
           tenant = userData.tenant_id;
           console.log("Found tenant ID in database:", tenant);
+        } else {
+          console.log("No tenant ID found in database");
         }
+      } else {
+        console.log("Found tenant ID in app_metadata:", tenant);
       }
       
       setTenantId(tenant);
@@ -57,6 +61,18 @@ const NewCompany = () => {
 
   const createCompany = useMutation({
     mutationFn: async (data: CompanyData) => {
+      // Log authentication state for debugging
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log("Auth session details:", {
+        userId: sessionData.session?.user?.id,
+        email: sessionData.session?.user?.email,
+        tenantInMetadata: sessionData.session?.user?.app_metadata?.tenant_id,
+        isDevelopment: import.meta.env.DEV,
+        supabaseUrl: import.meta.env.DEV ? 
+          "http://127.0.0.1:54321" : 
+          "https://gypnutyegqxelvsqjedu.supabase.co"
+      });
+      
       // Include the tenant_id in the data
       const companyData = {
         ...data,
@@ -65,15 +81,25 @@ const NewCompany = () => {
       
       console.log("Creating company with data:", companyData);
       
-      // Cast the table name to any to bypass TypeScript error until Supabase types are properly set up
-      const { data: result, error } = await supabase
-        .from('companies' as any)
-        .insert(companyData as any)
-        .select()
-        .single();
+      try {
+        // Cast the table name to any to bypass TypeScript error until Supabase types are properly set up
+        const { data: result, error } = await supabase
+          .from('companies' as any)
+          .insert(companyData as any)
+          .select()
+          .single();
 
-      if (error) throw error;
-      return result;
+        if (error) {
+          console.error("Company insertion error:", error);
+          throw error;
+        }
+        
+        console.log("Company created successfully:", result);
+        return result;
+      } catch (error) {
+        console.error("Detailed error during company creation:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({

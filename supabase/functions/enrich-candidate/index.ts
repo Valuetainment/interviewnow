@@ -22,9 +22,16 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Handle incoming requests
 Deno.serve(async (req) => {
+  // Add more CORS headers to ensure browser compatibility
+  const allCorsHeaders = {
+    ...corsHeaders,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Credentials': 'true'
+  };
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: allCorsHeaders });
   }
   
   try {
@@ -35,7 +42,7 @@ Deno.serve(async (req) => {
     if (!candidate_id) {
       return new Response(
         JSON.stringify({ error: 'Candidate ID is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...allCorsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
@@ -45,7 +52,7 @@ Deno.serve(async (req) => {
       console.error('PDL_API_KEY not found in environment variables');
       return new Response(
         JSON.stringify({ error: 'People Data Labs API key not found' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...allCorsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
@@ -60,7 +67,7 @@ Deno.serve(async (req) => {
       console.error('Error fetching candidate data:', candidateError);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch candidate data', details: candidateError }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...allCorsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
@@ -88,7 +95,7 @@ Deno.serve(async (req) => {
       console.error('No valid search parameters for PDL API');
       return new Response(
         JSON.stringify({ error: 'No valid search parameters for PDL API' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 400, headers: { ...allCorsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
@@ -112,12 +119,15 @@ Deno.serve(async (req) => {
       console.error(`PDL API error: ${response.status}`, errorText);
       return new Response(
         JSON.stringify({ error: `PDL API error: ${response.status}`, details: errorText }),
-        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: response.status, headers: { ...allCorsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
     const pdlData = await response.json();
     console.log('PDL API response received with likelihood:', pdlData.likelihood);
+    
+    // Add detailed logging of the PDL data
+    console.log('FULL PDL DATA:', JSON.stringify(pdlData, null, 2));
     
     // Transform PDL data to our schema
     const profileData = {
@@ -174,12 +184,15 @@ Deno.serve(async (req) => {
       industry: pdlData.industry,
     };
     
+    // Log the profile data being sent to the database
+    console.log('PROFILE DATA FOR UPSERT:', JSON.stringify(profileData, null, 2));
+    
     // Store enriched data in candidate_profiles table
     console.log('Storing enriched data in candidate_profiles table');
     const { error: upsertError } = await supabase
       .from('candidate_profiles')
       .upsert(profileData, {
-        onConflict: 'candidate_id',
+        onConflict: 'candidate_id, tenant_id',
         ignoreDuplicates: false,
       });
     
@@ -187,7 +200,7 @@ Deno.serve(async (req) => {
       console.error('Error upserting candidate profile data:', upsertError);
       return new Response(
         JSON.stringify({ error: 'Failed to store enriched candidate data', details: upsertError }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...allCorsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
@@ -198,13 +211,13 @@ Deno.serve(async (req) => {
         match_likelihood: pdlData.likelihood || 0,
         profile_id: pdlData.id
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...allCorsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Error in enrich-candidate function:', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Unknown error in enrichment process' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...allCorsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 }); 

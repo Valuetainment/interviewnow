@@ -1,0 +1,273 @@
+# Current Development Environment Documentation
+
+## 1. Repository Structure
+- **GitHub Repository**: thelabvenice/triangularai
+- **URL**: https://github.com/thelabvenice/triangularai.git
+- Only the main branch exists
+- No .github folder with workflows/actions
+- No branch protection or PR templates
+- Recent commit: "Fix company creation by explicitly adding tenant_id to company data"
+
+## 2. Local Development Environment
+### Git Configuration
+- User: ben_cursor (b@thelab.io)
+- Working directly on main branch
+- Direct push access to repository
+
+### Node.js Environment
+- Package name: vite_react_shadcn_ts@0.0.0
+- Vite-based React application with TypeScript
+- No Husky pre-commit hooks
+- Available scripts: dev, build, lint, preview, setup-env, check-env
+
+### Environment Variables
+- Example template available in env.example
+- Production environment variables stored in .env:
+  - Supabase URL: gypnutyegqxelvsqjedu.supabase.co
+  - OpenAI API key
+  - VideoSDK API key
+  - PDF.co API key
+
+## 3. Supabase Configuration
+### Project Details
+- Project ID: gypnutyegqxelvsqjedu
+- Local dev setup running on standard ports
+- PostgreSQL v15 database
+- JWT expiry set to 3600 seconds (1 hour)
+- File size limit: 50MiB
+
+### Edge Functions
+- 6 Edge Functions deployed:
+  - process-resume
+  - analyze-resume
+  - enrich-candidate
+  - check-env
+  - generate-position
+  - transcript-processor
+- All have JWT verification disabled
+- Organized with shared code in _shared directory
+- Configuration in deno.json, import_map.json, and tsconfig.json
+
+### Database Migrations
+- 16 migrations in total
+- Recent migrations include:
+  - Initial schema (20240429124500)
+  - Companies table (20250430131455)
+  - RLS policy fixes (20250430133000)
+  - Trigger fixes (20250430134500)
+  - Storage permissions (20250504000000)
+  - Companies table fix (20250507000000)
+- All migrations appear to be applied to both local and production
+
+### Local Branch Configuration
+- Current branch set to "main" in supabase/.branches/current_branch
+- No development branches currently defined
+
+## 4. Deployment Pipeline
+### Supabase-GitHub Integration
+- Connected to thelabvenice/triangularai repository
+- Production branch is main
+- Branch limit of 50
+- "Supabase changes only" is enabled - only changes to Supabase directory trigger branch creation
+- Supabase directory is at root level (.)
+
+### Vercel Integration
+- Vercel is connected to the GitHub repository
+- No local Vercel config file or .vercel directory
+- No explicit build or deployment configuration found
+- Assumed to deploy on changes to main branch
+
+## 5. Current Architecture
+### Frontend
+- React with TypeScript
+- Vite build system
+- Uses components from custom UI library
+
+### Backend
+- Supabase for authentication, database, and storage
+- Edge Functions for serverless processing
+- PostgreSQL database with Row Level Security
+
+### External Services
+- OpenAI for AI features
+- VideoSDK for media
+- PDF.co for document processing
+
+## 6. Recent Changes
+- Fixed companies table issue with migration 20250507000000_ensure_companies_table.sql
+- Modified NewCompany.tsx to explicitly add tenant_id to company data
+- Fixed types and form submission for company creation
+
+## 7. Working Setup
+- Local Supabase instance running
+- Direct connection to production Supabase
+- Single branch (main) workflow
+- Local development with hot-reload via npm run dev
+- Database migrations using supabase db push
+
+## 8. Notable Absences
+- No CI/CD pipelines defined in repository
+- No automated testing setup (.github/workflows)
+- No pre-commit hooks for linting/formatting
+- No branch-based development workflow
+- No defined process for code review before deployment
+
+*This document reflects the actual current state of your development environment, not what it could or should be. It captures what you're working with today as the foundation for potential workflow improvements.*
+
+
+# Local vs. Production Environment Differences
+
+## 1. Supabase Connection
+
+### Local:
+- **URL**: http://127.0.0.1:54321
+- **Anon Key**: Local development key (eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9...)
+- **DB Connection**: PostgreSQL on port 54322
+- **Studio UI**: Available at http://127.0.0.1:54323
+- **Email Testing**: Inbucket on port 54324 (simulates emails)
+
+### Production:
+- **URL**: https://gypnutyegqxelvsqjedu.supabase.co
+- **Anon Key**: Production key (eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5cG51dHllZ3F4ZWx2c3FqZWR1Iiwicm9sZSI6...)
+- **DB Connection**: Remote PostgreSQL (db.gypnutyegqxelvsqjedu.supabase.co)
+- **Environment**: General Availability (GA) release channel
+
+## 2. Environment Detection
+
+- **Auto-detection**: Uses `import.meta.env.DEV` to detect development mode
+- **Switchover Logic**: 
+  ```javascript
+  const supabaseUrl = isDevelopment ? LOCAL_SUPABASE_URL : REMOTE_SUPABASE_URL;
+  const supabaseAnonKey = isDevelopment ? LOCAL_SUPABASE_KEY : REMOTE_SUPABASE_KEY;
+  ```
+- **Manual Override**: Commented-out code exists to force development mode regardless of environment
+
+## 3. Authentication Settings
+
+### Local:
+- **Site URL**: http://localhost:3000
+- **Redirect URLs**: Include https://localhost:3000
+- **JWT Verification**: Disabled for edge functions (verify_jwt = false)
+- **Email Testing**: Not actually sent, viewable in Inbucket UI
+
+### Production:
+- **Live Authentication**: Real emails are sent
+- **JWT Verification**: Also disabled in production (verify_jwt = false)
+- **Same JWT Expiry**: Both use 3600 seconds (1 hour)
+
+## 4. Development Tools
+
+### Local Only:
+- **Component Tagger**: Only active in development mode (`mode === 'development' && componentTagger()`)
+- **Development Server**: Runs on port 8080 with hot reload
+- **localhost Access**: Edge functions accessible via localhost
+
+### Production:
+- **No Hot Reload**: Production build served statically
+- **Vercel Deployment**: Served through Vercel's CDN
+- **Edge Functions**: Deployed to Supabase infrastructure
+
+## 5. Database Schema Management
+
+- **Same Schema Used**: Local and production share the exact same database schema
+- **Migration Process**: Changes developed locally, then pushed to production via `supabase db push`
+- **Database Version**: Both use PostgreSQL 15 (local: latest version, production: 15.8.1.077)
+
+## 6. API Keys and External Services
+
+- **Same Keys Used**: The same API keys for OpenAI, VideoSDK, and PDF.co are used in both environments
+- **Key Management**: Keys stored in `.env` file locally and assumed to be in Vercel environment variables for production
+
+## 7. Storage Configuration
+
+- **Same File Size Limit**: Both environments use 50MiB limit
+- **Storage Paths**: Both use tenant-prefixed paths via `getTenantStoragePath` helper
+- **Local Storage**: Uses local filesystem within Docker container
+- **Production Storage**: Uses Supabase's S3-compatible storage
+
+## 8. Key Implications
+
+1. No separate staging or testing keys for external services
+2. JWT verification disabled in both environments for Edge Functions
+3. Single `.env` file used for both local and production connection details
+4. Direct changes to main branch impact production immediately
+5. Database schema changes are directly applied from local to production
+
+# Release Procedure Documentation
+
+## Current Deployment Process
+
+### Frontend Deployment
+1. **Code Push Triggers Deployment**:
+   - Pushing to the `main` branch automatically triggers deployment
+   - Vercel detects changes and builds the frontend application
+   - No formal pre-deployment testing or staging environment
+
+2. **Manual Verification**:
+   - After deployment, changes are manually verified in production
+   - No automated post-deployment checks or monitoring in place
+
+### Database Migration Deployment
+1. **Local Development and Testing**:
+   - Migrations are created and tested locally using `supabase start`
+   - Changes are validated against local database instance
+
+2. **Direct Migration Push**:
+   - Migrations are pushed directly to production with `supabase db push`
+   - No intermediate migration verification in a staging environment
+   - Example identified in your workflow:
+     ```bash
+     supabase db push
+     ```
+
+3. **Post-Migration Verification**:
+   - Manual testing after migration to confirm database changes
+   - No automated validation of schema changes
+
+### Edge Function Deployment
+1. **Individual Function Deployment**:
+   - Functions are deployed individually using `supabase functions deploy`
+   - Example from your scripts:
+     ```bash
+     supabase functions deploy generate-position --project-ref $PROJECT_REF
+     ```
+
+2. **Secret Management**:
+   - API keys are set using the Supabase CLI:
+     ```bash
+     supabase secrets set OPENAI_POSITION_API_KEY="your-openai-api-key" --project-ref $PROJECT_REF
+     ```
+
+## Rollback Procedures
+
+Your project currently lacks formal rollback procedures. Here's what I've identified:
+
+### Frontend Rollbacks
+- **No Automated Rollback**:
+  - No documented process for reverting to previous frontend versions
+  - Rollbacks would require manual git reversion and redeployment
+
+### Database Rollbacks
+- **No Migration Reversal Process**:
+  - No rollback migrations are created as part of the deployment process
+  - Database changes cannot be easily reversed without manual intervention
+  - No backup restoration procedure documented
+
+### Edge Function Rollbacks
+- **Manual Version Management**:
+  - No version tracking or rollback mechanism for Edge Functions
+  - Previous versions of functions are not preserved
+  - Rollback would require manual redeployment of previous code
+
+## Deployment Security
+- **Hard-coded API Keys**:
+  - The deployment script contains references to hard-coded API keys
+  - No secret rotation or management process described
+
+## Notable Absence of:
+1. **Release Versioning**: No semantic versioning or release tagging
+2. **Deployment Approval Process**: No formal review steps before production changes
+3. **Canary Deployments**: No gradual rollout of changes to detect issues
+4. **Automated Testing**: No integration or smoke tests before/after deployment
+5. **Rollback Documentation**: No clear instructions for emergency rollbacks
+6. **Backup Strategy**: No routine database backup before migrations

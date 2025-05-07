@@ -36,6 +36,8 @@
 - [x] Implement RLS policies for each table
 - [x] Create stored procedures/triggers for validation logic
 - [x] Set up initial migrations
+- [x] Fix RLS policies for companies table
+- [x] Make tenant_id nullable for companies table
 
 ## 4. Frontend Foundation
 - [x] Establish project folder structure
@@ -51,6 +53,8 @@
 - [ ] Set up theme provider with dark/light mode
 - [x] Create reusable UI components based on shadcn/ui
 - [x] Implement responsive design framework
+- [x] Optimize UI navigation by removing redundant elements
+- [x] Integrate resume functionality into Candidates section
 
 ## 5. Authentication & Authorization
 - [x] Connect to Supabase Auth
@@ -121,9 +125,9 @@
 - [x] Set up environment variables (.env file)
 - [x] Verify API connectivity with environment checker
 - [x] Test company creation functionality
-- [ ] Test resume upload and processing
-- [ ] Test candidate creation from resume
-- [ ] Test position creation with AI assistance
+- [x] Test resume upload and processing
+- [x] Test candidate creation from resume
+- [x] Test position creation with AI assistance
 - [ ] Test interview session creation
 - [ ] Test interview room functionality
 - [ ] Test real-time transcription

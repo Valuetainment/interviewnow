@@ -105,6 +105,42 @@ The project follows a structured development and deployment workflow:
 └──────────┘     └───────────────┘     └───────────────┘
 ```
 
+### Tenant User Authentication Flow
+
+```
+┌──────────┐     ┌───────────────┐     ┌───────────────┐
+│          │     │               │     │               │
+│  Login/  │────►│ Supabase Auth │────►│ User Record   │
+│  Signup  │     │ (Email/Pass)  │     │ Creation      │
+│          │     │               │     │               │
+└──────────┘     └───────────────┘     └───────┬───────┘
+                                              │
+┌──────────┐     ┌───────────────┐     ┌──────▼───────┐
+│          │     │               │     │               │
+│ JWT with │◄────│ Role & Tenant │◄────│ Single Tenant │
+│ Claims   │     │ Assignment    │     │ Association   │
+│          │     │               │     │               │
+└──────────┘     └───────────────┘     └───────────────┘
+```
+
+### Candidate Authentication Flow
+
+```
+┌──────────┐     ┌───────────────┐     ┌───────────────┐
+│          │     │               │     │               │
+│Invitation│────►│ Account       │────►│ Candidate-Auth│
+│Token     │     │ Creation      │     │ Association   │
+│          │     │               │     │               │
+└──────────┘     └───────────────┘     └───────┬───────┘
+                                              │
+┌──────────┐     ┌───────────────┐     ┌──────▼───────┐
+│          │     │               │     │               │
+│Multi-    │◄────│ RLS Policies  │◄────│ Candidate-    │
+│Tenant    │     │ for Access    │     │ Tenant       │
+│Access    │     │               │     │ Relationships │
+└──────────┘     └───────────────┘     └───────────────┘
+```
+
 ### Resume Processing Flow
 
 ```
@@ -229,6 +265,123 @@ CREATE POLICY "Users can access their own data" ON table_name
     USING (user_id = auth.uid());
 ```
 
+### Simplified RLS for Initial User Flow
+
+For some tables like companies, a more permissive RLS policy is used to facilitate initial user flow:
+
+```sql
+-- Allow authenticated users to select any company they have access to
+CREATE POLICY select_companies_policy ON companies
+  FOR SELECT USING (true);
+
+-- Let users create companies (tenant_id will be set via trigger)
+CREATE POLICY insert_companies_policy ON companies
+  FOR INSERT WITH CHECK (true);
+
+-- Users can only update companies in their tenant
+CREATE POLICY update_companies_policy ON companies
+  FOR UPDATE USING (
+    tenant_id IS NULL OR 
+    tenant_id = (CURRENT_SETTING('request.jwt.claims', true)::json->>'tenant_id')::uuid
+  );
+
+-- Users can only delete companies in their tenant
+CREATE POLICY delete_companies_policy ON companies
+  FOR DELETE USING (
+    tenant_id IS NULL OR 
+    tenant_id = (CURRENT_SETTING('request.jwt.claims', true)::json->>'tenant_id')::uuid
+  );
+```
+
+### Candidate Multi-tenant Access
+
+For candidate authentication and multi-tenant access, we use a junction table approach:
+
+```sql
+-- Junction table for many-to-many candidate-tenant relationships
+CREATE TABLE candidate_tenants (
+  candidate_id UUID REFERENCES candidates(id) ON DELETE CASCADE,
+  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'active',
+  relationship_type TEXT NOT NULL DEFAULT 'candidate',
+  invitation_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_interaction TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (candidate_id, tenant_id)
+);
+
+-- Candidate can see their own tenant relationships
+CREATE POLICY "Candidates can view their own tenant relationships" ON candidate_tenants
+  FOR SELECT
+  USING (candidate_id IN (
+    SELECT c.id FROM candidates c
+    WHERE c.auth_id = auth.uid()
+  ));
+
+-- Tenant users can see candidates in their own tenant
+CREATE POLICY "Tenant users can view their tenant's candidates" ON candidate_tenants
+  FOR SELECT
+  USING (tenant_id IN (
+    SELECT tenant_id FROM users
+    WHERE id = auth.uid()
+  ));
+```
+
+### Invitation-Based Registration
+
+We use a secure function to generate invitation tokens for candidates:
+
+```sql
+-- Function to generate invitation tokens securely
+CREATE OR REPLACE FUNCTION create_candidate_invitation(
+  p_tenant_id UUID,
+  p_candidate_email TEXT,
+  p_position_id UUID DEFAULT NULL
+) RETURNS UUID AS $$
+DECLARE
+  v_candidate_id UUID;
+  v_invitation_token UUID;
+  v_session_id UUID;
+BEGIN
+  -- Find or create candidate
+  SELECT id INTO v_candidate_id FROM candidates 
+  WHERE email = p_candidate_email AND tenant_id = p_tenant_id;
+  
+  IF v_candidate_id IS NULL THEN
+    -- Create new candidate
+    INSERT INTO candidates (tenant_id, email, full_name, auth_email)
+    VALUES (p_tenant_id, p_candidate_email, split_part(p_candidate_email, '@', 1), p_candidate_email)
+    RETURNING id INTO v_candidate_id;
+  END IF;
+  
+  -- Create interview session if position provided
+  IF p_position_id IS NOT NULL THEN
+    INSERT INTO interview_sessions (tenant_id, candidate_id, position_id, status)
+    VALUES (p_tenant_id, v_candidate_id, p_position_id, 'invited')
+    RETURNING id INTO v_session_id;
+  END IF;
+  
+  -- Create invitation token
+  INSERT INTO interview_invitations (tenant_id, candidate_id, session_id, expires_at)
+  VALUES (
+    p_tenant_id, 
+    v_candidate_id,
+    v_session_id,
+    NOW() + INTERVAL '7 days'
+  )
+  RETURNING token INTO v_invitation_token;
+  
+  -- Create candidate-tenant relationship if it doesn't exist
+  INSERT INTO candidate_tenants (candidate_id, tenant_id)
+  VALUES (v_candidate_id, p_tenant_id)
+  ON CONFLICT (candidate_id, tenant_id) DO NOTHING;
+  
+  RETURN v_invitation_token;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
 ## Database Schema Patterns
 
 The database schema follows several key patterns:
@@ -249,6 +402,117 @@ CREATE TABLE child_table (
     ...
 );
 ```
+
+### Dual-Table Approach for Candidate Data
+
+The candidate profile system uses a dual-table approach to separate core candidate data from enriched profile data:
+
+```sql
+-- Main candidates table for core data
+CREATE TABLE public.candidates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id UUID NOT NULL REFERENCES tenants(id),
+  full_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT,
+  resume_url TEXT,
+  resume_text TEXT,
+  resume_analysis JSONB,
+  skills TEXT[],
+  experience JSONB,
+  education JSONB,
+  auth_id UUID REFERENCES auth.users(id),
+  auth_email TEXT,
+  first_name TEXT,
+  last_name TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Enriched candidate_profiles table for PDL data
+CREATE TABLE public.candidate_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  candidate_id UUID NOT NULL REFERENCES candidates(id),
+  tenant_id UUID NOT NULL REFERENCES tenants(id),
+  
+  -- PDL specific fields
+  pdl_id TEXT,
+  pdl_likelihood INTEGER,
+  last_enriched_at TIMESTAMPTZ,
+  
+  -- Contact and personal info
+  first_name TEXT,
+  middle_name TEXT,
+  last_name TEXT,
+  gender TEXT,
+  birth_year INTEGER,
+  location_name TEXT,
+  location_locality TEXT,
+  location_region TEXT,
+  location_country TEXT,
+  location_continent TEXT,
+  location_postal_code TEXT,
+  location_street_address TEXT,
+  location_geo TEXT,
+  
+  -- Professional data
+  job_title TEXT,
+  job_company_name TEXT,
+  job_company_size TEXT,
+  job_company_industry TEXT,
+  job_start_date TEXT,
+  job_last_updated TEXT,
+  
+  -- Social profiles
+  linkedin_url TEXT,
+  linkedin_username TEXT,
+  linkedin_id TEXT,
+  twitter_url TEXT,
+  twitter_username TEXT,
+  facebook_url TEXT, 
+  facebook_username TEXT,
+  github_url TEXT,
+  github_username TEXT,
+  
+  -- Arrays and structured data
+  skills TEXT[],
+  interests TEXT[],
+  countries TEXT[],
+  experience JSONB,
+  education JSONB,
+  industry TEXT,
+  job_title_levels TEXT[],
+  
+  -- Timestamps
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  
+  -- Constraints
+  CONSTRAINT candidate_profiles_candidate_id_key UNIQUE (candidate_id, tenant_id)
+);
+
+-- Junction table for many-to-many candidate-tenant relationships
+CREATE TABLE candidate_tenants (
+  candidate_id UUID REFERENCES candidates(id) ON DELETE CASCADE,
+  tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'active',
+  relationship_type TEXT NOT NULL DEFAULT 'candidate',
+  invitation_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_interaction TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (candidate_id, tenant_id)
+);
+```
+
+This pattern offers several advantages:
+1. Core information from resume parsing is stored in the candidates table
+2. Enhanced information from People Data Labs is stored in the candidate_profiles table
+3. Both tables have the tenant_id column for multi-tenant isolation
+4. The 1:1 relationship is enforced with a unique constraint on (candidate_id, tenant_id)
+5. The separation allows for independent evolution of both datasets
+6. The candidate_tenants junction table enables many-to-many relationships between candidates and tenants
+7. Different relationship statuses can be tracked per tenant-candidate relationship
 
 ### Metadata Storage
 
@@ -271,6 +535,34 @@ CREATE TRIGGER track_changes
 AFTER INSERT OR UPDATE OR DELETE ON table_name
 FOR EACH ROW EXECUTE FUNCTION audit_trail();
 ```
+
+### Tenant Association via Triggers
+
+For certain tables like companies, automatic tenant association is handled via triggers:
+
+```sql
+CREATE OR REPLACE FUNCTION set_tenant_id_for_companies()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- If no tenant_id was specified and we have JWT claim
+  IF NEW.tenant_id IS NULL AND current_setting('request.jwt.claims', true) != '' THEN
+    -- Extract the tenant_id from the JWT claims
+    NEW.tenant_id := (current_setting('request.jwt.claims', true)::json->>'tenant_id')::uuid;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER companies_tenant_id_trigger
+BEFORE INSERT ON companies
+FOR EACH ROW EXECUTE FUNCTION set_tenant_id_for_companies();
+```
+
+This pattern allows:
+1. Initial creation of records without tenant_id (for first-time users)
+2. Automatic association with tenant when JWT is available
+3. Proper RLS enforcement for subsequent operations
+4. Flexibility for system operations when needed
 
 ## Error Handling Patterns
 
@@ -354,200 +646,150 @@ const useFetchData = (table: string) => {
 };
 ```
 
-## Core Architectural Patterns
+### Permission-Based Rendering
 
-### 1. Multi-Tenant Data Isolation
-- Every table includes a `tenant_id` column
-- Row-Level Security (RLS) policies enforce tenant isolation
-- JWT claims contain `tenant_id` for authentication context
-- Storage buckets use tenant-prefixed paths
-
-Example RLS policy:
-```sql
-alter table <table_name> enable row level security;
-create policy tenant_iso_<table_name> on <table_name>
-  using (tenant_id = current_setting('request.jwt.claim.tenant_id')::uuid);
-```
-
-### 2. Event-Driven Communication
-- Supabase Realtime channels for pub/sub patterns
-- Channel naming convention: `<entity>:<id>` (e.g., `interview:123`)
-- Presence for tracking active users in sessions
-- Transcript deltas delivered via Realtime for sub-200ms latency
-
-### 3. Serverless Edge Functions
-- Deno-based Edge Functions for all server-side logic
-- Function boundaries align with domain workflows
-- Each function authenticates via JWT and respects tenant isolation
-- Functions communicate with external services when needed
-
-### 4. Structured Assessment Methodology
-- Position-defined competencies with weights (sum = 100%)
-- AI assessment generator analyzes transcript against competencies
-- Behavioral metrics incorporated into final assessment
-- Weighted scoring calculations done server-side for consistency
-
-### 5. Environment and Testing Infrastructure
-- Standardized environment configuration through structured scripts
-- API connectivity verification prior to feature usage
-- Comprehensive testing documentation with step-by-step guides
-- Automated checks for critical dependencies
-
-## Data Flow Patterns
-
-### 1. Resume Processing Flow
-```
-Upload → Storage → process-resume → analyze-resume → Candidate DB Entry
-```
-
-The resume processing flow is now fully implemented:
-
-- **Frontend Components**:
-  - `ResumeUploader`: Handles file selection, validation, and upload
-  - `Candidate` page: Displays processed candidate information with skills tags and summary
-
-- **Storage Pattern**:
-  - Files stored in `resumes` bucket with tenant isolation
-  - File naming: `${tenantId}/${timestamp}_${filename}`
-  - Public URLs generated for downstream processing
-
-- **Edge Functions**:
-  - `process-resume`: Extracts text from PDF using PDF.co API
-    - Takes a PDF URL as input
-    - Returns extracted text as output
-    - Handles CORS and auth validation
-    - Validates environment variables and inputs
+```tsx
+const PositionsPage = () => {
+  const { user } = useAuth();
+  const role = user?.app_metadata?.role || 'user';
+  const canCreatePosition = ['owner', 'admin'].includes(role);
   
-  - `analyze-resume`: Analyzes resume text using OpenAI
-    - Takes extracted text as input
-    - Uses GPT-4o-mini to structure the resume data
-    - Returns JSON with personal info, skills, experience, education
-    - Implements error handling and response formatting
-
-- **Database Integration**:
-  - Candidates stored in `candidates` table
-  - Resume URL stored in `resume_url` field
-  - Structured data stored in `resume_analysis` JSONB field
-  - Tenant isolation enforced via RLS policies
-
-- **Error Handling**:
-  - Client-side validation for file type (PDF only) and size (< 10MB)
-  - Progress indicators for upload and processing steps
-  - Comprehensive error handling with user feedback
-  - Fallback mechanisms for API failures
-
-### 2. Position Creation Flow
-```
-Form Input → OpenAI Generation → Competency Suggestion → DB Persistence
+  return (
+    <div>
+      <h1>Positions</h1>
+      {canCreatePosition && (
+        <Button onClick={() => navigate('/positions/new')}>
+          Add Position
+        </Button>
+      )}
+      <PositionsList />
+    </div>
+  );
+};
 ```
 
-The position creation flow is now implemented:
+### Custom Authorization Hook
 
-- **Frontend Components**:
-  - `CreatePosition` page: Form for creating positions with AI assistance
-  - `CompetencyWeights`: Interactive UI for managing competency weights
-  - `CompetencySelector`: Component for selecting and adding competencies
-
-- **Form Validation**:
-  - Zod schema for client-side validation
-  - Form validation using React Hook Form
-  - Interactive feedback for validation errors
-
-- **Edge Functions**:
-  - `generate-position`: Creates job descriptions and suggests competencies
-    - Takes title and short description as input
-    - Uses OpenAI GPT-4o-mini to generate structured content
-    - Returns markdown job description and suggested competencies with weights
-    - Implements proper error handling and response formatting
-
-- **Database Schema**:
-  - `positions`: Stores position details with tenant isolation
-  - `competencies`: Reusable competency definitions
-  - `position_competencies`: Join table with weight values
-  - Validation trigger to ensure weights sum to 100%
-
-- **UI Components**:
-  - Two-panel layout for input and preview
-  - Interactive weight distribution with pie chart visualization
-  - Real-time validation for weight distribution
-  - Toast notifications for operation status
-
-### 3. Interview Session Flow
-```
-Create Session → Generate Invitation → Candidate Joins → 
-RTC Connection → Live Transcription → Assessment Generation
+```tsx
+const usePermissions = () => {
+  const { user } = useAuth();
+  const role = user?.app_metadata?.role || 'user';
+  
+  return {
+    canCreatePosition: ['owner', 'admin'].includes(role),
+    canEditPosition: ['owner', 'admin'].includes(role),
+    canDeletePosition: ['owner'].includes(role),
+    // Additional permission checks
+  };
+};
 ```
 
-The interview session flow is now implemented:
+### Candidate Authentication Components
 
-- **Frontend Components**:
-  - `Sessions` page: Displays sessions with tabs for different statuses
-  - `SessionList`: Component for viewing and managing sessions
-  - `CreateSession`: Form for setting up new interview sessions
-  - `InterviewRoom`: Full-screen interface for conducting interviews
-  - `InterviewInvitation`: Component for managing candidate invitations
-
-- **Form Validation**:
-  - Zod schema for session creation validation
-  - Required fields for candidate, position, and scheduling
-  - Date and time validation for scheduling
-
-- **Database Schema**:
-  - `interview_sessions`: Stores session details with references to candidates and positions
-  - `interview_invitations`: Manages invitation tokens and statuses
-  - `transcript_entries`: Stores real-time transcript segments
-
-- **UI Components**:
-  - Filtering and search for session management
-  - Video/audio controls for interview room
-  - Real-time transcript panel
-  - Recording and pause/resume functionality
-  - Session status tracking (scheduled, in_progress, completed, cancelled)
-
-- **Edge Functions**:
-  - `transcript-processor`: Processes audio chunks for real-time transcription
-    - Takes base64-encoded audio as input
-    - Uses OpenAI Whisper API for speech-to-text
-    - Returns structured transcript entries
-    - Broadcasts updates via Realtime channels
-
-- **WebRTC Integration**:
-  - Local video preview with mirroring
-  - Audio level visualization
-  - Media device permission handling
-  - Connection state management
-
-- **Real-time Updates**:
-  - Transcript entries delivered via Realtime channels
-  - Session status updates for all participants
-  - Presence for tracking active users
-
-### 4. Assessment Generation Flow
+```tsx
+const CandidateRegistration = ({ invitationToken }: { invitationToken: string }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  
+  const handleRegister = async () => {
+    try {
+      // Create user account
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      
+      if (error) throw error;
+      
+      // Link account with candidate record using invitation token
+      await supabase.functions.invoke('link-candidate-account', {
+        body: {
+          invitationToken,
+          userId: data.user.id
+        }
+      });
+      
+      // Redirect to dashboard
+      navigate('/candidate/dashboard');
+    } catch (error) {
+      console.error('Registration error:', error);
+    }
+  };
+  
+  return (
+    <div className="registration-form">
+      <h2>Create Your Account</h2>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Email"
+      />
+      <input
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="Password"
+      />
+      <button onClick={handleRegister}>Register</button>
+    </div>
+  );
+};
 ```
-Session End → Fetch Transcript → Retrieve Position Competencies → 
-AI Assessment → Weighted Calculation → Store Results → Realtime Notification
+
+## Security Patterns
+
+### JWT Claims Structure
+
+```json
+{
+  "aud": "authenticated",
+  "exp": 1714416090,
+  "sub": "user-uuid-here",
+  "email": "user@example.com",
+  "app_metadata": {
+    "tenant_id": "tenant-uuid-here",
+    "role": "admin"
+  },
+  "user_metadata": {
+    "name": "User Name"
+  }
+}
 ```
 
-## Component Relationships
+### Function-Based Access Control
 
-### Frontend Components
-- **Layout Components**: Page shells, navigation, tenant context providers
-- **Feature Components**: Interview room, resume upload, assessment viewer
-- **UI Components**: From shadcn/ui, customized for the application's design
+```sql
+CREATE OR REPLACE FUNCTION user_has_permission(
+  resource TEXT,
+  action TEXT
+) RETURNS BOOLEAN AS $$
+DECLARE
+  user_role TEXT;
+BEGIN
+  -- Get user role
+  SELECT role INTO user_role FROM users WHERE id = auth.uid();
+  
+  -- Check permission based on role and action
+  IF user_role = 'owner' THEN
+    RETURN TRUE; -- Owners have all permissions
+  ELSIF user_role = 'admin' AND action != 'delete' THEN
+    RETURN TRUE; -- Admins can do everything except delete
+  ELSIF user_role = 'user' AND action = 'read' THEN
+    RETURN TRUE; -- Users can only read
+  ELSE
+    RETURN FALSE;
+  END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
 
-### Backend Services
-- **Edge Functions**: Serverless compute for business logic
-- **Supabase Core**: Database, auth, storage, and realtime services
-- **External Integrations**: AI/ML services, PDF processing, video handling
+### Security Considerations
 
-### Testing and Environment Infrastructure
-- **Environment Setup**: Scripts for configuring required variables
-- **Verification Tools**: API connectivity testing and validation
-- **Documentation**: Comprehensive guides for testing and troubleshooting
-- **API Testing**: Direct validation of Edge Function behavior
-
-### Cross-Cutting Concerns
-- **Authentication**: JWT-based with tenant context
-- **Authorization**: RLS for data access, role-based UI permissions
-- **Audit Logging**: All sensitive operations logged to audit table
-- **Error Handling**: Structured error responses, monitoring via Logflare 
+1. **JWT-based authentication**: Using secure JWT tokens for authentication
+2. **Role-based access control**: Different permissions based on user role
+3. **Row-level security**: Enforcing data isolation at the database level
+4. **Tenant isolation**: Each tenant can only access their own data 
+5. **Permission-based UI rendering**: Showing only allowed actions in the UI
+6. **Security-definer functions**: Using proper PostgreSQL security context
+7. **Cross-tenant candidate authentication**: Secure handling of candidates with multiple tenant relationships 

@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC SDP Proxy Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background-color: #f9f9f9;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .log-container {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 20px;
+            height: 300px;
+            overflow-y: auto;
+            background-color: #f5f5f5;
+            font-family: monospace;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        .info {
+            color: blue;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebRTC SDP Proxy Test</h1>
+    
+    <div class="container">
+        <div class="card">
+            <h2>Connection Status</h2>
+            <p>WebSocket: <span id="ws-status">Not connected</span></p>
+            <p>Session ID: <span id="session-id">None</span></p>
+            <p>WebRTC: <span id="webrtc-status">Not initialized</span></p>
+            <button id="connect-btn">Connect WebSocket</button>
+            <button id="initialize-btn" disabled>Initialize WebRTC</button>
+            <button id="disconnect-btn" disabled>Disconnect</button>
+        </div>
+        
+        <div class="card">
+            <h2>Test Controls</h2>
+            <button id="test-sdp-btn" disabled>Test SDP Exchange</button>
+            <button id="test-ice-btn" disabled>Test ICE Candidate</button>
+            <button id="test-api-key-btn" disabled>Test API Key Status</button>
+        </div>
+        
+        <div class="card">
+            <h2>Options</h2>
+            <label>
+                <input type="checkbox" id="simulation-cb" checked>
+                Assume server is in simulation mode
+            </label>
+        </div>
+        
+        <div class="log-container" id="log-container">
+            <div class="log-entry info">Log started...</div>
+        </div>
+    </div>
+
+    <script>
+        // Elements
+        const wsStatusEl = document.getElementById('ws-status');
+        const sessionIdEl = document.getElementById('session-id');
+        const webrtcStatusEl = document.getElementById('webrtc-status');
+        const connectBtn = document.getElementById('connect-btn');
+        const initializeBtn = document.getElementById('initialize-btn');
+        const disconnectBtn = document.getElementById('disconnect-btn');
+        const testSdpBtn = document.getElementById('test-sdp-btn');
+        const testIceBtn = document.getElementById('test-ice-btn');
+        const testApiKeyBtn = document.getElementById('test-api-key-btn');
+        const simulationCb = document.getElementById('simulation-cb');
+        const logContainer = document.getElementById('log-container');
+        
+        // State
+        let ws = null;
+        let pc = null;
+        let sessionId = null;
+        const hostName = window.location.hostname;
+        const port = window.location.port;
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${hostName}:${port}`;
+        
+        // Logging function
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = message;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            console.log(`[${type}] ${message}`);
+        }
+        
+        // Connect WebSocket
+        connectBtn.addEventListener('click', () => {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+            
+            try {
+                log(`Connecting to WebSocket at ${wsUrl}...`);
+                ws = new WebSocket(wsUrl);
+                
+                ws.onopen = () => {
+                    wsStatusEl.textContent = 'Connected';
+                    wsStatusEl.style.color = 'green';
+                    connectBtn.disabled = true;
+                    disconnectBtn.disabled = false;
+                    initializeBtn.disabled = false;
+                    testApiKeyBtn.disabled = false;
+                    log('WebSocket connected', 'success');
+                };
+                
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    log(`Received WebSocket message: ${data.type}`, 'info');
+                    
+                    switch (data.type) {
+                        case 'session':
+                            sessionId = data.sessionId;
+                            sessionIdEl.textContent = sessionId;
+                            log(`Session established with ID: ${sessionId}`, 'success');
+                            break;
+                            
+                        case 'sdp_answer':
+                            log('Received SDP answer from server', 'success');
+                            if (pc) {
+                                handleSdpAnswer(data.answer);
+                            }
+                            break;
+                            
+                        case 'ice_acknowledge':
+                            log('ICE candidate acknowledged by server', 'success');
+                            break;
+                            
+                        case 'api_key_status':
+                            log(`API key status: ${data.status}`, 'success');
+                            break;
+                            
+                        case 'error':
+                            log(`Error: ${data.message}`, 'error');
+                            break;
+                            
+                        case 'session_ended':
+                            log('Session ended by server', 'info');
+                            break;
+                    }
+                };
+                
+                ws.onerror = (error) => {
+                    wsStatusEl.textContent = 'Error';
+                    wsStatusEl.style.color = 'red';
+                    log('WebSocket error', 'error');
+                    console.error('WebSocket error:', error);
+                };
+                
+                ws.onclose = () => {
+                    wsStatusEl.textContent = 'Disconnected';
+                    wsStatusEl.style.color = 'red';
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    initializeBtn.disabled = true;
+                    testSdpBtn.disabled = true;
+                    testIceBtn.disabled = true;
+                    testApiKeyBtn.disabled = true;
+                    log('WebSocket disconnected', 'info');
+                    
+                    if (pc) {
+                        pc.close();
+                        pc = null;
+                        webrtcStatusEl.textContent = 'Closed';
+                        webrtcStatusEl.style.color = 'red';
+                    }
+                };
+            } catch (error) {
+                log(`WebSocket connection error: ${error.message}`, 'error');
+            }
+        });
+        
+        // Initialize WebRTC
+        initializeBtn.addEventListener('click', () => {
+            if (pc) {
+                pc.close();
+            }
+            
+            try {
+                log('Initializing WebRTC connection...');
+                
+                // Create peer connection
+                pc = new RTCPeerConnection({
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' }
+                    ]
+                });
+                
+                pc.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        log('Generated ICE candidate', 'info');
+                        if (simulationCb.checked) {
+                            sendIceCandidate(event.candidate);
+                        }
+                    }
+                };
+                
+                pc.oniceconnectionstatechange = () => {
+                    log(`ICE connection state changed: ${pc.iceConnectionState}`, 'info');
+                    webrtcStatusEl.textContent = pc.iceConnectionState;
+                    
+                    if (pc.iceConnectionState === 'connected' || 
+                        pc.iceConnectionState === 'completed') {
+                        webrtcStatusEl.style.color = 'green';
+                    } else if (pc.iceConnectionState === 'failed' || 
+                               pc.iceConnectionState === 'disconnected' || 
+                               pc.iceConnectionState === 'closed') {
+                        webrtcStatusEl.style.color = 'red';
+                    } else {
+                        webrtcStatusEl.style.color = 'blue';
+                    }
+                };
+                
+                // Add audio transceiver (for receiving audio)
+                pc.addTransceiver('audio', { direction: 'recvonly' });
+                
+                webrtcStatusEl.textContent = 'Initialized';
+                webrtcStatusEl.style.color = 'blue';
+                testSdpBtn.disabled = false;
+                testIceBtn.disabled = false;
+                log('WebRTC peer connection initialized', 'success');
+                
+            } catch (error) {
+                log(`WebRTC initialization error: ${error.message}`, 'error');
+                webrtcStatusEl.textContent = 'Error';
+                webrtcStatusEl.style.color = 'red';
+            }
+        });
+        
+        // Disconnect
+        disconnectBtn.addEventListener('click', () => {
+            if (ws) {
+                // Send end session message
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({
+                        type: 'end_session'
+                    }));
+                }
+                
+                ws.close();
+                ws = null;
+                wsStatusEl.textContent = 'Disconnected';
+                wsStatusEl.style.color = 'red';
+            }
+            
+            if (pc) {
+                pc.close();
+                pc = null;
+                webrtcStatusEl.textContent = 'Closed';
+                webrtcStatusEl.style.color = 'red';
+            }
+            
+            sessionId = null;
+            sessionIdEl.textContent = 'None';
+            connectBtn.disabled = false;
+            disconnectBtn.disabled = true;
+            initializeBtn.disabled = true;
+            testSdpBtn.disabled = true;
+            testIceBtn.disabled = true;
+            testApiKeyBtn.disabled = true;
+            
+            log('Disconnected from server', 'info');
+        });
+        
+        // Test SDP Exchange
+        testSdpBtn.addEventListener('click', async () => {
+            if (!ws || !pc) {
+                log('WebSocket or WebRTC not initialized', 'error');
+                return;
+            }
+            
+            try {
+                log('Creating SDP offer...');
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                
+                log('Sending SDP offer to server...');
+                ws.send(JSON.stringify({
+                    type: 'sdp_offer',
+                    offer
+                }));
+                
+            } catch (error) {
+                log(`SDP exchange error: ${error.message}`, 'error');
+            }
+        });
+        
+        // Handle SDP answer from server
+        async function handleSdpAnswer(answer) {
+            try {
+                if (!pc) {
+                    throw new Error('WebRTC not initialized');
+                }
+                
+                log('Setting remote description from SDP answer...');
+                await pc.setRemoteDescription(new RTCSessionDescription(answer));
+                log('Remote description set successfully', 'success');
+                
+            } catch (error) {
+                log(`Error handling SDP answer: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test ICE Candidate
+        testIceBtn.addEventListener('click', () => {
+            if (!ws) {
+                log('WebSocket not connected', 'error');
+                return;
+            }
+            
+            try {
+                // Create a mock ICE candidate for testing
+                const mockCandidate = {
+                    candidate: 'candidate:1 1 UDP 2122194687 192.168.1.100 51670 typ host',
+                    sdpMid: '0',
+                    sdpMLineIndex: 0
+                };
+                
+                sendIceCandidate(mockCandidate);
+                
+            } catch (error) {
+                log(`ICE candidate error: ${error.message}`, 'error');
+            }
+        });
+        
+        // Send ICE candidate to server
+        function sendIceCandidate(candidate) {
+            if (!ws || !sessionId) {
+                log('Cannot send ICE candidate: WebSocket not connected or no session', 'error');
+                return;
+            }
+            
+            log('Sending ICE candidate to server...');
+            ws.send(JSON.stringify({
+                type: 'ice_candidate',
+                candidate
+            }));
+        }
+        
+        // Test API Key Status
+        testApiKeyBtn.addEventListener('click', () => {
+            if (!ws) {
+                log('WebSocket not connected', 'error');
+                return;
+            }
+            
+            try {
+                log('Requesting API key status...');
+                ws.send(JSON.stringify({
+                    type: 'get_api_key'
+                }));
+                
+            } catch (error) {
+                log(`API key status error: ${error.message}`, 'error');
+            }
+        });
+        
+        // Initial log
+        log('WebRTC SDP Proxy Test client loaded', 'info');
+    </script>
+</body>
+</html> 
