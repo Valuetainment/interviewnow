@@ -62,9 +62,18 @@ DROP POLICY IF EXISTS "Users can insert transcript entries for active sessions" 
 DROP TRIGGER IF EXISTS update_transcript_entries_updated_at ON public.transcript_entries;
 DROP TABLE IF EXISTS public.transcript_entries;
 
-DROP POLICY IF EXISTS "Users can view video segments for sessions they have access to" ON public.video_segments;
-DROP POLICY IF EXISTS "Users can insert video segments for active sessions" ON public.video_segments;
-DROP TRIGGER IF EXISTS update_video_segments_updated_at ON public.video_segments;
+-- Safely handle video_segments operations
+DO $$ 
+BEGIN
+    -- Check if the video_segments table exists before attempting operations on it
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'video_segments') THEN
+        EXECUTE 'DROP POLICY IF EXISTS "Users can view video segments for sessions they have access to" ON public.video_segments';
+        EXECUTE 'DROP POLICY IF EXISTS "Users can insert video segments for active sessions" ON public.video_segments';
+        EXECUTE 'DROP TRIGGER IF EXISTS update_video_segments_updated_at ON public.video_segments';
+    END IF;
+END $$;
+
+-- Now it's safe to drop the table
 DROP TABLE IF EXISTS public.video_segments;
 
 -- Create or replace timestamp trigger function
