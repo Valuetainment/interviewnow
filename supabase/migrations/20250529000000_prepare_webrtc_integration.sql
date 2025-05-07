@@ -31,12 +31,20 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create triggers to automatically set tenant_id for transcript entries
-DROP TRIGGER IF EXISTS set_transcript_tenant_id ON transcript_entries;
-CREATE TRIGGER set_transcript_tenant_id
-BEFORE INSERT ON transcript_entries
-FOR EACH ROW
-EXECUTE FUNCTION set_tenant_id_from_session();
+-- Create triggers to automatically set tenant_id for transcript entries if it doesn't exist
+DO $$
+BEGIN
+    -- Drop the trigger if it exists
+    EXECUTE 'DROP TRIGGER IF EXISTS set_transcript_tenant_id ON transcript_entries';
+    
+    -- Only create it if the table exists
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'transcript_entries') THEN
+        EXECUTE 'CREATE TRIGGER set_transcript_tenant_id
+                BEFORE INSERT ON transcript_entries
+                FOR EACH ROW
+                EXECUTE FUNCTION set_tenant_id_from_session()';
+    END IF;
+END $$;
 
 -- Check if video_segments table exists before operating on it
 DO $$ 

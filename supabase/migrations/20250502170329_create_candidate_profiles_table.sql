@@ -130,11 +130,19 @@ $$;
 -- check if the trigger function already exists, and add an updated_at column if needed
 alter table public.candidate_profiles add column if not exists updated_at timestamptz not null default now();
 
--- create trigger to update the updated_at column
-create trigger update_candidate_profiles_updated_at
-before update on public.candidate_profiles
-for each row
-execute function public.update_updated_at_column();
+-- create trigger to update the updated_at column only if it doesn't already exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger 
+    WHERE tgname = 'update_candidate_profiles_updated_at'
+  ) THEN
+    EXECUTE 'CREATE TRIGGER update_candidate_profiles_updated_at
+            BEFORE UPDATE ON public.candidate_profiles
+            FOR EACH ROW
+            EXECUTE FUNCTION public.update_updated_at_column()';
+  END IF;
+END $$;
 
 -- ensure required PDL columns exist in case the table was created by an earlier migration without them
 -- (must run BEFORE commenting on those columns)
