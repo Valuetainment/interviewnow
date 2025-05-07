@@ -1,0 +1,21 @@
+-- Migration: Disable problematic migrations
+-- Purpose: Prevent other transcript migrations from executing
+-- Date: 2025-05-07
+
+-- This file is intentionally placed before the problematic migrations
+-- (144500 and 144600) but after our new unified migration (144000)
+-- to ensure they don't execute their problematic parts.
+
+-- The following comment is important documentation:
+-- 
+-- The problematic migrations (20250507144500_add_webrtc_schema.sql and
+-- 20250507144600_fix_auth_functions.sql) have been replaced by a single
+-- atomic migration (20250507144000_single_transcript_migration.sql) that:
+--
+-- 1. Creates all required tables in the correct order
+-- 2. Sets up proper column names
+-- 3. Creates policies with fully-qualified references
+-- 4. Uses proper auth function patterns like (SELECT auth.uid())
+--
+-- After this migration runs, subsequent migrations will find these
+-- objects already exist and skip them via IF NOT EXISTS clauses. 
