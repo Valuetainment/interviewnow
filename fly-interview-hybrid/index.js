@@ -335,6 +335,11 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Additional health check endpoint to match Dockerfile HEALTHCHECK
+app.get('/healthz', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 // Get API key status endpoint (does not expose the actual key)
 app.get('/api/key-status', (req, res) => {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -363,7 +368,7 @@ app.get('/api/sessions/:sessionId', (req, res) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Simulation mode: ${process.env.SIMULATION_MODE === 'true' ? 'ENABLED' : 'DISABLED'}`);
