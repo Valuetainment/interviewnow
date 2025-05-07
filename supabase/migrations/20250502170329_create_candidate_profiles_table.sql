@@ -136,6 +136,13 @@ before update on public.candidate_profiles
 for each row
 execute function public.update_updated_at_column();
 
+-- ensure required PDL columns exist in case the table was created by an earlier migration without them
+-- (must run BEFORE commenting on those columns)
+alter table public.candidate_profiles
+  add column if not exists pdl_id text null,
+  add column if not exists pdl_likelihood integer null,
+  add column if not exists last_enriched_at timestamptz null;
+
 -- add comments
 comment on table public.candidate_profiles is 'Stores enriched candidate profile data from People Data Labs';
 comment on column public.candidate_profiles.tenant_id is 'The tenant that this profile belongs to';
