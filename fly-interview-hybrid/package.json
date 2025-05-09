@@ -8,6 +8,8 @@
     "dev": "nodemon index.js",
     "sim": "SIMULATION_MODE=true node index.js",
     "dev:sim": "SIMULATION_MODE=true nodemon index.js",
+    "simulate": "node simulation-server.js",
+    "simulate:dev": "nodemon simulation-server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
