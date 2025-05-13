@@ -16,6 +16,9 @@ import Candidate from "./pages/Candidate";
 import CandidateProfile from "./pages/CandidateProfile";
 import CompanySettings from "./pages/CompanySettings";
 import TestInterview from "./pages/TestInterview";
+import InterviewTestSimple from "./pages/InterviewTestSimple";
+import FullInterviewTest from "./pages/FullInterviewTest";
+import OpenAITestPage from "./pages/OpenAITestPage";
 import Transcripts from "./pages/Transcripts";
 import Positions2 from "./pages/Positions2";
 import PositionDetail2 from "./pages/PositionDetail2";
@@ -77,7 +80,13 @@ const App = () => (
             
             {/* Full-screen interview room (no dashboard layout) */}
             <Route path="/interview-room/:id" element={<InterviewRoom />} />
-            
+
+            {/* WebRTC test pages - all grouped under /test/ path for organization */}
+            <Route path="/test/ngrok" element={<InterviewTestSimple />} />
+            <Route path="/test/full" element={<FullInterviewTest />} />
+            <Route path="/test/openai" element={<OpenAITestPage />} />
+            <Route path="/test/webrtc-hooks" element={<InterviewTestSimple />} />
+
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
