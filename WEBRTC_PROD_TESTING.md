@@ -6,16 +6,18 @@
 
 ### Hooks Implementation Test
 
-URL: [https://interviewnow-fawn.vercel.app/test/webrtc-hooks](https://interviewnow-fawn.vercel.app/test/webrtc-hooks)
+URL: [https://interviewnow-fawn.vercel.app/interview-test-simple](https://interviewnow-fawn.vercel.app/interview-test-simple)
 
 This page uses our new hooks-based architecture with enhanced debugging features:
 - Look for the "Hooks Version" badge in the header
 - Debug tools and session recording functionality
 - Improved connection state visualization
 
-### Legacy Test
+### Alternative Test Pages
 
-URL: [https://interviewnow-fawn.vercel.app/test/ngrok](https://interviewnow-fawn.vercel.app/test/ngrok)
+If the main test page doesn't work, try these alternatives:
+- [https://interviewnow-fawn.vercel.app/test-interview](https://interviewnow-fawn.vercel.app/test-interview)
+- [https://interviewnow-fawn.vercel.app/interview-room/test-123](https://interviewnow-fawn.vercel.app/interview-room/test-123)
 
 For comparison with the previous implementation.
 
@@ -26,7 +28,7 @@ For comparison with the previous implementation.
    - **OpenAI Direct Mode:** Direct connection to OpenAI's Realtime API (requires API key)
 
 2. **Configure Connection**
-   - Simulation Mode: Set server URL (`wss://interview-sdp-proxy.fly.dev/ws`)
+   - Simulation Mode: Set server URL (`wss://interview-sdp-proxy.fly.dev/ws`) - CONFIRMED RUNNING
    - OpenAI Mode: Enter API key, configure job description and voice settings
 
 3. **Initiate Connection**
@@ -53,7 +55,9 @@ For comparison with the previous implementation.
 
 ### Server Availability
 - SDP Proxy server may need to be restarted if simulation fails
-- Command: `cd fly-interview-hybrid && fly machines restart`
+- Check status: `fly status -a interview-sdp-proxy`
+- Restart if needed: `fly machine start <machine-id> -a interview-sdp-proxy`
+- Current machine ID: `4d89791b262048`
 
 ## Test Scenarios
 
