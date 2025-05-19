@@ -105,14 +105,25 @@
    - Integrated voice customization and temperature settings
 
 ### Next Steps
-1. 🔄 Create unit tests for individual hooks (IN PROGRESS)
+1. ✅ Create unit tests for individual hooks (COMPLETED)
    - Created test setup with Vitest and React Testing Library
-   - Implemented test files for core hooks:
+   - Implemented comprehensive test files for all hooks:
      - useConnectionState
      - useRetry
      - useAudioVisualization
-   - Set up mocks for WebRTC and WebSocket APIs
-   - Working on resolving testing environment issues
+     - useWebRTCConnection
+     - useWebSocketConnection
+     - useTranscriptManager
+     - useOpenAIConnection
+     - useSDPProxy
+     - useWebRTC
+   - Set up robust mocks for WebRTC and WebSocket APIs
+   - Added tests for all major functionality including:
+     - Connection establishment and cleanup
+     - Error handling and recovery
+     - Message processing
+     - Transcript management
+     - State transitions
 
 2. ✅ Enhanced test interface (COMPLETED)
    - Added comprehensive debug information panel
@@ -122,10 +133,190 @@
    - Improved overall test page UI with better organization and visual feedback
    - Added support for toggling debug information visibility
 
-3. Prepare production deployment
-   - Test refactored code with the SDP proxy in production
-   - Deploy updates to Fly.io and Supabase
-   - Monitor for any regressions or issues
+3. ✅ Fixed production routing issues (COMPLETED)
+   - Added Netlify _redirects file to handle SPA routing (/*  /index.html 200)
+   - Created vercel.json with route configuration for Vercel deployments
+   - Added explicit routes for all test pages in App.tsx
+   - Created a standalone webrtc-test.html page for direct access
+   - Enhanced route definitions to include all test paths
+   - Added dedicated routes for test pages outside protected layouts
+   - Fixed deep-linking issues by configuring proper fallback routes
+
+4. ✅ Fixed JS errors in production bundle (COMPLETED)
+   - Fixed the "Cannot read properties of undefined (reading 'add')" errors
+   - Enhanced tenant ID retrieval with robust error handling
+   - Implemented fallback strategies for handling missing tenant data
+   - Added better validation in InterviewInvitation component
+   - Improved error messages with specific details for easier debugging
+   - Added graceful error handling with proper fallbacks
+
+## Prioritized Task List (May 19, 2025)
+
+The following is our prioritized task list for completing the WebRTC implementation and preparing it for production use:
+
+### High Priority Tasks
+1. ✅ Complete unit tests for remaining WebRTC hooks (COMPLETED)
+   - Implemented tests for useWebRTCConnection, useWebSocketConnection, useOpenAIConnection
+   - Implemented tests for useSDPProxy, useTranscriptManager, useWebRTC
+   - Created comprehensive test coverage for all hooks
+
+2. ✅ Fix production routing issues with WebRTC test pages (COMPLETED)
+   - Resolved 404 errors on test routes in production
+   - Fixed direct URL access to SPA routes
+   - Added routes for all test environments
+
+3. ✅ Implement proper fallback routes for client-side routing (COMPLETED)
+   - Configured server to handle SPA routing correctly with _redirects file
+   - Added vercel.json with catch-all route for client-side routing
+   - Fixed deep-linking issues with proper route configuration
+
+4. ✅ Debug and fix JS errors in production bundle (COMPLETED)
+   - Resolved "Cannot read properties of undefined (reading 'add')" errors
+   - Fixed tenant ID retrieval in authentication flows
+   - Implemented fallback mechanisms for handling missing data
+   - Added proper null checking and error boundaries
+   - Enhanced error messaging for easier debugging
+
+5. ✅ Clean up testing structure for hybrid architecture focus (COMPLETED)
+   - Updated InterviewTestSimple.tsx to default to hybrid architecture mode
+   - Refactored useSDPProxy.test.ts to focus only on hybrid architecture aspects
+   - Updated WEBRTC_TESTING.md to focus exclusively on hybrid approach
+   - Added TEST_STRUCTURE.md with comprehensive test organization
+   - Updated architecture docs to clearly mark original approach as historical
+   - Updated main TESTING.md file to reference new testing documentation
+
+### Medium Priority Tasks
+5. Update the SDP proxy with latest fixes
+   - Incorporate error handling improvements
+   - Add enhanced logging for diagnostics
+   - Implement session recovery mechanisms
+
+6. Deploy edge functions for hybrid architecture support
+   - Update interview-start and transcript-processor edge functions
+   - Test with WebRTC integration
+
+7. Test hybrid architecture with real interview sessions
+   - Conduct end-to-end tests with actual interviews
+   - Validate transcript storage and retrieval
+
+8. Implement VM per tenant strategy for isolation
+   - Configure Fly.io for multi-tenant isolation
+   - Ensure secure resource allocation
+
+9. Configure JWT validation for API endpoints
+   - Add JWT validation to WebSocket connections
+   - Implement token refresh mechanism
+
+10. Add tenant_id validation to WebRTC sessions
+    - Prevent cross-tenant access
+    - Document security model
+
+11. Set up monitoring and alerting for production
+    - Implement performance metrics
+    - Configure error alerting
+
+### Low Priority Tasks
+12. Create automated end-to-end tests for WebRTC flow
+13. Implement performance benchmarking tools
+14. Set up continuous testing in CI/CD pipeline
+15. Document production deployment process
+16. Create troubleshooting guide for common issues
+
+## Hybrid Architecture Test Migration Plan
+
+This plan outlines the steps to transition our testing structure to focus exclusively on the hybrid architecture, removing all tests specific to the original SDP proxy approach.
+
+### Phase 1: Test Codebase Audit (1-2 days)
+1. **Catalog all existing test files**
+   - Identify tests specific to original SDP proxy architecture
+   - Identify tests specific to hybrid architecture
+   - Identify shared/common test utilities and helpers
+
+2. **Review hook test implementations**
+   - Document which parts of useSDPProxy.test.ts are still relevant
+   - Flag tests that contain conditional logic for both architectures
+   - Identify hook mocks that need simplification
+
+3. **Assess test page relevance**
+   - Evaluate which test pages are essential for hybrid approach
+   - Document test pages with mixed architecture support to refactor
+   - Create list of all UI components requiring focused testing
+
+### Phase 2: Clean Up and Removal (2-3 days)
+1. **Archive original architecture code**
+   - Move `fly-interview-poc/test-sdp-proxy.js` to an archived directory
+   - Archive any other test files exclusively for original architecture
+   - Create git commit with clear message about architectural focus change
+
+2. **Simplify hybrid hook tests**
+   - Update `useWebRTC.test.ts` to remove original architecture test paths
+   - Refactor `useSDPProxy.test.ts` to focus only on components used in hybrid approach
+   - Remove conditional architecture branching in all hook tests
+   - Update mocks to reflect only hybrid architecture needs
+
+3. **Consolidate test interface components**
+   - Simplify `InterviewTestSimple.tsx` by removing architecture toggles
+   - Set hybrid architecture as the only option in test interfaces
+   - Remove all UI controls for switching between architectures
+   - Update test pages to use direct OpenAI WebRTC endpoints by default
+
+### Phase 3: Documentation Updates (1-2 days)
+1. **Update test documentation**
+   - Revise TESTING.md to focus exclusively on hybrid approach
+   - Update WEBRTC_TESTING.md to remove references to original architecture
+   - Revise AUTOMATED_TESTING.md to focus only on relevant tests
+   - Document the test organization structure in a new TEST_STRUCTURE.md file
+
+2. **Update architecture documentation**
+   - Update ARCHITECTURE_COMPARISON.md to clarify it's for historical reference only
+   - Create or update hybrid-architecture.md to be the primary reference
+   - Remove ambiguous references to multiple architectures in documentation
+   - Add clear markers in legacy documentation indicating archived status
+
+### Phase 4: Enhanced Hybrid Testing (3-4 days)
+1. **Implement focused hybrid architecture tests**
+   - Create dedicated test for OpenAI WebRTC connection flow
+   - Add comprehensive testing for direct connection edge cases
+   - Implement simulation mode tests that accurately reflect production behavior
+   - Create more robust mocks for OpenAI WebRTC endpoints
+
+2. **Add integration tests**
+   - Create tests for the complete interview flow using hybrid architecture
+   - Test transcript storage and retrieval with the hybrid approach
+   - Verify error handling specific to the hybrid connection model
+   - Create tests for reconnection scenarios unique to direct OpenAI connections
+
+3. **Implement test helper utilities**
+   - Create helper functions specific to hybrid architecture testing
+   - Develop simulation utilities that accurately mimic OpenAI WebRTC behavior
+   - Build test fixtures for common hybrid architecture test scenarios
+   - Add debugging utilities specific to hybrid architecture issues
+
+### Phase 5: Test Automation (2-3 days)
+1. **Create streamlined test command**
+   - Add npm script for running all hybrid architecture tests
+   - Configure test filtering to focus on specific test categories
+   - Add visual reporting for test results specific to hybrid components
+   - Create easy-to-use commands for common test scenarios
+
+2. **Document testing workflows**
+   - Create developer guide for testing hybrid architecture components
+   - Document common testing patterns and best practices
+   - Add troubleshooting guide for hybrid architecture test failures
+   - Create quick reference for running different test categories
+
+### Execution Timeline
+- **Week 1**: Complete Phases 1 and 2
+- **Week 2**: Complete Phases 3 and 4
+- **Week 3**: Complete Phase 5 and final verification
+
+### Expected Outcomes
+1. Clean, focused test suite specific to the hybrid architecture
+2. Clear documentation focused on the current architecture
+3. Improved test coverage for the hybrid approach
+4. Simplified testing workflow for developers
+5. More efficient use of development resources
+6. Clearer understanding of the current architecture throughout the codebase
 
 ## Hooks Architecture Implementation
 

@@ -1,6 +1,8 @@
 # Testing Guide: Interview Session Management
 
-This guide provides instructions for setting up your environment and testing the interview session management features.
+This guide provides instructions for setting up your environment and testing the interview session management features using our hybrid WebRTC architecture.
+
+> **Note:** For WebRTC-specific testing, see the [WebRTC Testing Guide](WEBRTC_TESTING.md). For a comprehensive overview of the test structure, see the [Test Structure Documentation](docs/development/TEST_STRUCTURE.md).
 
 ## Environment Setup
 

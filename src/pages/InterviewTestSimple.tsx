@@ -3,13 +3,11 @@ import { WebRTCManager } from '../components/interview/WebRTCManager';
 import { TranscriptPanel } from '../components/interview/TranscriptPanel';
 import { ConnectionState } from '../hooks/webrtc/useConnectionState';
 
-// Test page for WebRTC functionality without any auth requirements
+// Test page for WebRTC functionality using the hybrid architecture approach
 const InterviewTestSimple: React.FC = () => {
   const [transcript, setTranscript] = useState<string>('');
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [interviewId, setInterviewId] = useState<string>('test-' + Date.now().toString());
-  const [simulationMode, setSimulationMode] = useState<boolean>(true);
-  const [openAIMode, setOpenAIMode] = useState<boolean>(false);
   const [openAIKey, setOpenAIKey] = useState<string>('');
   const [jobDescription, setJobDescription] = useState<string>('Software Engineering Position');
   const [resume, setResume] = useState<string>('Experienced developer with React, TypeScript and WebRTC skills');
@@ -19,7 +17,8 @@ const InterviewTestSimple: React.FC = () => {
   const [sessionLogs, setSessionLogs] = useState<Array<{timestamp: string; event: string; data?: any}>>([]);
   const [showDebugInfo, setShowDebugInfo] = useState<boolean>(false);
 
-  // Use wss:// for secure ngrok connections - update with current URL
+  // For simulation mode only - can be toggled for local development without OpenAI API key
+  const [simulationMode, setSimulationMode] = useState<boolean>(false);
   const [serverUrl, setServerUrl] = useState<string>('wss://4d5fb0d8191c.ngrok.app');
 
   // Transcript data ref for recording
@@ -70,17 +69,10 @@ const InterviewTestSimple: React.FC = () => {
     addSessionLog('Connection state changed', { state });
   };
 
-  // Toggle between simulation and OpenAI modes
-  const handleModeChange = (mode: 'simulation' | 'openai') => {
-    if (mode === 'simulation') {
-      setSimulationMode(true);
-      setOpenAIMode(false);
-      addSessionLog('Mode changed to simulation');
-    } else if (mode === 'openai') {
-      setSimulationMode(false);
-      setOpenAIMode(true);
-      addSessionLog('Mode changed to OpenAI direct');
-    }
+  // Toggle simulation mode (for development without OpenAI API)
+  const toggleSimulationMode = () => {
+    setSimulationMode(!simulationMode);
+    addSessionLog(`Simulation mode ${!simulationMode ? 'enabled' : 'disabled'}`);
   };
 
   // Add a log entry to session logs
@@ -104,8 +96,7 @@ const InterviewTestSimple: React.FC = () => {
       logs: sessionLogs,
       config: {
         simulationMode,
-        openAIMode,
-        serverUrl,
+        serverUrl: simulationMode ? serverUrl : null,
         jobDescription,
         resume,
         voice,
@@ -147,25 +138,20 @@ const InterviewTestSimple: React.FC = () => {
         return 'connection-state-unknown';
     }
   };
-  
+
   return (
     <div className="interview-test-page">
       <div className="test-header">
-        <h1>WebRTC Test Page <span className="version-badge">Hooks Version</span></h1>
+        <h1>WebRTC Test Page <span className="version-badge">Hybrid Architecture</span></h1>
 
         <div className="test-actions">
           <div className="mode-selector">
             <button
               className={`mode-btn ${simulationMode ? 'active' : ''}`}
-              onClick={() => handleModeChange('simulation')}
+              onClick={toggleSimulationMode}
+              title="Toggle simulation mode for development without OpenAI API key"
             >
-              Simulation Mode
-            </button>
-            <button
-              className={`mode-btn ${openAIMode ? 'active' : ''}`}
-              onClick={() => handleModeChange('openai')}
-            >
-              OpenAI Direct Mode
+              Simulation Mode: {simulationMode ? 'ON' : 'OFF'}
             </button>
           </div>
 
@@ -208,7 +194,7 @@ const InterviewTestSimple: React.FC = () => {
           {simulationMode && (
             <>
               <div className="test-control-group">
-                <label>Server URL:</label>
+                <label>Simulation Server URL:</label>
                 <input
                   type="text"
                   value={serverUrl}
@@ -218,7 +204,7 @@ const InterviewTestSimple: React.FC = () => {
             </>
           )}
 
-          {openAIMode && (
+          {!simulationMode && (
             <>
               <div className="test-control-group">
                 <label>OpenAI API Key:</label>
@@ -229,50 +215,50 @@ const InterviewTestSimple: React.FC = () => {
                   placeholder="sk-..."
                 />
               </div>
-
-              <div className="test-control-group">
-                <label>Job Description:</label>
-                <input
-                  type="text"
-                  value={jobDescription}
-                  onChange={e => setJobDescription(e.target.value)}
-                />
-              </div>
-
-              <div className="test-control-group">
-                <label>Candidate Resume:</label>
-                <input
-                  type="text"
-                  value={resume}
-                  onChange={e => setResume(e.target.value)}
-                />
-              </div>
-
-              <div className="test-control-group">
-                <label>Voice:</label>
-                <select value={voice} onChange={e => setVoice(e.target.value)}>
-                  <option value="alloy">Alloy</option>
-                  <option value="echo">Echo</option>
-                  <option value="fable">Fable</option>
-                  <option value="onyx">Onyx</option>
-                  <option value="nova">Nova</option>
-                  <option value="shimmer">Shimmer</option>
-                </select>
-              </div>
-
-              <div className="test-control-group">
-                <label>Temperature: {temperature}</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={temperature}
-                  onChange={e => setTemperature(parseFloat(e.target.value))}
-                />
-              </div>
             </>
           )}
+
+          <div className="test-control-group">
+            <label>Job Description:</label>
+            <input
+              type="text"
+              value={jobDescription}
+              onChange={e => setJobDescription(e.target.value)}
+            />
+          </div>
+
+          <div className="test-control-group">
+            <label>Candidate Resume:</label>
+            <input
+              type="text"
+              value={resume}
+              onChange={e => setResume(e.target.value)}
+            />
+          </div>
+
+          <div className="test-control-group">
+            <label>Voice:</label>
+            <select value={voice} onChange={e => setVoice(e.target.value)}>
+              <option value="alloy">Alloy</option>
+              <option value="echo">Echo</option>
+              <option value="fable">Fable</option>
+              <option value="onyx">Onyx</option>
+              <option value="nova">Nova</option>
+              <option value="shimmer">Shimmer</option>
+            </select>
+          </div>
+
+          <div className="test-control-group">
+            <label>Temperature: {temperature}</label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              value={temperature}
+              onChange={e => setTemperature(parseFloat(e.target.value))}
+            />
+          </div>
 
           <div className="test-control-group">
             <label>Session ID:</label>
@@ -300,9 +286,9 @@ const InterviewTestSimple: React.FC = () => {
             sessionId={interviewId}
             onTranscriptUpdate={handleTranscriptUpdate}
             onConnectionStateChange={handleConnectionStateChange}
-            serverUrl={serverUrl}
+            serverUrl={simulationMode ? serverUrl : undefined}
             simulationMode={simulationMode}
-            openAIMode={openAIMode}
+            openAIMode={!simulationMode}
             openAIKey={openAIKey}
             jobDescription={jobDescription}
             resume={resume}
@@ -317,19 +303,18 @@ const InterviewTestSimple: React.FC = () => {
             <h3>Test Information</h3>
             {simulationMode ? (
               <>
-                <p>This page tests the WebRTC functionality in simulation mode.</p>
-                <p>It connects to a simulation server that returns mock transcription data.</p>
+                <p>Running in <strong>Simulation Mode</strong> - using local WebSocket server.</p>
+                <p>This mode allows testing without an OpenAI API key. Transcription is simulated.</p>
                 <p>Current Session ID: {interviewId}</p>
+                <p className="note"><strong>Note:</strong> Simulation mode is for development only and does not reflect production behavior.</p>
               </>
-            ) : openAIMode ? (
+            ) : (
               <>
-                <p>This page tests direct WebRTC connections to OpenAI.</p>
-                <p>It establishes a direct WebRTC connection to OpenAI's Realtime API.</p>
+                <p>Running in <strong>Direct OpenAI Mode</strong> - Hybrid Architecture.</p>
+                <p>This establishes a direct WebRTC connection to OpenAI's Realtime API.</p>
                 <p>Your API key is stored locally and never sent to our servers.</p>
                 <p>Current Session ID: {interviewId}</p>
               </>
-            ) : (
-              <p>Please select a testing mode.</p>
             )}
           </div>
 
@@ -341,14 +326,13 @@ const InterviewTestSimple: React.FC = () => {
                 <pre>
                   {JSON.stringify({
                     sessionId: interviewId,
-                    simulationMode,
-                    openAIMode,
-                    serverUrl: simulationMode ? serverUrl : 'N/A',
-                    openAISettings: openAIMode ? {
+                    mode: simulationMode ? 'simulation' : 'openai_direct',
+                    serverUrl: simulationMode ? serverUrl : null,
+                    openAISettings: {
                       voice,
                       temperature,
                       maximumLength: 5
-                    } : 'N/A'
+                    }
                   }, null, 2)}
                 </pre>
               </div>
