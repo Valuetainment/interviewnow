@@ -180,6 +180,10 @@ The following is our prioritized task list for completing the WebRTC implementat
 5. ✅ Clean up testing structure for hybrid architecture focus (COMPLETED)
    - Updated InterviewTestSimple.tsx to default to hybrid architecture mode
    - Refactored useSDPProxy.test.ts to focus only on hybrid architecture aspects
+   - Refactored useWebSocketConnection.test.ts to focus on SDP exchange for hybrid architecture
+   - Refactored useTranscriptManager.test.ts to support hybrid source attribution
+   - Refactored useOpenAIConnection.test.ts for direct OpenAI connection testing
+   - Enhanced test-hybrid-architecture.js script with improved reporting
    - Updated WEBRTC_TESTING.md to focus exclusively on hybrid approach
    - Added TEST_STRUCTURE.md with comprehensive test organization
    - Updated architecture docs to clearly mark original approach as historical

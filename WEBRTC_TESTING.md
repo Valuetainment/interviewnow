@@ -191,9 +191,12 @@ This information is valuable for troubleshooting connection issues.
 
 ## Automated Testing
 
-The project includes automated tests for the WebRTC hooks implementation:
+The project includes comprehensive automated tests for the WebRTC hooks implementation, focusing exclusively on the hybrid architecture:
 
 ```bash
+# Run the specialized hybrid architecture test script
+npm run test:hybrid
+
 # Run all WebRTC-related tests
 npm test -- --run src/hooks/webrtc/__tests__
 
@@ -201,7 +204,12 @@ npm test -- --run src/hooks/webrtc/__tests__
 npm test -- --run src/hooks/webrtc/__tests__/useOpenAIConnection.test.ts
 ```
 
-These tests verify the functionality of the WebRTC implementation in isolation, allowing for thorough testing without requiring actual backend services.
+The dedicated `test:hybrid` script runs a comprehensive test suite specifically designed for the hybrid architecture. It categorizes tests into:
+
+1. **Core Hook Tests** - Utility hooks used across different parts of the system
+2. **Hybrid Architecture Hook Tests** - Specialized hooks for the hybrid WebRTC approach
+
+These tests verify the functionality of the WebRTC implementation in isolation, allowing for thorough testing without requiring actual backend services or OpenAI API calls.
 
 ## Troubleshooting
 
