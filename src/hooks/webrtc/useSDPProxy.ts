@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useWebSocketConnection } from './useWebSocketConnection';
 import { useWebRTCConnection } from './useWebRTCConnection';
 import { ConnectionState } from './useConnectionState';
@@ -20,6 +20,7 @@ export interface SDPProxyHandlers {
   isConnected: boolean;
   audioLevel: number;
   isRecording: boolean;
+  setServerUrl: (url: string) => void;
 }
 
 /**
@@ -31,6 +32,9 @@ export function useSDPProxy(
   onConnectionStateChange?: (state: ConnectionState) => void,
   onTranscriptUpdate?: (text: string) => void
 ): SDPProxyHandlers {
+  // Store the server URL in a ref so we can update it
+  const serverUrlRef = useRef<string>(config.serverUrl);
+  
   // Create or use provided Supabase client
   const supabase = config.supabaseClient || createClient(
     import.meta.env.VITE_SUPABASE_URL || '',
@@ -109,9 +113,18 @@ export function useSDPProxy(
       switch (message.type) {
         case 'session':
           console.log('Received session message with ID:', message.sessionId);
-          
+
           // For simulation mode, we can just mark as connected
           if (config.simulationMode) {
+            console.log('Simulation mode - marking connection as established');
+            // Send a ping right away to keep connection alive
+            sendWebSocketMessage({
+              type: 'ping',
+              timestamp: new Date().toISOString(),
+              keepAlive: true
+            });
+
+            // Then mark as connected
             setTimeout(() => {
               if (onConnectionStateChange) {
                 onConnectionStateChange('connected');
@@ -120,9 +133,17 @@ export function useSDPProxy(
           }
           break;
 
+        case 'pong':
+          // Handle server pong responses to keep connection alive
+          console.log('Received pong from server:',
+            message.timestamp ? new Date(message.timestamp).toLocaleTimeString() : 'no timestamp');
+          // No need to do anything, this just confirms the connection is alive
+          break;
+
         case 'sdp_answer':
           // Process SDP answer
           if (pcRef.current && message.answer) {
+            console.log('Received SDP answer from server');
             handleAnswer(message.answer);
           }
           break;
@@ -130,6 +151,7 @@ export function useSDPProxy(
         case 'ice_candidate':
           // Process ICE candidate from server
           if (pcRef.current && message.candidate) {
+            console.log('Received ICE candidate from server');
             addIceCandidate(new RTCIceCandidate(message.candidate));
           }
           break;
@@ -138,9 +160,16 @@ export function useSDPProxy(
           // Process transcript update
           if (message.text) {
             console.log('TRANSCRIPT RECEIVED:', message.text);
-            
+
             const speaker = message.speaker || 'unknown';
             saveTranscript(message.text, speaker);
+
+            // Send a ping back to keep the connection alive
+            sendWebSocketMessage({
+              type: 'ping',
+              timestamp: new Date().toISOString(),
+              responseToTranscript: true
+            });
           }
           break;
 
@@ -206,9 +235,16 @@ export function useSDPProxy(
   // Initialize WebRTC session
   const initializeSession = useCallback(async (): Promise<boolean> => {
     try {
+      // Check if we have a valid server URL
+      if (!serverUrlRef.current && !config.simulationMode) {
+        console.error('Server URL not provided. Cannot initialize without a valid WebRTC server URL.');
+        return false;
+      }
+      
       // For simulation mode, bypass normal initialization
       if (config.simulationMode) {
-        await connectWebSocket(config.serverUrl);
+        const simulationServerUrl = serverUrlRef.current || config.serverUrl;
+        await connectWebSocket(simulationServerUrl);
         
         // In simulation mode, send init message and bypass WebRTC
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -228,7 +264,7 @@ export function useSDPProxy(
       }
       
       // Normal mode - initialize both WebSocket and WebRTC
-      const wsConnected = await connectWebSocket(config.serverUrl);
+      const wsConnected = await connectWebSocket(serverUrlRef.current);
       
       if (!wsConnected) {
         throw new Error('Failed to connect to WebSocket server');
@@ -301,6 +337,12 @@ export function useSDPProxy(
     disconnectWebSocket();
   }, [cleanupWebRTC, disconnectWebSocket]);
 
+  // Add method to update server URL
+  const setServerUrl = useCallback((url: string) => {
+    console.log(`Updating SDP proxy server URL to: ${url}`);
+    serverUrlRef.current = url;
+  }, []);
+
   return {
     initialize: initializeSession,
     cleanup,
@@ -309,6 +351,7 @@ export function useSDPProxy(
     isConnecting: isRtcConnecting,
     isConnected: isRtcConnected && isWsConnected,
     audioLevel,
-    isRecording
+    isRecording,
+    setServerUrl
   };
 }

@@ -92,7 +92,11 @@ export function useWebRTC(
   const sdpProxyConnection = useSDPProxy(
     sessionId,
     {
-      serverUrl: config.serverUrl || 'wss://interview-sdp-proxy.fly.dev/ws',
+      // SECURITY FIX: Don't use the hardcoded URL if we're in a real session (non-simulation)
+      // This avoids the dependency on the suspended service
+      serverUrl: config.simulationMode 
+        ? (config.serverUrl || 'wss://interview-sdp-proxy.fly.dev/ws')
+        : (config.serverUrl || ''), // Will be populated from edge function response
       simulationMode: config.simulationMode,
       supabaseClient: supabase
     },
@@ -150,7 +154,9 @@ export function useWebRTC(
           const { data, error: functionError } = await supabase.functions.invoke('interview-start', {
             body: JSON.stringify({
               interview_session_id: sessionId,
-              tenant_id: tenantData.tenant_id
+              tenant_id: tenantData.tenant_id,
+              // Default to hybrid architecture unless explicitly set otherwise
+              architecture: 'hybrid'
             })
           });
 
@@ -160,6 +166,17 @@ export function useWebRTC(
 
           if (!data.success) {
             throw new Error(data.error || 'Unknown error initializing interview');
+          }
+
+          // Use the server URL provided by the edge function
+          if (data.webrtc_server_url) {
+            console.log(`Using server URL from edge function: ${data.webrtc_server_url}`);
+            console.log(`Using VM with per-session isolation for interview ${sessionId}`);
+            
+            // Update the SDP proxy connection with the correct server URL
+            sdpProxyConnection.setServerUrl(data.webrtc_server_url);
+          } else {
+            throw new Error('Missing WebRTC server URL from edge function');
           }
 
           // Update interview session status in database
@@ -201,7 +218,8 @@ export function useWebRTC(
     useDirectOpenAI,
     supabase,
     activeConnection,
-    clearTranscript
+    clearTranscript,
+    sdpProxyConnection
   ]);
 
   // Clean up resources
