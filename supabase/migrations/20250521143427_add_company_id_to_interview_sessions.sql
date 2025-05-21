@@ -18,11 +18,13 @@ create policy "tenant_isolation_interview_sessions" on public.interview_sessions
 for select to authenticated
 using (
   tenant_id = (select auth.jwt() ->> 'tenant_id')::uuid
-  and
-  exists (
-    select 1 from public.companies
-    where companies.id = interview_sessions.company_id
-    and companies.tenant_id = (select auth.jwt() ->> 'tenant_id')::uuid
+  and (
+    company_id IS NULL
+    or exists (
+      select 1 from public.companies
+      where companies.id = interview_sessions.company_id
+      and companies.tenant_id = (select auth.jwt() ->> 'tenant_id')::uuid
+    )
   )
 );
 
@@ -31,11 +33,13 @@ create policy "tenant_isolation_interview_sessions_insert" on public.interview_s
 for insert to authenticated
 with check (
   tenant_id = (select auth.jwt() ->> 'tenant_id')::uuid
-  and
-  exists (
-    select 1 from public.companies
-    where companies.id = interview_sessions.company_id
-    and companies.tenant_id = (select auth.jwt() ->> 'tenant_id')::uuid
+  and (
+    company_id IS NULL
+    or exists (
+      select 1 from public.companies
+      where companies.id = interview_sessions.company_id
+      and companies.tenant_id = (select auth.jwt() ->> 'tenant_id')::uuid
+    )
   )
 );
 
@@ -43,20 +47,24 @@ create policy "tenant_isolation_interview_sessions_update" on public.interview_s
 for update to authenticated
 using (
   tenant_id = (select auth.jwt() ->> 'tenant_id')::uuid
-  and
-  exists (
-    select 1 from public.companies
-    where companies.id = interview_sessions.company_id
-    and companies.tenant_id = (select auth.jwt() ->> 'tenant_id')::uuid
+  and (
+    company_id IS NULL
+    or exists (
+      select 1 from public.companies
+      where companies.id = interview_sessions.company_id
+      and companies.tenant_id = (select auth.jwt() ->> 'tenant_id')::uuid
+    )
   )
 )
 with check (
   tenant_id = (select auth.jwt() ->> 'tenant_id')::uuid
-  and
-  exists (
-    select 1 from public.companies
-    where companies.id = interview_sessions.company_id
-    and companies.tenant_id = (select auth.jwt() ->> 'tenant_id')::uuid
+  and (
+    company_id IS NULL
+    or exists (
+      select 1 from public.companies
+      where companies.id = interview_sessions.company_id
+      and companies.tenant_id = (select auth.jwt() ->> 'tenant_id')::uuid
+    )
   )
 );
 
@@ -64,10 +72,12 @@ create policy "tenant_isolation_interview_sessions_delete" on public.interview_s
 for delete to authenticated
 using (
   tenant_id = (select auth.jwt() ->> 'tenant_id')::uuid
-  and
-  exists (
-    select 1 from public.companies
-    where companies.id = interview_sessions.company_id
-    and companies.tenant_id = (select auth.jwt() ->> 'tenant_id')::uuid
+  and (
+    company_id IS NULL
+    or exists (
+      select 1 from public.companies
+      where companies.id = interview_sessions.company_id
+      and companies.tenant_id = (select auth.jwt() ->> 'tenant_id')::uuid
+    )
   )
 ); 
