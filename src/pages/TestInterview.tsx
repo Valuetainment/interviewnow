@@ -26,19 +26,20 @@ interface Position {
   // Since competencies might not be directly available, we'll handle it in the code
 }
 
-interface Tenant {
+interface Company {
   id: string;
   name: string;
+  tenant_id: string;
 }
 
 const TestInterview = () => {
   const navigate = useNavigate();
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCandidate, setSelectedCandidate] = useState<string | null>(null);
   const [selectedPosition, setSelectedPosition] = useState<string | null>(null);
-  const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
+  const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [isStartingInterview, setIsStartingInterview] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadingError, setLoadingError] = useState<string | null>(null);
@@ -46,7 +47,7 @@ const TestInterview = () => {
   // For skill matching logic - we'll store position competencies separately
   const [positionSkills, setPositionSkills] = useState<Record<string, string[]>>({});
 
-  // Fetch tenant, candidate, and position data when component mounts
+  // Fetch company, candidate, and position data when component mounts
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -67,37 +68,55 @@ const TestInterview = () => {
           throw new Error("No tenant ID found and no fallback available");
         }
 
-        // Fetch tenants - this should now work with our fixed RLS policies
-        console.log("Fetching tenants from database...");
-        const { data: tenantsData, error: tenantsError } = await supabase
-          .from('tenants')
-          .select('id, name');
+        // Fetch companies for the current tenant (instead of all tenants)
+        console.log("Fetching companies for tenant:", effectiveTenantId);
+        
+        // Use casting to bypass TypeScript checks for the companies table
+        // This is needed because the TypeScript definitions don't include the companies table
+        const client = supabase as unknown as {
+          from(table: string): {
+            select(columns: string): {
+              eq(column: string, value: string): Promise<{
+                data: Company[] | null;
+                error: { message: string } | null;
+              }>;
+            };
+          };
+        };
+        
+        const { data: companiesData, error: companiesError } = await client
+          .from('companies')
+          .select('id, name, tenant_id')
+          .eq('tenant_id', effectiveTenantId);
 
-        if (tenantsError) {
-          console.error("Error fetching tenants:", tenantsError);
-          // If we still have issues, fall back to the local approach
-          console.log("Falling back to local tenant object");
-          setTenants([{
-            id: effectiveTenantId,
-            name: currentTenantId ? "Your Company" : "Test Company"
+        if (companiesError) {
+          console.error("Error fetching companies:", companiesError);
+          // If we still have issues, create a default company
+          console.log("Creating a default company for testing");
+          setCompanies([{
+            id: "company-" + Date.now(),
+            name: "Test Company",
+            tenant_id: effectiveTenantId
           }]);
         } else {
-          console.log("Successfully fetched tenants:", tenantsData?.length || 0);
-          // If we have no tenants, add our test tenant to the list
-          if (!tenantsData || tenantsData.length === 0) {
-            console.log("No tenants found, adding test tenant");
-            setTenants([{
-              id: testTenantId,
-              name: "Test Tenant (Auto-added)"
+          console.log("Successfully fetched companies:", companiesData);
+          console.log("Companies data:", JSON.stringify(companiesData, null, 2));
+          if (!companiesData || companiesData.length === 0) {
+            console.log("No companies found, adding test company");
+            setCompanies([{
+              id: "company-" + Date.now(),
+              name: "Test Company",
+              tenant_id: effectiveTenantId
             }]);
           } else {
-            setTenants(tenantsData);
+            // Cast the returned data to Company[] to satisfy TypeScript
+            setCompanies(companiesData as unknown as Company[]);
           }
         }
         
-        // Set default tenant based on current auth context
-        if (effectiveTenantId) {
-          setSelectedTenant(effectiveTenantId);
+        // Set default company if only one exists
+        if (companies && companies.length === 1) {
+          setSelectedCompany(companies[0].id);
         }
         
         // Fetch candidates for the current tenant
@@ -168,21 +187,31 @@ const TestInterview = () => {
   }, []);
 
   const handleStartInterview = async () => {
-    if (!selectedCandidate || !selectedPosition || !selectedTenant) {
-      toast.error('Please select a candidate, position, and tenant');
+    if (!selectedCandidate || !selectedPosition || !selectedCompany) {
+      toast.error('Please select a candidate, position, and company');
       return;
     }
 
     try {
       setIsStartingInterview(true);
 
+      // Get the tenant ID for the selected company
+      const company = companies.find(c => c.id === selectedCompany);
+      const tenantId = company?.tenant_id;
+
+      if (!tenantId) {
+        throw new Error("Could not find tenant ID for selected company");
+      }
+
       // Create a session record in the database
       const { data: sessionData, error: sessionError } = await supabase
         .from('interview_sessions')
         .insert({
-          tenant_id: selectedTenant,
+          tenant_id: tenantId,
           candidate_id: selectedCandidate,
           position_id: selectedPosition,
+          // Add company_id to the session
+          company_id: selectedCompany,
           status: 'scheduled',
           start_time: new Date().toISOString()
         })
@@ -200,7 +229,7 @@ const TestInterview = () => {
       toast.success('Interview created successfully!');
       
       // Navigate to the full WebRTC test page with real session details
-      navigate(`/test/full?session=${sessionId}&candidate=${selectedCandidate}&position=${selectedPosition}&tenant=${selectedTenant}`);
+      navigate(`/test/full?session=${sessionId}&candidate=${selectedCandidate}&position=${selectedPosition}&tenant=${tenantId}&company=${selectedCompany}`);
     } catch (error) {
       console.error('Error starting interview:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to start interview');
@@ -211,7 +240,7 @@ const TestInterview = () => {
   // Get the selected entities for display
   const candidate = selectedCandidate ? candidates.find(c => c.id === selectedCandidate) : null;
   const position = selectedPosition ? positions.find(p => p.id === selectedPosition) : null;
-  const tenant = selectedTenant ? tenants.find(t => t.id === selectedTenant) : null;
+  const company = selectedCompany ? companies.find(c => c.id === selectedCompany) : null;
 
   // Calculate skill match if both candidate and position are selected
   const getSkillMatch = () => {
@@ -287,7 +316,7 @@ const TestInterview = () => {
             <Button 
               size="lg"
               onClick={handleStartInterview} 
-              disabled={!selectedCandidate || !selectedPosition || !selectedTenant || isStartingInterview}
+              disabled={!selectedCandidate || !selectedPosition || !selectedCompany || isStartingInterview}
               className="px-8"
             >
               {isStartingInterview ? 'Starting...' : 'Start Interview'}
@@ -295,36 +324,40 @@ const TestInterview = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
-            {/* Tenant Selection */}
+            {/* Company Selection */}
             <Card>
               <CardHeader>
-                <CardTitle>Select Company/Tenant</CardTitle>
+                <CardTitle>Companies</CardTitle>
                 <CardDescription>
-                  Choose the company for this interview
+                  Choose a company for this interview
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Select 
-                  value={selectedTenant || undefined}
-                  onValueChange={setSelectedTenant}
+                  value={selectedCompany || undefined}
+                  onValueChange={setSelectedCompany}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a company" />
                   </SelectTrigger>
                   <SelectContent>
-                    {tenants.map(tenant => (
-                      <SelectItem key={tenant.id} value={tenant.id}>
-                        {tenant.name}
-                      </SelectItem>
-                    ))}
+                    {companies.length === 0 ? (
+                      <SelectItem value="no-companies" disabled>No companies available</SelectItem>
+                    ) : (
+                      companies.map(company => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 
-                {tenant && (
+                {company && (
                   <div className="mt-6 space-y-4">
                     <div className="border rounded-md p-4">
-                      <h3 className="font-semibold text-lg">{tenant.name}</h3>
-                      <p className="text-sm text-muted-foreground">Tenant ID: {tenant.id}</p>
+                      <h3 className="font-semibold text-lg">{company.name}</h3>
+                      <p className="text-sm text-muted-foreground">Company ID: {company.id}</p>
                     </div>
                   </div>
                 )}
@@ -495,7 +528,7 @@ const TestInterview = () => {
                 <Button 
                   size="lg"
                   onClick={handleStartInterview} 
-                  disabled={!selectedCandidate || !selectedPosition || !selectedTenant || isStartingInterview}
+                  disabled={!selectedCandidate || !selectedPosition || !selectedCompany || isStartingInterview}
                   className="px-12"
                 >
                   {isStartingInterview ? 'Starting...' : 'Start Interview Now'}
