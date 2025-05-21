@@ -67,13 +67,38 @@ const TestInterview = () => {
           throw new Error("No tenant ID found and no fallback available");
         }
 
-        // Fetch tenants instead of companies
+        // Fetch tenants - this should now work with our fixed RLS policies
+        console.log("Fetching tenants from database...");
         const { data: tenantsData, error: tenantsError } = await supabase
           .from('tenants')
           .select('id, name');
 
-        if (tenantsError) throw new Error(`Error fetching tenants: ${tenantsError.message}`);
-        console.log("Fetched tenants:", tenantsData?.length || 0);
+        if (tenantsError) {
+          console.error("Error fetching tenants:", tenantsError);
+          // If we still have issues, fall back to the local approach
+          console.log("Falling back to local tenant object");
+          setTenants([{
+            id: effectiveTenantId,
+            name: currentTenantId ? "Your Company" : "Test Company"
+          }]);
+        } else {
+          console.log("Successfully fetched tenants:", tenantsData?.length || 0);
+          // If we have no tenants, add our test tenant to the list
+          if (!tenantsData || tenantsData.length === 0) {
+            console.log("No tenants found, adding test tenant");
+            setTenants([{
+              id: testTenantId,
+              name: "Test Tenant (Auto-added)"
+            }]);
+          } else {
+            setTenants(tenantsData);
+          }
+        }
+        
+        // Set default tenant based on current auth context
+        if (effectiveTenantId) {
+          setSelectedTenant(effectiveTenantId);
+        }
         
         // Fetch candidates for the current tenant
         const { data: candidatesData, error: candidatesError } = await supabase
@@ -92,18 +117,6 @@ const TestInterview = () => {
 
         if (positionsError) throw new Error(`Error fetching positions: ${positionsError.message}`);
         console.log("Fetched positions:", positionsData?.length || 0);
-
-        // Set the fetched data to state
-        setTenants(tenantsData || []);
-        
-        // If no tenants were found, add the test tenant to the list
-        if (!tenantsData || tenantsData.length === 0) {
-          console.log("No tenants found, adding test tenant");
-          setTenants([{
-            id: testTenantId,
-            name: "Test Tenant (Auto-added)"
-          }]);
-        }
         
         // Process candidates data
         const processedCandidates = candidatesData?.map(candidate => {
@@ -131,14 +144,6 @@ const TestInterview = () => {
         
         setCandidates(processedCandidates);
         setPositions(positionsData || []);
-
-        // Set default tenant if only one exists
-        if (tenantsData && tenantsData.length === 1) {
-          setSelectedTenant(tenantsData[0].id);
-        } else if (effectiveTenantId) {
-          // Use current tenant as default
-          setSelectedTenant(effectiveTenantId);
-        }
 
         // For simplicity, we'll use static competencies for each position
         // In a real implementation, you would fetch this from your database
