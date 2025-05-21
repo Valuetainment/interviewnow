@@ -27,11 +27,31 @@
 | Completed | Documented complete user authentication & permissions system |
 | Completed | Implemented multi-tenant candidate authentication schema |
 | Completed | WebRTC SDP proxy implementation and testing |
+| Completed | Hybrid OpenAI approach implementation |
+| Completed | Hooks-based WebRTC architecture implementation |
+| Completed | WebRTC integration into main application |
+| Completed | Test routes for WebRTC functionality (/test/ngrok, /test/openai, etc.) |
 | Completed | Fixed CandidateProfile component TypeScript errors |
 | Completed | Implemented robust database migration pattern for transcript system |
 | Completed | Established Git branching workflow with Supabase |
-| Next | Integrate WebRTC SDP proxy into main application |
-| Next | Design interview room interface |
+| Completed | Completed unit tests for WebRTC hooks architecture |
+| Completed | Fixed production routing issues with WebRTC test pages |
+| Completed | Fixed JS errors in production bundle |
+| Completed | Cleaned up testing structure for hybrid architecture focus |
+| Completed | Implemented Phases 1-3 of Hybrid Architecture Test Migration Plan |
+| Completed | Fixed VM isolation security issue in hybrid architecture |
+| Completed | Deployed VM isolation fix to both edge function and frontend |
+| Completed | Created interview-hybrid-template VM for production |
+| Completed | Fixed TestInterview page with real database integration |
+| Completed | Fixed tenants table RLS policy issues |
+| Completed | Created proper RLS policies following Supabase guidelines |
+| Completed | Added Testing Tools to dashboard sidebar for easier access |
+| ⚠️ URGENT | Restart suspended WebRTC SDP Proxy in production |
+| Next | Complete Phase 4-5 of Hybrid Architecture Test Migration Plan |
+| Next | Deploy WebRTC functionality to production |
+| Next | Update SDP proxy with latest fixes |
+| Next | Deploy edge functions for hybrid architecture support |
+| Next | Enhance interview room experience |
 | Future | Assessment engine |
 | Future | Reporting and integrations |
 | Future | Multi-tenant and billing |
@@ -144,15 +164,38 @@
   - ✅ RLS policies for secure candidate data access
   - ✅ Secure invitation function with token generation
   - ✅ Detailed CANDIDATE_AUTH_FLOW.md documentation
-- ✅ WebRTC SDP proxy:
-  - ✅ Secure SDP exchange without exposing API keys
-  - ✅ Sophisticated SDP answer generation that maintains exact format compatibility
-  - ✅ WebSocket server for signaling and session management
+- ✅ WebRTC implementation:
+  - ✅ SDP proxy approach (fly-interview-poc)
+  - ✅ Hybrid OpenAI approach (fly-interview-hybrid)
+  - ✅ SDP exchange mechanism for WebRTC signaling
+  - ✅ Line-by-line SDP processing for format compatibility
   - ✅ ICE candidate handling for connection establishment
-  - ✅ Proper error handling and session cleanup
-  - ✅ Comprehensive documentation in WEBRTC-SDP-PROXY-TEST.md
-  - ✅ Test utility for verifying proxy functionality
-  - ✅ Sample environment configuration
+  - ✅ Session management with unique IDs
+  - ✅ Secure API key handling without client exposure
+  - ✅ Connection testing with simulation mode
+  - ✅ Comprehensive test documentation
+  - ✅ Automated test utility script
+- ✅ Hooks-based WebRTC architecture:
+  - ✅ useWebRTC orchestration hook
+  - ✅ Specialized hooks for WebRTC functionality
+  - ✅ Support for both SDP proxy and direct OpenAI connections
+  - ✅ Error handling and reconnection logic
+  - ✅ Resource management and cleanup
+  - ✅ Comprehensive unit tests for all hooks
+  - ✅ Enhanced debug information panel
+  - ✅ Connection state timeline visualization
+  - ✅ Visual indicators for connection states
+  - ✅ Session recording functionality with JSON export
+- ✅ WebRTC main application integration:
+  - ✅ WebRTCManager component using hooks architecture
+  - ✅ Test routes (/test/ngrok, /test/openai, /test/full)
+  - ✅ Visual connection status indicators
+  - ✅ Audio level visualization
+  - ✅ Simulation mode for testing
+  - ✅ Fixed production routing issues
+  - ✅ Added Netlify _redirects file for SPA routing
+  - ✅ Created vercel.json with route configuration
+  - ✅ Fixed tenant ID retrieval with robust error handling
 - ✅ Established Git branching workflow with Supabase:
   - ✅ Feature branch creation for isolated development
   - ✅ Preview environments with automated database setup
@@ -164,15 +207,78 @@
   - ✅ Conditional object creation with IF EXISTS/IF NOT EXISTS
   - ✅ Atomic migrations for complex changes
   - ✅ Documentation in migration files
+- ✅ Hybrid Architecture Test Migration Plan:
+  - ✅ Phase 1: Test Codebase Audit
+  - ✅ Phase 2: Clean Up and Removal
+  - ✅ Phase 3: Documentation Updates
+- ✅ VM Isolation Security Fix:
+  - ✅ Implemented per-session VM isolation in hybrid architecture
+  - ✅ Created unique VM name for each interview session
+  - ✅ Fixed security issue that allowed potential cross-session data exposure
+  - ✅ Created interview-hybrid-template VM for production deployment
+  - ✅ Added comprehensive VM isolation documentation (VM_ISOLATION.md)
+  - ✅ Updated WebRTC hooks to properly handle dynamic server URLs
+  - ✅ Modified interview-start edge function to create unique VM names
+- ✅ Fixed tenants table RLS policies:
+  - Identified issue with policy using non-existent JWT claim
+  - Created migration with proper lookup through users table
+  - Added separate policies for each operation and role
+  - Successfully applied migration to production
+  - Updated affected components to use tenants table directly
+- ✅ Improved TestInterview page:
+  - Replaced mock data with real database integration
+  - Added company/tenant selection dropdown
+  - Fixed bugs with candidate and position selection
+  - Enhanced UI with better layout and information
+  - Added robust error handling and loading states
+  - Implemented better tenant ID lookup with fallbacks
+  - Added comprehensive debug logging
+  - Created direct sidebar links for easier testing access
 
 ## In Progress
-- 🔄 Integration of WebRTC SDP proxy into main application:
-  - 🔄 React components for WebRTC communication
-  - 🔄 Connection to Fly.io SDP proxy service
-  - 🔄 Error handling and reconnection logic
-  - 🔄 Connection status indicators
+- 🔄 Hybrid Architecture Test Migration Plan:
+  - 🔄 Phase 4: Enhanced Hybrid Testing (IN PROGRESS)
+    - 🔄 Implementing focused hybrid architecture tests
+    - 🔄 Adding integration tests
+    - 🔄 Implementing test helper utilities
+  - ⬜ Phase 5: Test Automation (PLANNED)
+    - ⬜ Creating streamlined test command
+    - ⬜ Documenting testing workflows
+    - ⬜ Creating developer guide for testing hybrid architecture components
+- 🔄 Production deployment of WebRTC functionality:
+  - 🔄 Setting up Fly.io VMs for production environment
+  - 🔄 Configuring API keys and secrets for production
+  - 🔄 Deploying WebRTC proxies using production configuration
+  - 🔄 Setting up monitoring and alerting
+  - 🔄 Performance testing under production conditions
 
 ## What's Left to Build
+- 🔄 Update SDP proxy with latest fixes
+  - 🔄 Incorporate error handling improvements for connection failures
+  - 🔄 Add enhanced logging for diagnostics to better identify issues in production
+  - 🔄 Implement session recovery mechanisms for connection interruptions
+- ⬜ Deploy edge functions for hybrid architecture support
+  - ⬜ Update interview-start and transcript-processor edge functions
+  - ⬜ Test with WebRTC integration
+- ⬜ Test hybrid architecture with real interview sessions
+  - ⬜ Conduct end-to-end tests with actual interviews
+  - ⬜ Validate transcript storage and retrieval
+  - ⬜ Monitor resource usage and performance
+- ⬜ Implement VM per tenant strategy for isolation
+  - ⬜ Configure Fly.io for multi-tenant isolation
+  - ⬜ Ensure secure resource allocation
+  - ⬜ Document deployment model
+- ⬜ Configure JWT validation for API endpoints
+  - ⬜ Add JWT validation to WebSocket connections
+  - ⬜ Implement token refresh mechanism
+  - ⬜ Test security model comprehensively
+- ⬜ Add tenant_id validation to WebRTC sessions
+  - ⬜ Prevent cross-tenant access
+  - ⬜ Document security model
+- ⬜ Set up monitoring and alerting for production
+  - ⬜ Implement performance metrics
+  - ⬜ Configure error alerting
+  - ⬜ Set up automated notifications for system issues
 - ⬜ Complete Interview Room Interface
   - ⬜ Dedicated layout for interview experience
   - ⬜ Video/audio controls
@@ -186,6 +292,11 @@
 - ⬜ Data export functionality
 - ⬜ ATS integrations
 - ⬜ Billing and usage tracking
+- ⬜ Create automated end-to-end tests for WebRTC flow
+- ⬜ Implement performance benchmarking tools
+- ⬜ Set up continuous testing in CI/CD pipeline
+- ⬜ Document production deployment process
+- ⬜ Create troubleshooting guide for common issues
 
 ## Known Issues
 - ✅ Tenant ID fetching issue in authentication flow (RESOLVED)
@@ -212,20 +323,37 @@
   - Ensured tables exist before policies reference them
   - Used schema-qualified names in all SQL statements
   - Implemented atomic migrations for complex changes
+- ⚠️ WebRTC SDP Proxy SUSPENDED in production (CRITICAL):
+  - SDP Proxy server was deployed but is currently suspended
+  - Last deployed on May 9, 2025 to Miami region
+  - Requires restart with `fly apps start interview-sdp-proxy`
+  - No interview functionality in production until resolved
+- 🔄 Edge Function verification needed:
+  - Need to verify interview-start (v5) is ACTIVE
+  - Need to verify interview-transcript (v4) is ACTIVE
+  - Need to verify transcript-processor (v5) is ACTIVE
+- 🔄 WebRTC production configuration issues:
+  - Client code needs to point to production WebSocket URL
+  - JWT validation needs to be properly configured
 
 ## Upcoming Priorities
-1. Fix remaining TypeScript errors in CandidateProfile component
-2. Deploy candidate_profiles table to production
-3. Deploy candidate_tenants table to production
-4. Integrate WebRTC SDP proxy into main application
-5. Complete Database type definitions for all tables
-6. Develop assessment engine based on competencies
-7. Create reporting dashboard with analytics
-8. Implement optimization for Edge Functions
-9. Add caching layer for transcript processing
-10. Complete end-to-end testing suite
-11. Fix remaining non-critical issues in production
-12. Implement connection recovery for WebRTC failures
+1. ⚠️ Restart suspended WebRTC SDP Proxy in production
+   - Run `fly apps start interview-sdp-proxy`
+   - Verify operation with `fly apps status interview-sdp-proxy`
+   - Check logs with `fly logs interview-sdp-proxy`
+2. Complete Hybrid Architecture Test Migration Plan
+   - Finish Phase 4: Enhanced Hybrid Testing
+   - Implement Phase 5: Test Automation
+   - Create developer guide for testing
+   - Add troubleshooting guide for hybrid architecture test failures
+3. Deploy WebRTC functionality to production
+4. Update the SDP proxy with latest fixes
+5. Deploy edge functions for hybrid architecture support
+6. Test hybrid architecture with real interview sessions
+7. Implement VM per tenant strategy for isolation
+8. Configure JWT validation for API endpoints
+9. Add tenant_id validation to WebRTC sessions
+10. Set up monitoring and alerting for production
 
 ## Completed Features
 - ✅ Core project structure and foundation
@@ -352,16 +480,6 @@
   - ✅ Created comprehensive verified-flows documentation
   - ✅ Implemented JWT claims for tenant and role information
   - ✅ Built UI components with permission-based rendering
-- ✅ WebRTC SDP proxy
-  - ✅ Node.js/Express server with WebSocket support
-  - ✅ SDP exchange mechanism for WebRTC signaling
-  - ✅ Line-by-line SDP processing for format compatibility
-  - ✅ ICE candidate handling for connection establishment
-  - ✅ Session management with unique IDs
-  - ✅ Secure API key handling without client exposure
-  - ✅ Connection testing with simulation mode
-  - ✅ Comprehensive test documentation
-  - ✅ Automated test utility script
 
 ## Testing Status
 - ✅ Environment configuration testing
@@ -383,6 +501,7 @@
 - ✅ Authentication and permissions system
 - ✅ WebRTC SDP proxy functionality
 - ✅ WebRTC connectivity testing
+- 🔄 WebRTC integration into main application (not yet implemented)
 - 🔄 Candidate profiles with PDL enrichment (not yet in production)
 - 🔄 Multi-tenant candidate authentication (schema created but not deployed)
 - 🔄 Interview session flow testing (implemented locally, pending production)
@@ -407,7 +526,7 @@
 - ✅ Fly.io proof-of-concept (isolated test)
 - ✅ User authentication flow documentation
 - ✅ Candidate authentication schema design
-- ✅ WebRTC SDP proxy (tested in isolation)
+- 🔄 WebRTC SDP proxy (deployed but SUSPENDED)
 
 **Pending Production Deployment:**
 - 🔄 Migration file for candidate_profiles pending deployment
@@ -418,30 +537,84 @@
 - 🔄 Production monitoring and optimization
 - ⬜ Staging environment
 
+## Production Infrastructure Status
+
+### WebRTC VM Templates
+- **Original SDP Proxy Template:** `interview-sdp-proxy` (SUSPENDED)
+- **Hybrid Architecture Template:** `interview-hybrid-template` (ACTIVE)
+  - **Status**: DEPLOYED
+  - **Primary Region:** `mia` (Miami)
+  - **Security Features:**
+    - Per-session isolation
+    - Secure WebSocket connections
+    - VM-specific API keys
+    - JWT authentication support
+  - **Deployment Files:**
+    - Main production server: `index.js`
+    - Docker configuration: `Dockerfile`
+    - Fly.io configuration: `fly.toml`
+
+### VM Isolation Model
+- **Implementation Type:** Per-session isolation
+- **Status:** DEPLOYED
+- **Documentation:** docs/architecture/VM_ISOLATION.md
+- **Key Features:**
+  - Each interview gets its own dedicated VM
+  - Complete separation between interviews, even within same tenant
+  - Prevents potential cross-session data leakage
+  - Enhanced security through physical isolation
+
+### WebRTC SDP Proxy
+- **Application Name:** `interview-sdp-proxy`
+- **Status: SUSPENDED** (Last deployed: May 9, 2025)
+- **Primary Region:** `mia` (Miami)
+- **Access URLs:**
+  - WebSocket: `wss://interview-sdp-proxy.fly.dev/ws`
+  - HTTP/Status: `https://interview-sdp-proxy.fly.dev`
+- **Implementation Files:**
+  - Main production server: `index.js`
+  - Docker configuration: `Dockerfile`
+  - Fly.io configuration: `fly.toml`
+
+### Supabase Edge Functions
+- **interview-start**: v6 (ACTIVE) - Updated with VM isolation fix
+- **interview-transcript**: v4 (ACTIVE)
+- **transcript-processor**: v5 (ACTIVE)
+
+### WebRTC Implementations
+1. **Original SDP Proxy** (fly-interview-poc):
+   - Traditional WebRTC SDP proxy with server-side audio processing
+   - Full audio transmission over WebSockets
+   - Higher latency and more server resources required
+   - **Status: SUSPENDED in production**
+
+2. **Hybrid OpenAI Approach** (fly-interview-hybrid):
+   - Uses OpenAI's native WebRTC capabilities
+   - Fly.io only serves as a secure SDP exchange proxy
+   - Direct WebRTC connection between client and OpenAI
+   - Lower latency and more efficient resource usage
+   - Now with per-session VM isolation
+   - **Status: Deployed VM template, pending full production verification**
+
+### Hooks-Based WebRTC Architecture
+- **Status**: Implemented and tested locally
+- **Core Features**:
+  - Separation of concerns with specialized hooks
+  - Elimination of circular dependencies
+  - Improved error handling and reconnection logic
+  - Support for both SDP proxy and direct OpenAI connections
+  - Comprehensive unit tests for all hooks
+  - Visual connection status indicators
+
 ## Documentation Status
 - ✅ Memory bank documentation
-- ✅ Implementation checklist
-- ✅ Testing guides
-- ✅ Environment setup documentation
-- ✅ GitHub README.md with comprehensive project info
-- ✅ Database RLS policy documentation
-- ✅ Edge Function configuration documentation
-- ✅ Verified flows documentation for production features
-- ✅ API endpoints documentation with request/response formats
-- ✅ Infrastructure platform evaluation documentation
-- ✅ Fly.io proof-of-concept documentation
-  - ✅ TEST_RESULTS.md with comprehensive findings
-  - ✅ DEPLOYMENT_GUIDE.md for Fly.io setup
-  - ✅ PRODUCTION_INTEGRATION.md for main app integration
+- ✅ Development workflow documentation
 - ✅ Authentication and permissions documentation
-  - ✅ USER_AUTH_PERMISSIONS_FLOW.md with RBAC details
-  - ✅ CANDIDATE_AUTH_FLOW.md with multi-tenant support
-- ✅ WebRTC SDP proxy documentation
-  - ✅ WEBRTC-SDP-PROXY-TEST.md with implementation details and challenges
-  - ✅ README.md with API reference and usage guide
-  - ✅ Sample environment configuration for developers
-- ⬜ User documentation
-- ⬜ Developer onboarding guide
+- ✅ WebRTC implementation documentation
+- ✅ Test documentation
+- 🔄 Production deployment documentation (CRITICAL_PRODUCTION.md created)
+- 🔄 WebRTC production monitoring documentation
+- ⬜ Troubleshooting guide for production WebRTC issues
 
 ## Future Considerations
 - Advanced analytics dashboard
@@ -457,7 +630,77 @@
 - Horizontal scaling of Fly.io infrastructure for high-volume periods
 - WebRTC connection resilience improvements for challenging network conditions
 
+## Recent Changes
+- Fixed tenants table RLS policy issues:
+  - Identified and fixed problematic policy using non-existent JWT claim (request.jwt.claim.tenant_id)
+  - Created migration to implement proper policies following Supabase guidelines
+  - Added separate policies for each operation (SELECT, INSERT, UPDATE, DELETE)
+  - Added separate policies for each role (authenticated, anon, service_role)
+  - Successfully applied migration to production
+  - Added proper documentation for future reference
+
+- Enhanced TestInterview page:
+  - Completely replaced mock data with real database integration
+  - Added proper tenant/company selection dropdown
+  - Fixed bugs with candidate and position selection
+  - Improved UI with 3-column layout for better organization
+  - Added robust loading and error states
+  - Implemented better tenant ID lookup with fallback logic
+  - Added comprehensive debug logging
+  - Created sidebar links for easier test access
+  - Added compatibility matrix to show candidate-position matches
+
+- Added Testing Tools to dashboard sidebar:
+  - Created dedicated Testing Tools section for easier access
+  - Added direct links to test interview pages
+  - Simplified navigation to testing functionality
+  - Made testing more accessible for development purposes
+
+- VM isolation security fix:
+  - Fixed critical issue where hybrid architecture was using tenant-level isolation
+  - Modified interview-start edge function to create unique VM names
+  - Updated WebRTC hooks to handle dynamic server URLs
+  - Created comprehensive VM isolation documentation
+  - Deployed fix to both edge function and frontend
+  - Created interview-hybrid-template VM for production
+
 ## Recent Updates
+
+### June 4, 2024
+- Fixed critical security issue in VM isolation model:
+  - Identified vulnerability in hybrid architecture where one VM was shared per tenant
+  - Modified interview-start edge function to create unique VM per session regardless of architecture
+  - Updated WebRTC hooks to properly handle dynamic server URLs from edge functions
+  - Created comprehensive documentation (VM_ISOLATION.md) explaining the isolation model
+  - Deployed fix to production with both edge function update and frontend changes
+  - Created interview-hybrid-template VM for the production deployment
+  - Enhanced logging for better VM creation and usage tracking
+
+### June 1, 2024
+- Completed unit tests for WebRTC hooks architecture:
+  - Created test setup with Vitest and React Testing Library
+  - Implemented comprehensive test files for all hooks (useConnectionState, useRetry, useAudioVisualization, etc.)
+  - Set up robust mocks for WebRTC and WebSocket APIs
+  - Added tests for all major functionality
+- Fixed production routing issues and JS errors:
+  - Added Netlify _redirects file to handle SPA routing
+  - Created vercel.json with route configuration for Vercel deployments
+  - Added explicit routes for all test pages in App.tsx
+  - Fixed "Cannot read properties of undefined (reading 'add')" errors
+  - Enhanced tenant ID retrieval with robust error handling
+  - Implemented fallback strategies for handling missing tenant data
+- Cleaned up testing structure for hybrid architecture focus:
+  - Updated InterviewTestSimple.tsx to default to hybrid architecture mode
+  - Refactored hook tests to focus only on hybrid architecture aspects
+  - Enhanced test-hybrid-architecture.js script with improved reporting
+  - Updated documentation to focus exclusively on hybrid approach
+  - Added TEST_STRUCTURE.md with comprehensive test organization
+  - Updated architecture docs to clearly mark original approach as historical
+- Defined Hybrid Architecture Test Migration Plan:
+  - Created 5-phase plan to transition testing to focus on hybrid architecture
+  - Completed Phases 1-3: Test Codebase Audit, Clean Up and Removal, Documentation Updates
+  - Started Phase 4: Enhanced Hybrid Testing with focused test implementation
+  - Outlined Phase 5: Test Automation for streamlined testing workflow
 
 ### May 28, 2024
 - Implemented WebRTC SDP proxy for secure communication between clients and OpenAI's API:
@@ -468,6 +711,7 @@
   - Updated project README with API reference and usage information
   - Added sample environment configuration for easy developer setup
   - Implemented proper session management and cleanup
+  - NOTE: This implementation exists as a proof-of-concept in the fly-interview-poc directory and has not yet been integrated into the main application
 
 ### May 16, 2024
 - Created comprehensive documentation for the authentication and permissions system:
