@@ -9,7 +9,9 @@ import {
   Settings,
   BriefcaseBusiness,
   Search,
-  BarChart
+  BarChart,
+  TestTube,
+  Beaker
 } from 'lucide-react';
 
 import {
@@ -150,6 +152,58 @@ const DashboardSidebar: React.FC = () => {
             </Link>
           </SidebarMenuItem>
         </SidebarMenu>
+
+        <SidebarSeparator />
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Testing Tools</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <Link to="/create-session">
+                <SidebarMenuButton 
+                  asChild
+                  isActive={isActive('/create-session')}
+                  tooltip="Create Test Session"
+                >
+                  <div className="flex items-center gap-2">
+                    <Beaker />
+                    <span>Create Test Session</span>
+                  </div>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+            
+            <SidebarMenuItem>
+              <Link to="/test-interview">
+                <SidebarMenuButton 
+                  asChild
+                  isActive={isActive('/test-interview')}
+                  tooltip="Test Interview"
+                >
+                  <div className="flex items-center gap-2">
+                    <TestTube />
+                    <span>Test Interview</span>
+                  </div>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+            
+            <SidebarMenuItem>
+              <Link to="/test/full">
+                <SidebarMenuButton 
+                  asChild
+                  isActive={isActive('/test/full')}
+                  tooltip="Full WebRTC Test"
+                >
+                  <div className="flex items-center gap-2">
+                    <Video />
+                    <span>Full WebRTC Test</span>
+                  </div>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
 
         <SidebarSeparator />
 
