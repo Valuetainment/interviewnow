@@ -54,10 +54,17 @@ const TestInterview = () => {
         setLoadingError(null);
 
         // Get current tenant ID to use as default
+        console.log("Attempting to get current tenant ID...");
         const currentTenantId = await getCurrentTenantId();
         
-        if (!currentTenantId) {
-          throw new Error("No tenant ID found. Please log in again.");
+        // Use a test tenant ID if not found - this is for development/testing only
+        const testTenantId = "11111111-1111-1111-1111-111111111111";
+        
+        const effectiveTenantId = currentTenantId || testTenantId;
+        console.log("Using tenant ID:", effectiveTenantId, currentTenantId ? "(from auth)" : "(fallback test ID)");
+        
+        if (!effectiveTenantId) {
+          throw new Error("No tenant ID found and no fallback available");
         }
 
         // Fetch tenants instead of companies
@@ -66,25 +73,37 @@ const TestInterview = () => {
           .select('id, name');
 
         if (tenantsError) throw new Error(`Error fetching tenants: ${tenantsError.message}`);
+        console.log("Fetched tenants:", tenantsData?.length || 0);
         
         // Fetch candidates for the current tenant
         const { data: candidatesData, error: candidatesError } = await supabase
           .from('candidates')
           .select('id, full_name, email, skills, resume_analysis')
-          .eq('tenant_id', currentTenantId);
+          .eq('tenant_id', effectiveTenantId);
 
         if (candidatesError) throw new Error(`Error fetching candidates: ${candidatesError.message}`);
+        console.log("Fetched candidates:", candidatesData?.length || 0);
 
         // Fetch positions for the current tenant
         const { data: positionsData, error: positionsError } = await supabase
           .from('positions')
           .select('id, title, description')
-          .eq('tenant_id', currentTenantId);
+          .eq('tenant_id', effectiveTenantId);
 
         if (positionsError) throw new Error(`Error fetching positions: ${positionsError.message}`);
+        console.log("Fetched positions:", positionsData?.length || 0);
 
         // Set the fetched data to state
         setTenants(tenantsData || []);
+        
+        // If no tenants were found, add the test tenant to the list
+        if (!tenantsData || tenantsData.length === 0) {
+          console.log("No tenants found, adding test tenant");
+          setTenants([{
+            id: testTenantId,
+            name: "Test Tenant (Auto-added)"
+          }]);
+        }
         
         // Process candidates data
         const processedCandidates = candidatesData?.map(candidate => {
@@ -116,9 +135,9 @@ const TestInterview = () => {
         // Set default tenant if only one exists
         if (tenantsData && tenantsData.length === 1) {
           setSelectedTenant(tenantsData[0].id);
-        } else if (currentTenantId) {
+        } else if (effectiveTenantId) {
           // Use current tenant as default
-          setSelectedTenant(currentTenantId);
+          setSelectedTenant(effectiveTenantId);
         }
 
         // For simplicity, we'll use static competencies for each position
