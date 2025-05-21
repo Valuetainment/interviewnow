@@ -210,8 +210,8 @@ const TestInterview = () => {
           tenant_id: tenantId,
           candidate_id: selectedCandidate,
           position_id: selectedPosition,
-          // Note: Company info is accessible via tenant_id since companies belong to tenants
-          // We don't store company_id directly as it's not in the interview_sessions schema
+          // Now we can include company_id since we've added it to the database schema
+          company_id: selectedCompany,
           status: 'scheduled',
           start_time: new Date().toISOString()
         })
