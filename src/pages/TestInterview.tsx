@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -7,66 +7,251 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from "sonner";
+import { supabase, getCurrentTenantId } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
+import { Json } from "@/integrations/supabase/types";
 
-// Mock data for candidates and positions
-const MOCK_CANDIDATES = [
-  { id: 1, name: 'John Doe', email: 'john@example.com', skills: ['React', 'TypeScript', 'Node.js'] },
-  { id: 2, name: 'Jane Smith', email: 'jane@example.com', skills: ['Python', 'Django', 'AWS'] },
-  { id: 3, name: 'Robert Johnson', email: 'robert@example.com', skills: ['Angular', 'Java', 'Spring Boot'] }
-];
+interface Candidate {
+  id: string;
+  full_name: string;
+  email: string;
+  skills?: string[] | null;
+  resume_analysis?: Json | null;
+}
 
-const MOCK_POSITIONS = [
-  { id: 1, title: 'Senior Frontend Developer', requiredSkills: ['React', 'TypeScript', 'Redux'] },
-  { id: 2, title: 'Backend Engineer', requiredSkills: ['Node.js', 'MongoDB', 'Express'] },
-  { id: 3, title: 'Full Stack Developer', requiredSkills: ['React', 'Node.js', 'PostgreSQL'] }
-];
+interface Position {
+  id: string;
+  title: string;
+  description: string | null;
+  // Since competencies might not be directly available, we'll handle it in the code
+}
+
+interface Tenant {
+  id: string;
+  name: string;
+}
 
 const TestInterview = () => {
   const navigate = useNavigate();
-  const [selectedCandidate, setSelectedCandidate] = useState<number | null>(null);
-  const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [selectedCandidate, setSelectedCandidate] = useState<string | null>(null);
+  const [selectedPosition, setSelectedPosition] = useState<string | null>(null);
+  const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
   const [isStartingInterview, setIsStartingInterview] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
+  
+  // For skill matching logic - we'll store position competencies separately
+  const [positionSkills, setPositionSkills] = useState<Record<string, string[]>>({});
 
-  const handleStartInterview = () => {
-    if (!selectedCandidate || !selectedPosition) {
-      toast.error('Please select both a candidate and a position');
+  // Fetch tenant, candidate, and position data when component mounts
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        setLoadingError(null);
+
+        // Get current tenant ID to use as default
+        const currentTenantId = await getCurrentTenantId();
+        
+        if (!currentTenantId) {
+          throw new Error("No tenant ID found. Please log in again.");
+        }
+
+        // Fetch tenants instead of companies
+        const { data: tenantsData, error: tenantsError } = await supabase
+          .from('tenants')
+          .select('id, name');
+
+        if (tenantsError) throw new Error(`Error fetching tenants: ${tenantsError.message}`);
+        
+        // Fetch candidates for the current tenant
+        const { data: candidatesData, error: candidatesError } = await supabase
+          .from('candidates')
+          .select('id, full_name, email, skills, resume_analysis')
+          .eq('tenant_id', currentTenantId);
+
+        if (candidatesError) throw new Error(`Error fetching candidates: ${candidatesError.message}`);
+
+        // Fetch positions for the current tenant
+        const { data: positionsData, error: positionsError } = await supabase
+          .from('positions')
+          .select('id, title, description')
+          .eq('tenant_id', currentTenantId);
+
+        if (positionsError) throw new Error(`Error fetching positions: ${positionsError.message}`);
+
+        // Set the fetched data to state
+        setTenants(tenantsData || []);
+        
+        // Process candidates data
+        const processedCandidates = candidatesData?.map(candidate => {
+          // Extract skills from resume_analysis if available
+          let candidateSkills = candidate.skills || [];
+          
+          // Safely extract skills from resume_analysis
+          if (!candidateSkills.length && candidate.resume_analysis) {
+            // Check if resume_analysis is an object and has a skills property
+            if (typeof candidate.resume_analysis === 'object' && 
+                candidate.resume_analysis !== null &&
+                'skills' in candidate.resume_analysis) {
+              const skills = (candidate.resume_analysis as Record<string, unknown>).skills;
+              if (Array.isArray(skills)) {
+                candidateSkills = skills;
+              }
+            }
+          }
+          
+          return {
+            ...candidate,
+            skills: candidateSkills
+          };
+        }) || [];
+        
+        setCandidates(processedCandidates);
+        setPositions(positionsData || []);
+
+        // Set default tenant if only one exists
+        if (tenantsData && tenantsData.length === 1) {
+          setSelectedTenant(tenantsData[0].id);
+        } else if (currentTenantId) {
+          // Use current tenant as default
+          setSelectedTenant(currentTenantId);
+        }
+
+        // For simplicity, we'll use static competencies for each position
+        // In a real implementation, you would fetch this from your database
+        const skills: Record<string, string[]> = {};
+        positionsData?.forEach(position => {
+          // This is a mock implementation - in reality, fetch actual competencies for each position
+          skills[position.id] = [
+            'JavaScript', 'TypeScript', 'React', 'Node.js', 'SQL'
+          ];
+        });
+        setPositionSkills(skills);
+
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setLoadingError(error instanceof Error ? error.message : 'Unknown error loading data');
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const handleStartInterview = async () => {
+    if (!selectedCandidate || !selectedPosition || !selectedTenant) {
+      toast.error('Please select a candidate, position, and tenant');
       return;
     }
 
-    setIsStartingInterview(true);
+    try {
+      setIsStartingInterview(true);
 
-    // Create a simulated session ID for testing
-    const sessionId = `test-${Date.now()}`;
+      // Create a session record in the database
+      const { data: sessionData, error: sessionError } = await supabase
+        .from('interview_sessions')
+        .insert({
+          tenant_id: selectedTenant,
+          candidate_id: selectedCandidate,
+          position_id: selectedPosition,
+          status: 'scheduled',
+          start_time: new Date().toISOString()
+        })
+        .select('id')
+        .single();
 
-    // Simulate API call to create interview session
-    setTimeout(() => {
+      if (sessionError) {
+        throw new Error(`Error creating interview session: ${sessionError.message}`);
+      }
+
+      // Use the real session ID if available, or create a test ID if not
+      const sessionId = sessionData?.id || `test-${Date.now()}`;
+
       setIsStartingInterview(false);
       toast.success('Interview created successfully!');
       
-      // Actually navigate to the test interview page
-      // This will use our InterviewRoom component from our routing
-      navigate(`/test/full?session=${sessionId}&candidate=${selectedCandidate}&position=${selectedPosition}`);
-    }, 1000);
+      // Navigate to the full WebRTC test page with real session details
+      navigate(`/test/full?session=${sessionId}&candidate=${selectedCandidate}&position=${selectedPosition}&tenant=${selectedTenant}`);
+    } catch (error) {
+      console.error('Error starting interview:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to start interview');
+      setIsStartingInterview(false);
+    }
   };
 
-  const candidate = selectedCandidate ? MOCK_CANDIDATES.find(c => c.id === selectedCandidate) : null;
-  const position = selectedPosition ? MOCK_POSITIONS.find(p => p.id === selectedPosition) : null;
+  // Get the selected entities for display
+  const candidate = selectedCandidate ? candidates.find(c => c.id === selectedCandidate) : null;
+  const position = selectedPosition ? positions.find(p => p.id === selectedPosition) : null;
+  const tenant = selectedTenant ? tenants.find(t => t.id === selectedTenant) : null;
 
+  // Calculate skill match if both candidate and position are selected
   const getSkillMatch = () => {
-    if (!candidate || !position) return null;
+    if (!candidate || !position || !selectedPosition) return null;
     
-    const matchedSkills = candidate.skills.filter(skill => 
-      position.requiredSkills.includes(skill)
+    // Get the competencies/skills for this position from our state
+    const requiredSkills = positionSkills[selectedPosition] || [];
+    
+    // Find matching skills (case insensitive)
+    const candidateSkills = candidate.skills || [];
+    const matchedSkills = candidateSkills.filter(skill => 
+      requiredSkills.some(req => req.toLowerCase() === skill.toLowerCase())
     );
     
     return {
       matchedCount: matchedSkills.length,
-      totalRequired: position.requiredSkills.length,
-      matchPercentage: Math.round((matchedSkills.length / position.requiredSkills.length) * 100)
+      totalRequired: requiredSkills.length,
+      matchPercentage: requiredSkills.length === 0 ? 0 : 
+        Math.round((matchedSkills.length / requiredSkills.length) * 100)
     };
   };
 
   const skillMatch = getSkillMatch();
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Navbar />
+        <div className="flex-grow container mx-auto px-4 py-24 md:py-32 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-lg">Loading interview data...</p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Error state
+  if (loadingError) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Navbar />
+        <div className="flex-grow container mx-auto px-4 py-24 md:py-32 flex items-center justify-center">
+          <div className="text-center">
+            <div className="bg-destructive/10 text-destructive p-6 rounded-lg max-w-md">
+              <h3 className="text-xl font-bold mb-2">Error Loading Data</h3>
+              <p>{loadingError}</p>
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={() => window.location.reload()}
+              >
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -78,14 +263,51 @@ const TestInterview = () => {
             <Button 
               size="lg"
               onClick={handleStartInterview} 
-              disabled={!selectedCandidate || !selectedPosition || isStartingInterview}
+              disabled={!selectedCandidate || !selectedPosition || !selectedTenant || isStartingInterview}
               className="px-8"
             >
               {isStartingInterview ? 'Starting...' : 'Start Interview'}
             </Button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+            {/* Tenant Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Select Company/Tenant</CardTitle>
+                <CardDescription>
+                  Choose the company for this interview
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Select 
+                  value={selectedTenant || undefined}
+                  onValueChange={setSelectedTenant}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a company" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tenants.map(tenant => (
+                      <SelectItem key={tenant.id} value={tenant.id}>
+                        {tenant.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                {tenant && (
+                  <div className="mt-6 space-y-4">
+                    <div className="border rounded-md p-4">
+                      <h3 className="font-semibold text-lg">{tenant.name}</h3>
+                      <p className="text-sm text-muted-foreground">Tenant ID: {tenant.id}</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            {/* Candidate Selection */}
             <Card>
               <CardHeader>
                 <CardTitle>Select Candidate</CardTitle>
@@ -95,44 +317,52 @@ const TestInterview = () => {
               </CardHeader>
               <CardContent>
                 <Select 
-                  onValueChange={(value) => setSelectedCandidate(Number(value))}
+                  value={selectedCandidate || undefined}
+                  onValueChange={setSelectedCandidate}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a candidate" />
                   </SelectTrigger>
                   <SelectContent>
-                    {MOCK_CANDIDATES.map(candidate => (
-                      <SelectItem key={candidate.id} value={candidate.id.toString()}>
-                        {candidate.name}
-                      </SelectItem>
-                    ))}
+                    {candidates.length === 0 ? (
+                      <SelectItem value="no-candidates" disabled>No candidates available</SelectItem>
+                    ) : (
+                      candidates.map(candidate => (
+                        <SelectItem key={candidate.id} value={candidate.id}>
+                          {candidate.full_name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 
                 {candidate && (
                   <div className="mt-6 space-y-4">
                     <div className="border rounded-md p-4">
-                      <h3 className="font-semibold text-lg">{candidate.name}</h3>
+                      <h3 className="font-semibold text-lg">{candidate.full_name}</h3>
                       <p className="text-sm text-muted-foreground">{candidate.email}</p>
-                      <div className="mt-2">
-                        <h4 className="text-sm font-medium">Skills:</h4>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {candidate.skills.map((skill, index) => (
-                            <span 
-                              key={index} 
-                              className="bg-primary/10 text-primary px-2 py-1 rounded-md text-xs"
-                            >
-                              {skill}
-                            </span>
-                          ))}
+                      {candidate.skills && candidate.skills.length > 0 && (
+                        <div className="mt-2">
+                          <h4 className="text-sm font-medium">Skills:</h4>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {candidate.skills.map((skill, index) => (
+                              <span 
+                                key={index} 
+                                className="bg-primary/10 text-primary px-2 py-1 rounded-md text-xs"
+                              >
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 )}
               </CardContent>
             </Card>
             
+            {/* Position Selection */}
             <Card>
               <CardHeader>
                 <CardTitle>Select Position</CardTitle>
@@ -142,37 +372,47 @@ const TestInterview = () => {
               </CardHeader>
               <CardContent>
                 <Select 
-                  onValueChange={(value) => setSelectedPosition(Number(value))}
+                  value={selectedPosition || undefined}
+                  onValueChange={setSelectedPosition}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a position" />
                   </SelectTrigger>
                   <SelectContent>
-                    {MOCK_POSITIONS.map(position => (
-                      <SelectItem key={position.id} value={position.id.toString()}>
-                        {position.title}
-                      </SelectItem>
-                    ))}
+                    {positions.length === 0 ? (
+                      <SelectItem value="no-positions" disabled>No positions available</SelectItem>
+                    ) : (
+                      positions.map(position => (
+                        <SelectItem key={position.id} value={position.id}>
+                          {position.title}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
                 
-                {position && (
+                {position && selectedPosition && (
                   <div className="mt-6 space-y-4">
                     <div className="border rounded-md p-4">
                       <h3 className="font-semibold text-lg">{position.title}</h3>
-                      <div className="mt-2">
-                        <h4 className="text-sm font-medium">Required Skills:</h4>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {position.requiredSkills.map((skill, index) => (
-                            <span 
-                              key={index} 
-                              className="bg-secondary/10 text-secondary px-2 py-1 rounded-md text-xs"
-                            >
-                              {skill}
-                            </span>
-                          ))}
+                      {position.description && (
+                        <p className="text-sm text-muted-foreground mt-1">{position.description}</p>
+                      )}
+                      {positionSkills[selectedPosition] && positionSkills[selectedPosition].length > 0 && (
+                        <div className="mt-2">
+                          <h4 className="text-sm font-medium">Required Skills:</h4>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {positionSkills[selectedPosition].map((skill, index) => (
+                              <span 
+                                key={index} 
+                                className="bg-secondary/10 text-secondary px-2 py-1 rounded-md text-xs"
+                              >
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -180,7 +420,7 @@ const TestInterview = () => {
             </Card>
           </div>
           
-          {candidate && position && (
+          {candidate && position && selectedPosition && (
             <Card className="mb-8">
               <CardHeader>
                 <CardTitle>Interview Compatibility</CardTitle>
@@ -202,22 +442,22 @@ const TestInterview = () => {
                       <TableRow>
                         <TableCell>
                           <div className="flex items-center">
-                            <span className="font-medium">{skillMatch?.matchPercentage}%</span>
+                            <span className="font-medium">{skillMatch?.matchPercentage || 0}%</span>
                             <span className="text-sm text-muted-foreground ml-2">
-                              ({skillMatch?.matchedCount}/{skillMatch?.totalRequired} skills)
+                              ({skillMatch?.matchedCount || 0}/{skillMatch?.totalRequired || 0} skills)
                             </span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <span className="text-sm">
-                            Candidate has {candidate.skills.length} relevant skills
+                            Candidate has {candidate.skills?.length || 0} relevant skills
                           </span>
                         </TableCell>
                         <TableCell>
                           <ul className="list-disc list-inside text-sm">
-                            {position.requiredSkills.map((skill, index) => (
+                            {positionSkills[selectedPosition]?.map((skill, index) => (
                               <li key={index}>
-                                {skill} {candidate.skills.includes(skill) ? '✓' : ''}
+                                {skill} {candidate.skills?.some(s => s.toLowerCase() === skill.toLowerCase()) ? '✓' : ''}
                               </li>
                             ))}
                           </ul>
@@ -231,7 +471,7 @@ const TestInterview = () => {
                 <Button 
                   size="lg"
                   onClick={handleStartInterview} 
-                  disabled={isStartingInterview}
+                  disabled={!selectedCandidate || !selectedPosition || !selectedTenant || isStartingInterview}
                   className="px-12"
                 >
                   {isStartingInterview ? 'Starting...' : 'Start Interview Now'}
