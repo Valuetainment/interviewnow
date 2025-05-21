@@ -1,5 +1,5 @@
-
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +22,7 @@ const MOCK_POSITIONS = [
 ];
 
 const TestInterview = () => {
+  const navigate = useNavigate();
   const [selectedCandidate, setSelectedCandidate] = useState<number | null>(null);
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null);
   const [isStartingInterview, setIsStartingInterview] = useState(false);
@@ -32,20 +33,20 @@ const TestInterview = () => {
       return;
     }
 
-    // In a real implementation, we would navigate to the interview room
-    // or set up the interview session here
     setIsStartingInterview(true);
 
-    // Simulate API call
+    // Create a simulated session ID for testing
+    const sessionId = `test-${Date.now()}`;
+
+    // Simulate API call to create interview session
     setTimeout(() => {
       setIsStartingInterview(false);
-      toast.success('Interview prepared successfully!');
+      toast.success('Interview created successfully!');
       
-      // Mock interview preparation - in a real app, we would redirect to the interview room
-      toast.info('Redirecting to interview room...', {
-        duration: 2000,
-      });
-    }, 2000);
+      // Actually navigate to the test interview page
+      // This will use our InterviewRoom component from our routing
+      navigate(`/test/full?session=${sessionId}&candidate=${selectedCandidate}&position=${selectedPosition}`);
+    }, 1000);
   };
 
   const candidate = selectedCandidate ? MOCK_CANDIDATES.find(c => c.id === selectedCandidate) : null;
@@ -72,7 +73,17 @@ const TestInterview = () => {
       <Navbar />
       <div className="flex-grow container mx-auto px-4 py-24 md:py-32">
         <div className="max-w-5xl mx-auto">
-          <h1 className="text-3xl md:text-4xl font-bold mb-8">Test Interview Session</h1>
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl md:text-4xl font-bold">Test Interview Session</h1>
+            <Button 
+              size="lg"
+              onClick={handleStartInterview} 
+              disabled={!selectedCandidate || !selectedPosition || isStartingInterview}
+              className="px-8"
+            >
+              {isStartingInterview ? 'Starting...' : 'Start Interview'}
+            </Button>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
             <Card>
@@ -216,73 +227,18 @@ const TestInterview = () => {
                   </Table>
                 </div>
               </CardContent>
-              <CardFooter className="flex justify-end">
+              <CardFooter className="flex justify-center">
                 <Button 
+                  size="lg"
                   onClick={handleStartInterview} 
-                  disabled={!selectedCandidate || !selectedPosition || isStartingInterview}
+                  disabled={isStartingInterview}
+                  className="px-12"
                 >
-                  {isStartingInterview ? 'Preparing...' : 'Start Interview'}
+                  {isStartingInterview ? 'Starting...' : 'Start Interview Now'}
                 </Button>
               </CardFooter>
             </Card>
           )}
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Interview Settings</CardTitle>
-              <CardDescription>
-                Configure the interview parameters
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium">Interview Duration</label>
-                    <Select defaultValue="30">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="15">15 minutes</SelectItem>
-                        <SelectItem value="30">30 minutes</SelectItem>
-                        <SelectItem value="45">45 minutes</SelectItem>
-                        <SelectItem value="60">60 minutes</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Difficulty Level</label>
-                    <Select defaultValue="medium">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="easy">Easy</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="hard">Hard</SelectItem>
-                        <SelectItem value="expert">Expert</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium">Interview Mode</label>
-                  <Select defaultValue="ai_interviewer">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ai_interviewer">AI Interviewer</SelectItem>
-                      <SelectItem value="human_assisted">Human-Assisted</SelectItem>
-                      <SelectItem value="questions_only">Questions Only</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
       <Footer />
