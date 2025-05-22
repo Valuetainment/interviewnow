@@ -2,14 +2,24 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+const fetch = require('node-fetch');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
 
 // Initialize Express app
 const app = express();
+
+// Get the port from environment or use 8080 as default to match Fly.io config
+const port = process.env.PORT || 8080;
+
+// Log environment for debugging
+console.log('Environment variables:');
+console.log(`PORT: ${process.env.PORT}`);
+console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`SIMULATION_MODE: ${process.env.SIMULATION_MODE}`);
 
 // Security middleware
 app.use(helmet({
@@ -60,8 +70,12 @@ wss.on('connection', (ws, req) => {
   
   // Initialize session data
   sessions.set(sessionId, {
+    ws: ws,
     offers: [], // Store SDP offers
     answers: [], // Store SDP answers
+    iceCandidates: [],
+    openaiSessionId: null,
+    openaiClientId: null,
     connected: Date.now()
   });
   
@@ -84,8 +98,10 @@ wss.on('connection', (ws, req) => {
         throw new Error('Session not found');
       }
       
+      console.log(`Received message of type: ${data.type}`);
+      
       switch (data.type) {
-        case 'sdp_offer':
+        case 'sdpOffer':
           // Client sent an SDP offer that should be proxied to OpenAI
           console.log('Received SDP offer');
           
@@ -108,8 +124,8 @@ wss.on('connection', (ws, req) => {
               
               // Send mock answer back to client
               ws.send(JSON.stringify({ 
-                type: 'sdp_answer', 
-                answer: mockAnswer,
+                type: 'sdpAnswer', 
+                answer: mockAnswer.sdp,
                 headers: corsHeaders
               }));
               
@@ -128,8 +144,8 @@ wss.on('connection', (ws, req) => {
               
               // Send the answer back to client
               ws.send(JSON.stringify({ 
-                type: 'sdp_answer', 
-                answer,
+                type: 'sdpAnswer', 
+                answer: answer,
                 headers: corsHeaders
               }));
             }
@@ -143,7 +159,7 @@ wss.on('connection', (ws, req) => {
           }
           break;
           
-        case 'ice_candidate':
+        case 'iceCandidate':
           // Client sent an ICE candidate that should be proxied to OpenAI
           console.log('Received ICE candidate');
           
@@ -151,15 +167,18 @@ wss.on('connection', (ws, req) => {
             if (process.env.SIMULATION_MODE === 'true') {
               // In simulation mode, just acknowledge receipt
               ws.send(JSON.stringify({
-                type: 'ice_acknowledge',
+                type: 'iceAcknowledge',
                 headers: corsHeaders
               }));
             } else {
+              // Store ICE candidate
+              session.iceCandidates.push(data.candidate);
+              
               // Proxy the ICE candidate to OpenAI
               await proxyICECandidateToOpenAI(data.candidate, sessionId);
               
               ws.send(JSON.stringify({
-                type: 'ice_acknowledge',
+                type: 'iceAcknowledge',
                 headers: corsHeaders
               }));
             }
@@ -173,14 +192,11 @@ wss.on('connection', (ws, req) => {
           }
           break;
           
-        case 'get_api_key':
+        case 'apiKeyStatus':
           // Client is requesting a proxy for the OpenAI API key
-          console.log('Processing API key proxy request');
+          console.log('Processing API key status request');
           
           try {
-            // In a real implementation, this would handle authentication
-            // and validate the user's permissions before providing proxy access
-            
             // For now, just confirm that the API key exists
             const apiKey = process.env.OPENAI_API_KEY;
             if (!apiKey) {
@@ -252,29 +268,65 @@ async function proxySDPToOpenAI(offer) {
   try {
     console.log('Proxying SDP offer to OpenAI');
     
-    // In a real implementation, this would call the OpenAI WebRTC API
-    // For now, this is a placeholder that will be implemented when the OpenAI WebRTC API is available
-    
-    // Mock implementation for now
-    const response = await fetch("https://api.openai.com/v1/audio/webrtc", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        offer: offer,
-        // Additional options will go here based on OpenAI's WebRTC API design
-      }),
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OpenAI API key not configured');
     }
     
-    const data = await response.json();
-    return data.answer;
+    // Step 1: Create a Realtime session with OpenAI
+    const sessionResponse = await fetch('https://api.openai.com/v1/audio/realtime/sessions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'OpenAI-Beta': 'realtime'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        voice: 'alloy'
+      })
+    });
+    
+    if (!sessionResponse.ok) {
+      const errorText = await sessionResponse.text();
+      console.error('Error creating OpenAI session:', errorText);
+      throw new Error(`OpenAI API error (session creation): ${sessionResponse.status} - ${errorText}`);
+    }
+    
+    const sessionData = await sessionResponse.json();
+    console.log('OpenAI session created:', sessionData.session_id);
+    
+    // Step 2: Exchange SDP with the WebRTC endpoint
+    const webrtcResponse = await fetch(`https://api.openai.com/v1/audio/realtime/session/${sessionData.session_id}/client/${sessionData.client_id}/webrtc`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'OpenAI-Beta': 'realtime'
+      },
+      body: JSON.stringify({
+        sdp: offer
+      })
+    });
+    
+    if (!webrtcResponse.ok) {
+      const errorText = await webrtcResponse.text();
+      console.error('Error exchanging SDP with OpenAI:', errorText);
+      throw new Error(`OpenAI API error (SDP exchange): ${webrtcResponse.status} - ${errorText}`);
+    }
+    
+    const webrtcData = await webrtcResponse.json();
+    console.log('SDP exchange successful');
+    
+    // Store session info for ICE candidates
+    const sessionId = offer.sdp ? offer.sdp.match(/o=.* ([0-9]+) [0-9]+ IN IP[4|6] .*/)?.[1] : null;
+    if (sessionId && sessions.has(sessionId)) {
+      const session = sessions.get(sessionId);
+      session.openaiSessionId = sessionData.session_id;
+      session.openaiClientId = sessionData.client_id;
+    }
+    
+    return webrtcData.sdp;
     
   } catch (error) {
     console.error('Error proxying SDP to OpenAI:', error);
@@ -287,24 +339,33 @@ async function proxyICECandidateToOpenAI(candidate, sessionId) {
   try {
     console.log('Proxying ICE candidate to OpenAI for session:', sessionId);
     
-    // In a real implementation, this would call the OpenAI WebRTC API
-    // For now, this is a placeholder that will be implemented when the OpenAI WebRTC API is available
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
     
-    // Mock implementation for now
-    const response = await fetch(`https://api.openai.com/v1/audio/webrtc/sessions/${sessionId}/ice`, {
-      method: "POST",
+    // We need the OpenAI session and client IDs to send ICE candidates
+    const session = sessions.get(sessionId);
+    if (!session || !session.openaiSessionId || !session.openaiClientId) {
+      throw new Error('Cannot send ICE candidate: OpenAI session not established');
+    }
+    
+    const response = await fetch(`https://api.openai.com/v1/audio/realtime/session/${session.openaiSessionId}/client/${session.openaiClientId}/webrtc/ice`, {
+      method: 'POST',
       headers: {
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'OpenAI-Beta': 'realtime'
       },
       body: JSON.stringify({
-        candidate: candidate,
-      }),
+        candidate: candidate
+      })
     });
     
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+      console.error('Error sending ICE candidate to OpenAI:', errorText);
+      throw new Error(`OpenAI API error (ICE candidate): ${response.status} - ${errorText}`);
     }
     
     return true;
@@ -319,7 +380,27 @@ async function proxyICECandidateToOpenAI(candidate, sessionId) {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.status(200).json({ status: 'ok' });
+});
+
+// More detailed health check for debugging
+app.get('/healthz', (req, res) => {
+  const healthInfo = {
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: Date.now(),
+    env: {
+      node_env: process.env.NODE_ENV,
+      port: process.env.PORT,
+      simulation_mode: process.env.SIMULATION_MODE
+    }
+  };
+  res.status(200).json(healthInfo);
+});
+
+// Root path to verify server is accessible
+app.get('/', (req, res) => {
+  res.send('WebRTC SDP Proxy Server is running');
 });
 
 // Get API key status endpoint (does not expose the actual key)
@@ -350,8 +431,9 @@ app.get('/api/sessions/:sessionId', (req, res) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+server.listen(port, '0.0.0.0', () => {
+  console.log(`Server running on port ${port} and listening on all interfaces (0.0.0.0:${port})`);
   console.log(`Simulation mode: ${process.env.SIMULATION_MODE === 'true' ? 'ENABLED' : 'DISABLED'}`);
+}).on('error', (err) => {
+  console.error('Error starting server:', err);
 }); 
