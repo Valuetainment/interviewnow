@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenAI Realtime API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .control-panel {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .status {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .log {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>OpenAI Realtime API WebRTC Test</h1>
+    
+    <div class="container">
+        <div class="control-panel">
+            <button id="connectBtn">1. Connect WebSocket</button>
+            <button id="initWebRTCBtn" disabled>2. Initialize WebRTC</button>
+            <button id="apiKeyBtn">Check API Key</button>
+        </div>
+        
+        <div>
+            <h3>Status</h3>
+            <div id="status" class="status">Not connected</div>
+        </div>
+        
+        <div>
+            <h3>Log</h3>
+            <div id="log" class="log">Log started...</div>
+        </div>
+        
+        <div>
+            <h3>Audio Output</h3>
+            <audio id="audioOutput" controls autoplay></audio>
+        </div>
+    </div>
+
+    <script>
+        const connectBtn = document.getElementById('connectBtn');
+        const initWebRTCBtn = document.getElementById('initWebRTCBtn');
+        const apiKeyBtn = document.getElementById('apiKeyBtn');
+        const statusEl = document.getElementById('status');
+        const logEl = document.getElementById('log');
+        const audioOutput = document.getElementById('audioOutput');
+        
+        let ws = null;
+        let sessionId = null;
+        let peerConnection = null;
+        
+        // Log helper function
+        function log(message) {
+            console.log(message);
+            logEl.textContent += '\n' + message;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+        
+        // Update status
+        function updateStatus(message) {
+            statusEl.textContent = message;
+        }
+        
+        // Connect to WebSocket
+        connectBtn.addEventListener('click', () => {
+            log('Connecting to WebSocket...');
+            
+            // Get current hostname and protocol
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+            const wsUrl = `${protocol}//${host}`;
+            
+            log(`Connecting to WebSocket at ${wsUrl}...`);
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                log('WebSocket connected');
+                updateStatus('WebSocket connected. Ready to initialize WebRTC.');
+                connectBtn.disabled = true;
+                initWebRTCBtn.disabled = false;
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                log(`Received WebSocket message: ${data.type}`);
+                
+                switch (data.type) {
+                    case 'session':
+                        sessionId = data.sessionId;
+                        log(`Session established with ID: ${sessionId}`);
+                        break;
+                    
+                    case 'sdpAnswer':
+                        handleSDPAnswer(data.answer);
+                        break;
+                    
+                    case 'iceCandidate':
+                        handleRemoteICECandidate(data.candidate);
+                        break;
+                    
+                    case 'error':
+                        log(`Error: ${data.message}`);
+                        updateStatus(`Error: ${data.message}`);
+                        break;
+                    
+                    case 'api_key_status':
+                        log(`API key status: ${data.status}`);
+                        updateStatus(`API key status: ${data.status}`);
+                        break;
+                }
+            };
+            
+            ws.onclose = () => {
+                log('WebSocket closed');
+                updateStatus('WebSocket closed. Reconnect to continue.');
+                connectBtn.disabled = false;
+                initWebRTCBtn.disabled = true;
+            };
+            
+            ws.onerror = (error) => {
+                log(`WebSocket error: ${error}`);
+                updateStatus('WebSocket error. See console for details.');
+            };
+        });
+        
+        // Initialize WebRTC
+        initWebRTCBtn.addEventListener('click', async () => {
+            log('Initializing WebRTC connection...');
+            updateStatus('Initializing WebRTC connection...');
+            
+            const configuration = {
+                iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+            };
+            
+            peerConnection = new RTCPeerConnection(configuration);
+            log('WebRTC peer connection initialized');
+            
+            // Handle ICE candidates
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    log('Generated ICE candidate');
+                    sendICECandidate(event.candidate);
+                }
+            };
+            
+            // Set up audio output
+            peerConnection.ontrack = (event) => {
+                log('Received remote track');
+                if (event.track.kind === 'audio') {
+                    log('Adding audio track to audio element');
+                    const stream = new MediaStream();
+                    stream.addTrack(event.track);
+                    audioOutput.srcObject = stream;
+                }
+            };
+            
+            // Connection state changes
+            peerConnection.onconnectionstatechange = () => {
+                log(`Connection state changed: ${peerConnection.connectionState}`);
+                updateStatus(`Connection state: ${peerConnection.connectionState}`);
+            };
+            
+            // ICE connection state changes
+            peerConnection.oniceconnectionstatechange = () => {
+                log(`ICE connection state changed: ${peerConnection.iceConnectionState}`);
+            };
+            
+            // Create offer
+            try {
+                log('Creating SDP offer...');
+                const offer = await peerConnection.createOffer({
+                    offerToReceiveAudio: true,
+                    offerToReceiveVideo: false
+                });
+                
+                await peerConnection.setLocalDescription(offer);
+                
+                log('Sending SDP offer to server...');
+                ws.send(JSON.stringify({
+                    type: 'sdpOffer',
+                    offer: peerConnection.localDescription
+                }));
+            } catch (error) {
+                log(`Error creating offer: ${error}`);
+                updateStatus(`Error: ${error.message}`);
+            }
+        });
+        
+        // Check API key status
+        apiKeyBtn.addEventListener('click', () => {
+            log('Requesting API key status...');
+            
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('WebSocket not connected');
+                return;
+            }
+            
+            ws.send(JSON.stringify({
+                type: 'apiKeyStatus'
+            }));
+        });
+        
+        // Handle SDP answer from server
+        async function handleSDPAnswer(answer) {
+            log('Received SDP answer from server');
+            
+            try {
+                const rtcSessionDescription = new RTCSessionDescription({
+                    type: 'answer',
+                    sdp: answer
+                });
+                
+                await peerConnection.setRemoteDescription(rtcSessionDescription);
+                log('Set remote description successfully');
+                updateStatus('WebRTC connection established. Waiting for audio...');
+            } catch (error) {
+                log(`Error setting remote description: ${error}`);
+                updateStatus(`Error: ${error.message}`);
+            }
+        }
+        
+        // Send ICE candidate to server
+        function sendICECandidate(candidate) {
+            log('Sending ICE candidate to server...');
+            
+            ws.send(JSON.stringify({
+                type: 'iceCandidate',
+                candidate: candidate
+            }));
+        }
+        
+        // Handle remote ICE candidate
+        async function handleRemoteICECandidate(candidate) {
+            log('Received ICE candidate from server');
+            
+            try {
+                await peerConnection.addIceCandidate(candidate);
+                log('Added remote ICE candidate');
+            } catch (error) {
+                log(`Error adding remote ICE candidate: ${error}`);
+            }
+        }
+        
+        // Log when page loads
+        log('OpenAI Realtime API Test client loaded');
+    </script>
+</body>
+</html> 
