@@ -40,16 +40,55 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 
 // Helper to get current tenant ID from auth context
 export const getCurrentTenantId = async (): Promise<string | null> => {
-  const { data } = await supabase.auth.getSession();
-  const session = data.session;
-  
-  if (!session?.user) {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const session = data?.session;
+
+    if (!session?.user) {
+      console.log('No active session found for tenant ID lookup');
+      return null;
+    }
+
+    // Try multiple places where tenant_id might be stored
+    // 1. Check JWT claims at top level (if JWT hook is configured)
+    const jwtClaims = (session as { access_token?: string }).access_token ? 
+      JSON.parse(atob((session as { access_token: string }).access_token.split('.')[1])) : {};
+    
+    if (jwtClaims.tenant_id) {
+      console.log('Found tenant_id in JWT claims:', jwtClaims.tenant_id);
+      return jwtClaims.tenant_id;
+    }
+
+    // 2. Check app_metadata (original location)
+    const tenantId = session.user.app_metadata?.tenant_id || null;
+
+    if (!tenantId) {
+      // 3. If tenant_id is not in JWT or app_metadata, try to get it from the database
+      try {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('tenant_id')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!userError && userData?.tenant_id) {
+          console.log('Found tenant_id in users table:', userData.tenant_id);
+          return userData.tenant_id;
+        }
+
+        console.warn('No tenant_id found for user:', session.user.id);
+        return null;
+      } catch (dbError) {
+        console.error('Error in tenant_id database lookup:', dbError);
+        return null;
+      }
+    }
+
+    return tenantId;
+  } catch (error) {
+    console.error('Error getting tenant ID:', error);
     return null;
   }
-  
-  // Getting tenant_id from JWT claims
-  const tenantId = session.user.app_metadata?.tenant_id || null;
-  return tenantId;
 };
 
 // Helper to create a path with tenant prefix for storage
