@@ -30,9 +30,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Supabase configuration is missing. URL: ' + supabaseUrl);
 }
 
-console.log('Supabase client initialized with:', { 
+console.log('[Supabase v2] Client initialized with:', { 
   url: supabaseUrl, 
-  isDevelopment 
+  isDevelopment,
+  timestamp: new Date().toISOString(),
+  version: 'fix-55d433c'
 });
 
 // Import the supabase client like this:
