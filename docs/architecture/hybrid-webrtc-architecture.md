@@ -95,7 +95,50 @@ Our hybrid architecture for the AI Interview Insights Platform leverages WebRTC 
 
 ## Technical Data Flow
 
-### 1. Setup Phase (Signaling)
+The interview process follows a 5-stage flow, with each stage corresponding to specific technical operations in the system.
+
+### 5-Stage Interview Flow
+
+The complete interview flow works in these five discrete stages:
+
+1. **Interview Setup**
+   - User selects candidate and position
+   - System creates a new session record in the database
+   - User is redirected to the interview page with the session ID
+
+2. **Connection Establishment**
+   - WebRTC connection process is initiated
+   - System fetches ephemeral key from edge function
+   - WebRTC peer connection with data channel is created
+   - SDP offer is generated and sent to proxy
+   - SDP answer is received and bidirectional audio connection established
+
+3. **Session Configuration**
+   - System sends "session.update" with interview instructions
+   - Company context is provided for personalized interviews
+   - Turn detection settings established for conversational flow
+   - Voice selection and audio format parameters are configured
+
+4. **Interview Execution**
+   - AI interviewer begins with introduction based on instructions
+   - User's audio is captured, encoded, and transmitted via WebRTC
+   - Transcript entries are captured and saved
+   - Real-time responses from OpenAI are processed and displayed
+
+5. **Interview Completion**
+   - User ends interview, triggering disconnect process
+   - Final transcript is saved with "completed" flag
+   - Audio recording is uploaded to storage
+   - Interview session status is updated to "completed"
+   - Invitation status is updated (if applicable)
+
+For detailed implementation steps for each stage, see the [Interview Execution Flow](../verified-flows/INTERVIEW_EXECUTION_FLOW.md) document.
+
+### Technical Phases
+
+At a lower level, these stages correspond to three technical phases:
+
+#### 1. Setup Phase (Signaling)
 ```
 a. Browser Client ──(SDP Offer)──────────────────► Fly.io SDP Proxy
 b. Fly.io SDP Proxy ──(API Key + SDP)──────────► OpenAI WebRTC API
@@ -104,13 +147,13 @@ d. Fly.io SDP Proxy ──(SDP Answer)─────────────►
 e. ICE candidates exchanged to establish direct connection
 ```
 
-### 2. Streaming Phase (Direct Connection)
+#### 2. Streaming Phase (Direct Connection)
 ```
 a. Browser Client ──(Direct Audio Stream)─────► OpenAI WebRTC Endpoint
 b. OpenAI Processor ──(Text via Data Channel)──► Browser Client
 ```
 
-### 3. Persistence Phase
+#### 3. Persistence Phase
 ```
 a. Browser Client ──(Session Data + Transcript)──► Supabase
 b. Supabase ──(Stored Results)───────────────────► Browser Client (for review)

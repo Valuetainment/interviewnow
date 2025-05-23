@@ -8,6 +8,7 @@ interface TranscriptRequest {
   timestamp?: string;
   speaker?: string;
   confidence?: number;
+  source?: 'hybrid' | 'sdp_proxy'; // Indicates which architecture sent the transcript
 }
 
 interface TranscriptResponse {
@@ -25,7 +26,7 @@ serve(async (req) => {
   try {
     // Get request data
     const requestData: TranscriptRequest = await req.json();
-    const { interview_session_id, text, timestamp, speaker, confidence } = requestData;
+    const { interview_session_id, text, timestamp, speaker, confidence, source = 'sdp_proxy' } = requestData;
     
     if (!interview_session_id || !text) {
       return new Response(
@@ -80,15 +81,47 @@ serve(async (req) => {
       );
     }
     
+    // Check if we need to determine the architecture
+    let architecture = null;
+
+    if (!speaker && source === 'hybrid') {
+      // For hybrid architecture, try to determine the speaker from session information
+      // In a real implementation, this would use more advanced logic
+      // This is a simplified example
+      const { data: sessionArchData } = await supabaseClient
+        .from('interview_sessions')
+        .select('webrtc_architecture')
+        .eq('id', interview_session_id)
+        .single();
+
+      architecture = sessionArchData?.webrtc_architecture || 'sdp_proxy';
+    }
+
+    // Determine speaker based on architecture and provided speaker value
+    let finalSpeaker = speaker;
+    if (!finalSpeaker && source === 'hybrid') {
+      // If we don't have a speaker but are using hybrid architecture,
+      // we can make a reasonable guess based on pattern matching
+      if (text && text.trim().startsWith('User:')) {
+        finalSpeaker = 'candidate';
+      } else if (text && text.trim().startsWith('AI:')) {
+        finalSpeaker = 'ai';
+      } else {
+        finalSpeaker = 'unknown';
+      }
+    }
+
     // Store transcript entry
     const { data: transcriptData, error: transcriptError } = await supabaseClient
       .from('transcript_entries')
       .insert({
         interview_session_id,
+        tenant_id: sessionData.tenant_id, // Ensure tenant_id is set for security
         text,
         timestamp: timestamp || new Date().toISOString(),
-        speaker,
-        confidence
+        speaker: finalSpeaker || 'unknown', // Use determined speaker or default
+        confidence,
+        source_architecture: source // Track which architecture sent this
       })
       .select('id')
       .single();

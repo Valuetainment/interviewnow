@@ -55,3 +55,6 @@ bun.lockb
 # Temporary files
 *.tmp
 *.bak
+.vercel
+
+**/.claude/settings.local.json

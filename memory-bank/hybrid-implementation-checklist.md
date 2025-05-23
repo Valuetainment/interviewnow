@@ -7,7 +7,7 @@ This document provides a comprehensive checklist for implementing the hybrid arc
 - [x] Create separate Fly.io VM template for WebRTC proxy
 - [x] Set up environment variables for storing API keys securely
 - [ ] Configure multi-tenant isolation structure (one app per tenant)
-- [ ] Implement VM per session strategy for complete isolation
+- [x] Implement VM per session strategy for complete isolation (Tested locally, pending production deployment)
 - [x] Configure CORS and security headers for all endpoints
 - [x] Set up containerization with proper resource constraints
 - [x] Create deployment templates for infrastructure as code
@@ -55,7 +55,7 @@ This document provides a comprehensive checklist for implementing the hybrid arc
 
 ## Authentication & Security
 
-- [ ] Implement JWT validation for all API endpoints
+- [ ] Implement JWT validation for all API endpoints (Partial implementation in interview-start edge function)
 - [ ] Create Magic Link and Google OAuth integration
 - [ ] Add session token validation and refresh mechanisms
 - [ ] Implement tenant isolation in all authentication flows
@@ -67,6 +67,18 @@ This document provides a comprehensive checklist for implementing the hybrid arc
 - [ ] Create secure invitation token generation and validation
 - [ ] Implement IP-based access restrictions for sensitive operations
 - [ ] Add activity logging for compliance and security monitoring
+
+## VM Isolation Security
+
+- [x] Design per-session VM isolation model (Complete)
+- [x] Implement unique VM naming convention based on tenant and session (Complete)
+- [x] Update interview-start edge function to create session-specific VMs (Complete)
+- [x] Modify WebRTC hooks to handle dynamic VM URLs (Complete)
+- [x] Local testing of per-session isolation completed successfully
+- [ ] Production implementation of per-session isolation (Pending)
+- [ ] Security verification testing in production environment
+- [ ] Resource usage monitoring for isolated VMs in production
+- [ ] Implement automated VM cleanup after session completion
 
 ## Testing
 
@@ -136,12 +148,63 @@ This document provides a comprehensive checklist for implementing the hybrid arc
 - [x] Develop a simple React WebRTC component for testing
 - [x] Implement secure API key management on Fly.io VMs
 
+## Application Integration (Completed)
+
+- [x] Integrate WebRTC SDP proxy into main application
+- [x] Implement hooks-based architecture for WebRTC functionality
+- [x] Create specialized hooks for different aspects (connection, audio, retry)
+- [x] Update WebRTCManager to use hooks-based architecture
+- [x] Add test routes (/test/ngrok, /test/openai, /test/full, /test/webrtc-hooks)
+- [x] Add error handling and reconnection logic
+- [x] Implement connection status indicators
+- [x] Add audio level visualization
+
+## Current Priority (In Progress)
+
+- [x] Complete unit tests for WebRTC hooks architecture
+- [x] Fix production routing issues with WebRTC test pages
+- [x] Fix JS errors in production bundle
+- [x] Clean up testing structure for hybrid architecture focus
+- [ ] Update the SDP proxy with latest fixes:
+  - [ ] Incorporate error handling improvements
+  - [ ] Add enhanced logging for diagnostics
+  - [ ] Implement session recovery mechanisms
+- [ ] Deploy edge functions for hybrid architecture support
+- [ ] Test hybrid architecture with real interview sessions
+- [ ] Implement VM per tenant strategy for isolation
+- [ ] Configure JWT validation for API endpoints
+- [ ] Deploy WebRTC functionality to production environment
+- [ ] Set up monitoring and alerting for production
+- [ ] Performance test under production conditions
+- [ ] Enhance interview room experience
+- [ ] Implement recording and playback functionality
+
+## Front-to-Back Implementation Strategy
+
+We're following a front-to-back implementation approach for production deployment:
+
+1. First complete all client-side components and test locally
+2. Deploy individual backend services once frontend integration is verified
+3. Implement production security measures incrementally
+4. Test each component thoroughly before proceeding to next integration point
+5. Document implementation details continuously throughout process
+6. Set specific verification points before proceeding to next phase
+
+## Production Deployment Planning
+
+- Create pre-deployment checklist for security verification
+- Document rollback procedures in case of issues
+- Specify monitoring requirements for initial deployment
+- Implement canary release strategy for risk mitigation
+- Create incident response plan for potential issues
+- Document observability metrics for production monitoring
+
 ## Key Technical Decisions (Validated)
 
 - [x] SDP exchange occurs through Fly.io, but actual audio/video streams go directly between client and OpenAI
 - [x] API keys are never exposed to the client; all sensitive operations proxied through Fly.io
-- [x] One VM per interview session for complete isolation and security
-- [ ] JWT-based authentication for all API endpoints
+- [x] One VM per interview session for complete isolation and security (Tested locally, pending production deployment)
+- [ ] JWT-based authentication for all API endpoints (Partial implementation in interview-start edge function)
 - [ ] Server-side VAD (Voice Activity Detection) for optimal turn-taking
 - [ ] Function calling via OpenAI for interview control (ending session, rating candidates)
 - [x] Separate services for different concerns: authentication, transcript storage, video recording

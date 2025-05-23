@@ -104,7 +104,11 @@ The database uses a multi-tenant design with tables including:
 - Models: GPT-4o-mini for resume analysis and transcript processing
 - Authentication: API key in environment variables
 - Used for: Resume analysis, position descriptions, transcript processing
-- Future WebRTC API: Direct audio streaming for real-time transcription (requires SDP proxy for security)
+- WebRTC Realtime API: Direct audio streaming for real-time transcription
+  - API: https://sessions.openai.com/v1/realtime
+  - Headers: Requires "OpenAI-Beta: realtime=v1"
+  - Authentication: Direct API key (not JWT-based)
+  - Used for: Real-time WebRTC connections for audio transcription
 
 ### PDF.co
 - API: https://api.pdf.co/v1
@@ -155,6 +159,49 @@ The WebRTC SDP proxy is a critical security and connectivity component that enab
 6. Direct WebRTC connection established between client and OpenAI
 7. Audio streaming and transcription happens directly with OpenAI
 8. Proxy maintains session state and handles cleanup
+
+## Hooks-Based WebRTC Architecture
+
+The WebRTC implementation has been refactored using a hooks-based architecture that eliminates circular dependencies and creates a more maintainable, modular system for WebRTC functionality:
+
+### Core Hooks
+- **useConnectionState**: Manages connection state transitions and provides consistent state reporting across the system
+- **useRetry**: Implements retry logic with exponential backoff for handling connection failures gracefully
+- **useAudioVisualization**: Manages audio capture and provides real-time visualization of audio levels
+
+### Connection Hooks
+- **useWebRTCConnection**: Handles WebRTC peer connection establishment, ICE negotiation, and media track management
+- **useWebSocketConnection**: Manages WebSocket connections to the SDP proxy with automatic reconnection
+- **useOpenAIConnection**: Specialized hook for direct OpenAI WebRTC connections with AI-specific configuration
+- **useSDPProxy**: Specialized hook for the SDP proxy architecture that handles signaling and transcript management
+- **useTranscriptManager**: Manages the accumulation, processing, and storage of transcript data
+
+### Orchestration Hook
+- **useWebRTC**: Main entry point that orchestrates all specialized hooks based on configuration settings
+
+### Advantages of Hooks Architecture
+1. **Separation of Concerns**: Each hook has a specific, focused responsibility
+2. **Improved Testability**: Individual hooks can be tested in isolation with specialized mocks
+3. **Code Reusability**: Hooks can be combined in different ways for various use cases
+4. **Reduced Complexity**: Simpler components with clearer boundaries and interfaces
+5. **Maintainable Codebase**: Easier to extend and modify specific aspects without affecting others
+6. **Better Error Handling**: More granular error tracking and recovery at each level
+7. **Resource Management**: Proper cleanup of resources with useEffect dependency arrays
+
+### Integration into WebRTCManager
+The WebRTCManager component has been updated to use this hooks-based architecture, resulting in:
+1. Simplified component code with functionality delegated to hooks
+2. Support for multiple connection modes (simulation, SDP proxy, direct OpenAI)
+3. Improved error handling and recovery
+4. Better visual feedback for connection state
+5. Comprehensive test pages for development and validation
+
+### Testing Infrastructure
+Comprehensive testing has been implemented for all hooks:
+1. Unit tests with Vitest and React Testing Library
+2. Mocks for WebRTC and WebSocket APIs
+3. Tests for connection establishment, error handling, message processing, and state transitions
+4. Interactive test pages with debug information panels and state visualization
 
 ## Environment Configuration
 
@@ -438,3 +485,141 @@ When creating SQL migrations, follow these guidelines for reliability:
    ```
 
 For a complete guide, see `docs/development/supabase-branching-guide.md` 
+
+## WebRTC Implementation
+
+The platform incorporates WebRTC technology for real-time communication during interviews. Two approaches have been implemented:
+
+1. **Original SDP Proxy Approach** (fly-interview-poc):
+   - Traditional WebRTC SDP proxy with server-side audio processing
+   - Full audio transmission over WebSockets
+   - Higher latency and server resources required
+   - Currently suspended in production (last deployed May 9, 2025)
+
+2. **Hybrid OpenAI Approach** (fly-interview-hybrid):
+   - Uses OpenAI's native WebRTC capabilities
+   - Fly.io serves only as a secure SDP exchange proxy
+   - Direct WebRTC connection between client and OpenAI
+   - Lower latency and more efficient resource usage
+   - Successfully deployed and tested in production
+   - Fixed authentication to use OpenAI API key directly
+   - Uses proper Realtime API endpoints (sessions.openai.com)
+   - Requires OpenAI-Beta: realtime=v1 header
+
+Both architectures now implement a strict **per-session VM isolation model**, where each interview session gets its own dedicated VM regardless of the chosen architecture. This ensures complete isolation between interviews and prevents potential data leakage.
+
+### VM Isolation Architecture
+
+The platform enforces a strict isolation model where each interview session gets its own isolated virtual machine:
+
+1. **Per-Session Isolation**: Every interview session has its own isolated VM 
+   - VM naming pattern: `interview-{architecture}-{tenantId}-{sessionShortId}`
+   - Complete separation between all interviews, even within the same tenant
+   - Prevents any potential cross-session data leakage
+
+2. **Implementation Details**:
+   - The `interview-start` edge function creates unique VM names for each session
+   - WebRTC hooks dynamically handle server URLs from edge function responses
+   - Session tokens include tenant and session context for authentication
+   - Comprehensive documentation in `docs/architecture/VM_ISOLATION.md`
+
+3. **Security Benefits**:
+   - Physical isolation between interview sessions
+   - API keys and secrets isolated to each VM
+   - No shared memory or disk space between sessions
+   - Reduced attack surface through compartmentalization
+   - Improved observability with per-session logs
+
+### Hooks-Based Architecture
+
+The WebRTC implementation uses a hooks-based architecture for better maintainability and separation of concerns:
+
+1. **Core WebRTC Hooks**:
+   - `useConnectionState`: Manages connection state transitions and reporting
+   - `useRetry`: Implements retry logic with exponential backoff
+   - `useAudioVisualization`: Manages audio capture and visualization
+
+2. **Connection Hooks**:
+   - `useWebRTCConnection`: Handles WebRTC peer connection and ICE negotiation
+   - `useWebSocketConnection`: Manages WebSocket connections to the proxy
+   - `useOpenAIConnection`: Specialized hook for direct OpenAI connections
+   - `useSDPProxy`: Specialized hook for SDP proxy architecture
+   - `useTranscriptManager`: Manages transcript data and storage
+
+3. **Orchestration Hook**:
+   - `useWebRTC`: Main entry point that coordinates all specialized hooks
+   - Dynamically determines which connection implementation to use
+   - Handles initialization, cleanup, and status reporting
+
+This architecture eliminates circular dependencies and creates a more maintainable system by separating concerns into focused hooks with clear responsibilities.
+
+### WebRTC Test Structure
+
+WebRTC testing is organized into several categories:
+
+1. **Unit Tests**: 
+   - Located in `src/hooks/webrtc/__tests__/`
+   - Tests individual hooks in isolation
+   - Uses comprehensive mocks for WebRTC, WebSocket, and Audio APIs
+
+2. **Integration Tests**: 
+   - Tests interaction between hooks and components
+   - Validates complete connection flow
+
+3. **Manual Test Pages**: 
+   - Interactive interfaces at specific routes:
+     - `/interview-test-simple`: Main test page
+     - `/test/openai`: Direct OpenAI testing
+     - `/test/full`: Comprehensive end-to-end testing
+     - `/test/ngrok`: Testing with ngrok tunneling
+     - `/test/webrtc-hooks`: Testing hooks architecture
+
+4. **Simulation Tools**: 
+   - Local testing without OpenAI API keys
+   - Located in `fly-interview-hybrid/`
+   - `simple-server.js` provides WebSocket simulation
+
+### WebRTC Operational Procedures
+
+To manage the WebRTC infrastructure in production:
+
+1. **Restart Suspended SDP Proxy**:
+   ```bash
+   fly apps start interview-sdp-proxy
+   fly apps status interview-sdp-proxy
+   fly logs interview-sdp-proxy
+   ```
+
+2. **Deploy Edge Functions**:
+   ```bash
+   supabase functions deploy interview-start
+   supabase functions deploy transcript-processor
+   ```
+
+3. **Local Testing Setup**:
+   ```bash
+   # Start development server
+   npm run dev
+   
+   # Start simulation server
+   cd fly-interview-hybrid && node simple-server.js
+   
+   # Start ngrok tunnel (if needed)
+   ./start-ngrok-test.sh
+   ```
+
+4. **VM Management**:
+   ```bash
+   # Scale VM capacity
+   fly scale count 50 --app interview-sdp-proxy
+   
+   # Check VM status
+   fly status --app interview-sdp-proxy
+   ``` 
+
+### JWT Configuration
+- **Custom Access Token Hook**: `auth.custom_access_token_hook`
+  - Adds tenant_id to JWT claims at top level
+  - Configured in Supabase Authentication → Hooks
+  - Enables RLS policies to check `(auth.jwt() ->> 'tenant_id')`
+  - Users must sign out/in after configuration for new JWT tokens 

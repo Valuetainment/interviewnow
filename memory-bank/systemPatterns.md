@@ -793,3 +793,140 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 5. **Permission-based UI rendering**: Showing only allowed actions in the UI
 6. **Security-definer functions**: Using proper PostgreSQL security context
 7. **Cross-tenant candidate authentication**: Secure handling of candidates with multiple tenant relationships 
+
+## WebRTC Implementation Patterns
+
+### Original SDP Proxy Approach
+The initial WebRTC implementation used a traditional SDP proxy approach:
+```
+┌─────────────────┐     ┌─────────────────────┐     ┌────────────────┐
+│                 │     │                     │     │                │
+│  Client Browser │────►│  SDP Proxy Server   │────►│  OpenAI API    │
+│                 │     │  (Full Audio        │     │                │
+│                 │◄────│   Processing)       │◄────│                │
+└─────────────────┘     └─────────────────────┘     └────────────────┘
+```
+
+### Hybrid WebRTC Architecture
+The current implementation uses a hybrid approach with direct OpenAI connection:
+```
+┌─────────────────┐     ┌─────────────────────┐     
+│                 │     │                     │     
+│  Client Browser │────►│  SDP Proxy Server   │     
+│                 │     │  (Credential        │     
+│                 │◄────│   Management Only)  │     
+└────────┬────────┘     └─────────────────────┘     
+         │                        
+         │                        
+         ▼                        
+┌─────────────────┐               
+│                 │               
+│   OpenAI API    │               
+│   (Direct       │               
+│    WebRTC)      │               
+└─────────────────┘               
+```
+
+### Detailed Hybrid Architecture Flow
+
+1. **Session Initialization**:
+   - Client requests session via `interview-start` edge function
+   - Function validates tenant and creates session in database
+   - Function provisions VM on Fly.io for this specific session
+   - Function returns session configuration with VM endpoint
+
+2. **Connection Establishment**:
+   - Client connects to session-specific WebSocket endpoint on Fly.io
+   - Client creates WebRTC offer and sends via WebSocket
+   - Server processes offer and exchanges with OpenAI
+   - SDP answer returned to client via WebSocket
+   - ICE candidates exchanged for NAT traversal
+   - Direct WebRTC connection established between client and OpenAI
+
+3. **Audio Processing**:
+   - Audio streams directly between client and OpenAI
+   - API keys remain secure on server, never exposed to client
+   - Transcription happens in real-time through OpenAI
+   - Transcript events come through WebRTC data channel
+
+4. **Transcript Management**:
+   - Transcript segments sent to Supabase via edge function
+   - Stored with proper tenant isolation using RLS policies
+   - Real-time updates available through Supabase subscription
+   - Session data persisted for later review
+
+5. **Session Termination**:
+   - Connection closed by client or server
+   - Final transcript processing and storage
+   - VM resources cleaned up and deallocated
+   - Session marked as completed in database
+
+### Per-Session VM Isolation
+
+Each interview session gets its own dedicated VM:
+
+```
+┌───────────────────────────────────────────────────────────┐
+│                                                           │
+│                     Fly.io Platform                       │
+│                                                           │
+│  ┌───────────────────┐      ┌───────────────────┐        │
+│  │                   │      │                   │        │
+│  │  VM: Session A    │      │  VM: Session B    │        │
+│  │  Tenant 1         │      │  Tenant 1         │        │
+│  │                   │      │                   │        │
+│  └───────────────────┘      └───────────────────┘        │
+│                                                           │
+│  ┌───────────────────┐      ┌───────────────────┐        │
+│  │                   │      │                   │        │
+│  │  VM: Session C    │      │  VM: Session D    │        │
+│  │  Tenant 2         │      │  Tenant 2         │        │
+│  │                   │      │                   │        │
+│  └───────────────────┘      └───────────────────┘        │
+│                                                           │
+└───────────────────────────────────────────────────────────┘
+```
+
+This architecture provides:
+- Complete isolation between sessions (even within same tenant)
+- Secure credential management without client exposure
+- Direct audio streaming for lowest latency
+- Scalable infrastructure with minimal resource usage
+- Automatic resource cleanup after session completion
+
+### WebRTC Hook Architecture
+
+The WebRTC implementation uses a hooks-based pattern:
+
+```
+┌───────────────────────────────────────────────────────────┐
+│                                                           │
+│                       WebRTCManager                       │
+│                                                           │
+│  ┌───────────────────────────────────────────────────┐   │
+│  │                                                   │   │
+│  │                     useWebRTC                     │   │
+│  │                                                   │   │
+│  └───────────────────────────────────────────────────┘   │
+│                                                           │
+│  ┌─────────────┐  ┌─────────────┐  ┌──────────────────┐  │
+│  │             │  │             │  │                  │  │
+│  │ useRetry    │  │ useConnect  │  │ useTranscript    │  │
+│  │             │  │ ionState    │  │ Manager          │  │
+│  └─────────────┘  └─────────────┘  └──────────────────┘  │
+│                                                           │
+│  ┌─────────────┐  ┌─────────────┐  ┌──────────────────┐  │
+│  │             │  │             │  │                  │  │
+│  │ useWebRTC   │  │ useWebSocket│  │ useOpenAI        │  │
+│  │ Connection  │  │ Connection  │  │ Connection       │  │
+│  └─────────────┘  └─────────────┘  └──────────────────┘  │
+│                                                           │
+└───────────────────────────────────────────────────────────┘
+```
+
+This pattern:
+- Separates concerns into focused hooks
+- Eliminates circular dependencies
+- Improves testability with isolated components
+- Enhances maintainability with clear interfaces
+- Enables composition of functionality 

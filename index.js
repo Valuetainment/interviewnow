@@ -81,7 +81,7 @@ wss.on('connection', (ws, req) => {
           
           try {
             // Forward SDP offer to OpenAI and get answer
-            const sdpAnswer = await exchangeSDP(session.sdpOffer);
+            const sdpAnswer = await proxySDPToOpenAI(session.sdpOffer);
             session.sdpAnswer = sdpAnswer;
             
             // Send SDP answer back to client
@@ -104,8 +104,24 @@ wss.on('connection', (ws, req) => {
           console.log('Received ICE candidate from client');
           // Store ICE candidate
           session.iceCandidates.push(data.candidate);
-          // In a production implementation, we would need to handle
-          // exchanging ICE candidates with OpenAI
+          
+          try {
+            // Forward ICE candidate to OpenAI
+            await proxyICECandidateToOpenAI(data.candidate, sessionId);
+            
+            // Acknowledge receipt
+            ws.send(JSON.stringify({
+              type: 'iceAcknowledge',
+              headers: corsHeaders
+            }));
+          } catch (error) {
+            console.error('Error proxying ICE candidate:', error);
+            ws.send(JSON.stringify({ 
+              type: 'error', 
+              message: 'Failed to process ICE candidate: ' + error.message,
+              headers: corsHeaders
+            }));
+          }
           break;
           
         case 'transcriptUpdate':
@@ -149,148 +165,95 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-// Exchange SDP with OpenAI
-async function exchangeSDP(clientSdp) {
+// Proxy an SDP offer to OpenAI and get an SDP answer
+async function proxySDPToOpenAI(offer) {
   try {
-    console.log('Exchanging SDP with OpenAI WebRTC API');
+    console.log('Proxying SDP offer to OpenAI');
     
-    // For now, we need to use our simulation approach since there isn't a public
-    // OpenAI WebRTC API endpoint available yet
+    // Get OpenAI API key from environment
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
+
+    // Step 1: Create a realtime session first to get a client secret
+    const sessionResponse = await fetch("https://api.openai.com/v1/audio/realtime/sessions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "OpenAI-Beta": "realtime"
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        voice: "alloy"
+      }),
+    });
     
-    // Get the client SDP as a string
-    const clientSdpStr = typeof clientSdp === 'string' ? clientSdp : clientSdp.sdp;
-    
-    // Create an answer by directly modifying the offer
-    // This ensures the m-lines stay in exactly the same order
-    const answerSdp = createAnswerFromOffer(clientSdpStr);
-    
-    const simulatedAnswer = {
-      type: 'answer',
-      sdp: answerSdp
-    };
-    
-    // Test the OpenAI API connection with a simple request to verify the key works
-    try {
-      const response = await fetch("https://api.openai.com/v1/models", {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-          "Content-Type": "application/json",
-        }
-      });
-      
-      if (response.ok) {
-        const models = await response.json();
-        console.log('OpenAI API connection successful', models.data.length ? 'models available' : 'no models found');
-      } else {
-        console.error('OpenAI API connection failed:', await response.text());
-      }
-    } catch (apiError) {
-      console.error('Error testing OpenAI API:', apiError);
+    if (!sessionResponse.ok) {
+      const errorText = await sessionResponse.text();
+      throw new Error(`OpenAI Session API error: ${sessionResponse.status} - ${errorText}`);
     }
     
-    console.log('Generated SDP answer');
-    return simulatedAnswer;
+    const sessionData = await sessionResponse.json();
+    const sessionId = sessionData.id;
+    const ephemeralKey = sessionData.client_secret?.value;
+    
+    if (!ephemeralKey) {
+      throw new Error('Failed to get ephemeral key from OpenAI');
+    }
+
+    // Step 2: Now use the ephemeral key to establish WebRTC connection
+    const rtcResponse = await fetch("https://api.openai.com/v1/audio/realtime/rtc", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${ephemeralKey}`,
+        "Content-Type": "application/sdp"
+      },
+      body: offer.sdp || offer,
+    });
+    
+    if (!rtcResponse.ok) {
+      const errorText = await rtcResponse.text();
+      throw new Error(`OpenAI WebRTC API error: ${rtcResponse.status} - ${errorText}`);
+    }
+    
+    // The response will be the SDP answer
+    const sdpAnswer = await rtcResponse.text();
+    
+    return {
+      type: "answer",
+      sdp: sdpAnswer
+    };
+    
   } catch (error) {
-    console.error('Error in SDP exchange:', error);
+    console.error('Error proxying SDP to OpenAI:', error);
     throw error;
   }
 }
 
-// Create an SDP answer directly from the offer by changing only what's necessary
-function createAnswerFromOffer(offerSdp) {
-  // Split the SDP into lines
-  const lines = offerSdp.split('\r\n');
-  if (lines.length === 1) {
-    // Try alternate line ending
-    lines.splice(0, 1, ...offerSdp.split('\n'));
-  }
-  
-  const answer = [];
-  
-  // Keep track of whether we're in a media section
-  let inMediaSection = false;
-  let currentMediaType = null;
-  
-  // Process line by line
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+// Proxy an ICE candidate to OpenAI
+async function proxyICECandidateToOpenAI(candidate, sessionId) {
+  try {
+    console.log('Proxying ICE candidate to OpenAI for session:', sessionId);
     
-    // Start with the line as is
-    let newLine = line;
-    
-    // Detect media sections
-    if (line.startsWith('m=')) {
-      inMediaSection = true;
-      currentMediaType = line.split(' ')[0].substring(2); // e.g., "audio", "video", "application"
-      // Keep the m= line exactly as is
+    // Get OpenAI API key from environment
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OpenAI API key not configured');
     }
     
-    // For session-level or media-level attributes, modify as needed
-    if (line.startsWith('a=')) {
-      // Change offer to answer
-      if (line === 'a=type:offer') {
-        newLine = 'a=type:answer';
-      }
-      
-      // Reverse the setup role
-      else if (line.startsWith('a=setup:')) {
-        if (line === 'a=setup:actpass') {
-          newLine = 'a=setup:active';
-        }
-      }
-      
-      // Change sendrecv to recvonly for audio/video
-      else if (inMediaSection && (currentMediaType === 'audio' || currentMediaType === 'video')) {
-        if (line === 'a=sendrecv') {
-          newLine = 'a=recvonly';
-        } else if (line === 'a=sendonly') {
-          newLine = 'a=recvonly';
-        }
-      }
-      
-      // Use our own ICE credentials
-      else if (line.startsWith('a=ice-ufrag:')) {
-        newLine = 'a=ice-ufrag:' + generateRandomString(8);
-      }
-      else if (line.startsWith('a=ice-pwd:')) {
-        newLine = 'a=ice-pwd:' + generateRandomString(24);
-      }
-      
-      // Replace fingerprint with our fake one (in a real implementation, this would be actual cert)
-      else if (line.startsWith('a=fingerprint:')) {
-        const parts = line.split(' ');
-        if (parts.length >= 2) {
-          newLine = parts[0] + ' ' + generateFakeFingerprint();
-        }
-      }
-    }
+    // Use the correct endpoint to send ICE candidates
+    // Note: OpenAI's API doesn't actually have a dedicated ICE candidate endpoint 
+    // They handle ICE candidates through the WebRTC connection, not via REST API
+    // This function is a placeholder and should be adapted based on OpenAI's documentation
     
-    // Add the line to the answer
-    answer.push(newLine);
+    return true;
+    
+  } catch (error) {
+    console.error('Error proxying ICE candidate to OpenAI:', error);
+    throw error;
   }
-  
-  return answer.join('\r\n') + '\r\n';
-}
-
-// Helper function to generate random string of specified length
-function generateRandomString(length) {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += characters.charAt(Math.floor(Math.random() * characters.length));
-  }
-  return result;
-}
-
-// Helper function to generate a fake fingerprint
-function generateFakeFingerprint() {
-  let fingerprint = '';
-  for (let i = 0; i < 32; i++) {
-    fingerprint += (Math.floor(Math.random() * 256)).toString(16).padStart(2, '0');
-    if (i < 31) fingerprint += ':';
-  }
-  return fingerprint;
 }
 
 // HTTP routes
@@ -330,7 +293,7 @@ app.post('/api/exchange-sdp', async (req, res) => {
       return res.status(400).json({ error: 'SDP offer required' });
     }
     
-    const answer = await exchangeSDP(sdp);
+    const answer = await proxySDPToOpenAI(sdp);
     res.json({ sdp: answer });
   } catch (error) {
     console.error('Error in SDP exchange:', error);

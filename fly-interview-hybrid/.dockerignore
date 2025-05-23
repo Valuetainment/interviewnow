@@ -1,0 +1,39 @@
+# flyctl launch added from .gitignore
+# Node.js dependencies
+**/node_modules
+**/npm-debug.log
+**/yarn-debug.log
+**/yarn-error.log
+
+# Environment variables
+**/.env
+**/.env.local
+**/.env.development
+**/.env.test
+**/.env.production
+
+# Logs
+**/logs
+**/*.log
+
+# Build artifacts
+**/dist
+**/build
+
+# IDE and editor files
+**/.vscode
+**/.idea
+**/*.swp
+**/*.swo
+
+# Operating system files
+**/.DS_Store
+**/Thumbs.db
+
+# Fly.io deployment files
+**/fly.local.toml
+
+# Temporary files
+**/tmp
+**/temp/ 
+fly.toml

@@ -1,6 +1,36 @@
-# Triangular AI Interview Insights Platform
+# AI Interview Insights Platform
 
 A multi-tenant SaaS platform for end-to-end AI-driven hiring processes built on Supabase infrastructure. Streamline resume parsing, conduct AI-driven interviews, generate weighted assessments, and export to ATS systems.
+
+## 🚀 New Developer Onboarding
+
+**Welcome! Start here for fastest productive setup:**
+
+### **Essential First Read** (30 minutes)
+1. **[📋 Memory Bank Context](memory-bank/)** - Most up-to-date project state and progress
+   - [Project Brief](memory-bank/projectbrief.md) - Core product vision
+   - [Active Context](memory-bank/activeContext.md) - Current state and recent fixes
+   - [Progress](memory-bank/progress.md) - Completed features and milestones
+2. **[📖 Main Documentation](docs/index.md)** - Complete platform overview and navigation
+3. **[🎯 WebRTC Entry Point](docs/architecture/webrtc-entry-point.md)** - Core system implementation
+
+### **Development Setup** (45 minutes)
+4. **[🛠️ Development Guide](docs/development/README.md)** - Environment setup and workflow
+5. **[📝 Development Log](CLAUDE.md)** - Recent work, current issues, commands to run
+6. **[🧪 Testing Structure](docs/guides/testing/TEST_STRUCTURE.md)** - Testing patterns and organization
+
+### **When You Need It** (as needed)
+7. **[🏗️ Implementation Details](docs/architecture/hybrid-implementation-details.md)** - Technical specs and APIs
+8. **[🔒 Security Model](docs/architecture/vm-isolation-guide.md)** - Per-session VM isolation
+9. **[✅ Checklists](memory-bank/checklist.md)** - Implementation status tracking
+
+**⚠️ Critical Updates**: 
+- WebRTC SDP proxy has been fixed and uses OpenAI Realtime API
+- JWT custom_access_token_hook is configured for tenant isolation
+- VM isolation is per-session (not per-tenant) for security
+- Sign out and back in after JWT configuration changes
+
+**💡 Pro Tip**: Always check memory-bank/ for the most current project state before making changes.
 
 ## Core Features
 
@@ -90,6 +120,11 @@ To verify your setup is working:
 curl -X POST http://127.0.0.1:54321/functions/v1/check-env
 ```
 
+For comprehensive testing options:
+- [General Testing Guide](TESTING.md) - Manual testing for interview session management
+- [WebRTC Testing Guide](WEBRTC_TESTING.md) - Testing the WebRTC implementation
+- [Automated Testing Guide](docs/guides/testing/AUTOMATED_TESTING.md) - All automated test scripts
+
 ## Project Structure
 
 ```
@@ -123,21 +158,31 @@ triangularai/
 
 ## Current Status
 
-See [CHECKLIST.md](memory-bank/checklist.md) for implementation status.
+See [memory-bank/checklist.md](memory-bank/checklist.md) for detailed implementation status.
 
-### Completed
-- Core platform infrastructure
-- Database schema with RLS policies
-- Authentication and authorization
-- Dashboard implementation
-- Resume processing flow
-- Position and competency management
-- Interview session setup
-- Candidate enrichment with PDL
+### Completed ✅
+- Core platform infrastructure with multi-tenant support
+- Database schema with RLS policies and JWT tenant isolation
+- Authentication with custom_access_token_hook for tenant_id claims
+- Dashboard implementation with full CRUD operations
+- Resume processing flow (PDF.co extraction + OpenAI analysis)
+- Position and competency management with AI generation
+- Interview session setup with WebRTC support
+- Candidate enrichment with People Data Labs
+- WebRTC implementation with hybrid architecture (hooks-based)
+- Comprehensive unit tests for WebRTC functionality
+- Per-session VM isolation for security
 
-### In Progress
+### Recently Fixed 🔧
+- WebRTC SDP proxy now using OpenAI Realtime API
+- JWT claims properly configured for tenant isolation
+- VM isolation changed from per-tenant to per-session
+- Interview sessions table includes company_id with RLS policies
+
+### In Progress 🚧
+- Production deployment of WebRTC functionality
 - Assessment engine implementation
-- End-to-end testing
+- End-to-end integration testing
 - Performance optimization
 
 ## License

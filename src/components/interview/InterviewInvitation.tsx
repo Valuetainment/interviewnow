@@ -58,18 +58,61 @@ const InterviewInvitation: React.FC<InterviewInvitationProps> = ({
   const generateInvitation = async () => {
     try {
       setIsGenerating(true);
-      
+
       // Calculate expiration date (7 days from now)
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
-      
+
       // Get the current tenant ID
       const tenantId = await getCurrentTenantId();
       if (!tenantId) {
-        throw new Error('Tenant ID not found in auth context');
+        // Handle missing tenant ID more gracefully
+        console.warn('Tenant ID not found in auth context, attempting to use default tenant');
+
+        // Try to get the tenant ID from the session data directly
+        try {
+          const { data: sessionData, error: sessionError } = await supabase
+            .from('interview_sessions')
+            .select('tenant_id')
+            .eq('id', sessionId)
+            .single();
+
+          if (sessionError || !sessionData?.tenant_id) {
+            throw new Error('Failed to determine tenant ID for this session');
+          }
+
+          // Create invitation record using the tenant ID from the session
+          const { data, error } = await supabase
+            .from('interview_invitations')
+            .insert({
+              tenant_id: sessionData.tenant_id,
+              session_id: sessionId,
+              candidate_id: candidateId,
+              expires_at: expiresAt.toISOString(),
+              status: 'pending'
+            })
+            .select('token')
+            .single();
+
+          if (error) throw error;
+
+          // Set the invitation URL
+          const newInvitationUrl = `${window.location.origin}/interview/join/${data.token}`;
+          setInvitationUrl(newInvitationUrl);
+
+          toast.success('Invitation link generated successfully!');
+          if (onInvitationSent) {
+            onInvitationSent();
+          }
+
+          return;
+        } catch (fallbackError) {
+          console.error('Error in fallback tenant ID retrieval:', fallbackError);
+          throw new Error('Tenant ID not available. Please refresh and try again.');
+        }
       }
-      
-      // Create invitation record
+
+      // Create invitation record with the tenant ID from auth context
       const { data, error } = await supabase
         .from('interview_invitations')
         .insert({
@@ -81,20 +124,20 @@ const InterviewInvitation: React.FC<InterviewInvitationProps> = ({
         })
         .select('token')
         .single();
-      
+
       if (error) throw error;
-      
+
       // Set the invitation URL
-      const newInvitationUrl = `${window.location.origin}/interview/join/${data.token}`;
+      const newInvitationUrl = `${window.location.origin}/interview/join/${data?.token}`;
       setInvitationUrl(newInvitationUrl);
-      
+
       toast.success('Invitation link generated successfully!');
       if (onInvitationSent) {
         onInvitationSent();
       }
     } catch (error) {
       console.error('Error generating invitation:', error);
-      toast.error('Failed to generate invitation link');
+      toast.error(error instanceof Error ? error.message : 'Failed to generate invitation link');
     } finally {
       setIsGenerating(false);
     }
@@ -103,27 +146,40 @@ const InterviewInvitation: React.FC<InterviewInvitationProps> = ({
   const sendEmailInvitation = async () => {
     // In a real implementation, this would call an edge function
     // to send an email with the invitation link
-    
+
     try {
       setIsSending(true);
+
+      // Validate that we have the required data
+      if (!tokenValue) {
+        throw new Error('No invitation token available. Please generate an invitation first.');
+      }
+
+      if (!candidateEmail) {
+        throw new Error('Candidate email is required but not available.');
+      }
+
       // Mock sending email
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Update invitation status
-      if (tokenValue) {
-        await supabase
-          .from('interview_invitations')
-          .update({ status: 'sent' })
-          .eq('token', tokenValue);
+      const { error } = await supabase
+        .from('interview_invitations')
+        .update({ status: 'sent' })
+        .eq('token', tokenValue);
+
+      if (error) {
+        console.error('Error updating invitation status:', error);
+        throw new Error('Failed to update invitation status');
       }
-      
+
       toast.success(`Invitation sent to ${candidateEmail}`);
       if (onInvitationSent) {
         onInvitationSent();
       }
     } catch (error) {
       console.error('Error sending invitation:', error);
-      toast.error('Failed to send invitation email');
+      toast.error(error instanceof Error ? error.message : 'Failed to send invitation email');
     } finally {
       setIsSending(false);
     }

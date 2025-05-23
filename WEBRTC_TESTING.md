@@ -32,6 +32,82 @@ There are three main ways to test the WebRTC hybrid implementation:
 2. **Simulation Mode** - Uses a mock server to simulate responses without requiring an OpenAI API key
 3. **Ngrok Tunnel Mode** - Uses a secure tunnel for testing behind firewalls or when developing locally
 
+## Available Test Pages
+
+The project includes several test pages for different testing scenarios:
+
+### React-based Test Pages
+- `/interview-test-simple` - Main test interface with full configuration options
+- `/simple-webrtc-test` - Simplified WebRTC test without audio visualization
+- `/basic-webrtc-test` - Basic functionality testing
+- `/test/openai` - Direct OpenAI connection testing
+- `/test/full` - Full interview flow testing
+
+### Standalone HTML Test Pages
+- `/realtime-test.html` - Direct OpenAI Realtime API test (deployed version)
+- `/test.html` - Basic WebSocket connection test (local simulation)
+- `/websocket-test.html` - WebSocket-specific testing interface
+
+These pages provide different levels of testing complexity, from basic connectivity checks to full interview simulations.
+
+## Local vs. Production Testing Expectations
+
+When testing the WebRTC hybrid architecture locally versus in production, it's important to understand what aspects can be properly tested in each environment.
+
+### What Works in Local Testing
+
+1. **WebRTC Connection Flow**:
+   - SDP exchange protocols and signaling
+   - Connection state management
+   - Error handling and recovery logic
+   - JWT validation and tenant isolation
+   - Session recovery mechanisms
+
+2. **Component Integration**:
+   - Hooks architecture and component interaction
+   - State management and data flow
+   - UI rendering and transcript display
+   - Error boundaries and fallback behaviors
+
+3. **Edge Function Logic**:
+   - Request validation and parameter handling
+   - Security checks and tenant verification
+   - Configuration generation
+   - Error response formatting
+
+### What Doesn't Work in Local Testing
+
+1. **Audio Processing**:
+   - Actual audio transcription with OpenAI (only simulated in local testing)
+   - True bidirectional audio streams
+   - Real voice responses from AI
+
+2. **Infrastructure**:
+   - Actual Fly.io VM provisioning and management
+   - Multi-region deployment behavior
+   - True resource allocation and scaling
+   - Load balancing and high availability testing
+
+3. **Security**:
+   - Real JWT signing with production keys
+   - Actual infrastructure-level tenant isolation
+   - Production database RLS policies
+
+4. **Database Operations**:
+   - Unless connected to a real Supabase instance, these will be simulated
+   - Realtime subscriptions across clients
+   - RLS policy enforcement
+
+### Recommended Testing Progression
+
+For thorough testing of the hybrid architecture, we recommend following this progression:
+
+1. **Start with Simulation Mode** - Test basic functionality without API costs
+2. **Proceed to Direct OpenAI Tests** - Limited tests with real API for true behavior
+3. **Finally Conduct Production Tests** - Full end-to-end testing with actual infrastructure
+
+This approach balances development speed with thorough validation of all components.
+
 ## Running in Direct OpenAI Mode
 
 Direct OpenAI mode provides the most realistic testing experience by connecting directly to OpenAI's Realtime API.
@@ -49,11 +125,19 @@ npm run dev
 
 ### Step 3: Navigate to the Test Page
 
-Open your browser and go to:
+Open your browser and go to one of these test pages:
 
 ```
-http://localhost:8080/interview-test-simple
+http://localhost:8080/interview-test-simple  # Main test interface with React components
 ```
+
+Or for standalone HTML testing (if you deployed the SDP proxy):
+
+```
+https://interview-sdp-proxy.fly.dev/realtime-test.html  # Direct OpenAI Realtime API test
+```
+
+The `realtime-test.html` page provides a simplified interface for testing the OpenAI Realtime API connection directly without the full React application overhead.
 
 ### Step 4: Configure and Start the Test
 
@@ -111,11 +195,51 @@ Open your browser and go to:
 http://localhost:8080/interview-test-simple
 ```
 
+Or test the server directly with:
+
+```
+http://localhost:3001/test.html  # Basic WebSocket test interface
+```
+
 ### Step 4: Enable Simulation Mode
 
 1. Toggle the "Simulation Mode" button to ON
-2. Set the Server URL to `ws://localhost:3001` (or the appropriate URL)
+2. Set the Server URL to `ws://localhost:3001?simulation=true` (the simulation parameter is required)
 3. The connection will use the simulation server instead of OpenAI
+
+### Direct WebSocket Testing
+
+For testing the WebSocket server directly (without using React components):
+
+1. Open http://localhost:3001 in your browser
+2. Open your browser's developer console (F12 or right-click > Inspect > Console)
+3. Run this JavaScript to test the connection:
+
+```javascript
+// Create WebSocket connection with simulation parameter
+const socket = new WebSocket('ws://localhost:3001?simulation=true');
+
+// Connection opened
+socket.addEventListener('open', (event) => {
+  console.log('WebSocket Connected!');
+
+  // Send a ping message
+  socket.send(JSON.stringify({type: 'ping'}));
+  console.log('Sent: ping message');
+});
+
+// Listen for messages
+socket.addEventListener('message', (event) => {
+  console.log('Message from server:', JSON.parse(event.data));
+});
+
+// Listen for errors
+socket.addEventListener('error', (event) => {
+  console.error('WebSocket error occurred');
+});
+```
+
+This direct testing approach can help isolate server functionality from React component issues.
 
 ## Running with Ngrok Tunnel
 

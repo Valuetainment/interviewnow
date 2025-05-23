@@ -44,12 +44,18 @@
 | Completed | Created interview-hybrid-template VM for production |
 | Completed | Fixed TestInterview page with real database integration |
 | Completed | Fixed tenants table RLS policy issues |
+| Completed | Added company_id to interview_sessions table with proper FK constraints |
+| Completed | Fixed RLS policies for interview_sessions to handle NULL company_id |
+| Completed | Updated user metadata to match actual tenant relationship |
 | Completed | Created proper RLS policies following Supabase guidelines |
 | Completed | Added Testing Tools to dashboard sidebar for easier access |
-| ⚠️ URGENT | Restart suspended WebRTC SDP Proxy in production |
+| Completed | Fixed and deployed WebRTC SDP Proxy in production |
+| Completed | Updated interview-hybrid-template with OpenAI Realtime API support |
+| Completed | Fixed JWT claims for RLS policies with custom access token hook |
+| Completed | Configured JWT hook in Supabase dashboard |
+| Next | Test interview sessions with updated JWT claims |
+| Next | Verify WebRTC end-to-end functionality in production |
 | Next | Complete Phase 4-5 of Hybrid Architecture Test Migration Plan |
-| Next | Deploy WebRTC functionality to production |
-| Next | Update SDP proxy with latest fixes |
 | Next | Deploy edge functions for hybrid architecture support |
 | Next | Enhance interview room experience |
 | Future | Assessment engine |
@@ -143,6 +149,11 @@
 - ✅ Infrastructure platform evaluation for interview processing
 - ✅ Comparison of E2B and Fly.io for multi-tenant isolation
 - ✅ Selection of Fly.io as preferred platform for interview workloads
+- ✅ Fixed problematic RLS policies with proper tenant_id lookup
+- ✅ Added company_id to interview_sessions table with foreign key constraint
+- ✅ Created RLS policies that correctly handle NULL company_id values
+- ✅ Fixed proper tenant verification for companies referenced by interview_sessions
+- ✅ Fixed user metadata tenant_id to match actual tenant relationship (solved JWT mismatch)
 - ✅ Fly.io proof-of-concept for interview transcription:
   - ✅ WebSocket server with real-time communication capabilities
   - ✅ Browser client for audio capture and playback
@@ -175,6 +186,12 @@
   - ✅ Connection testing with simulation mode
   - ✅ Comprehensive test documentation
   - ✅ Automated test utility script
+  - ✅ OpenAI Realtime API integration with proper session creation
+  - ✅ WebRTC signaling with proper endpoint usage
+  - ✅ Proper CORS handling for cross-origin WebRTC connections
+  - ✅ Deployed and tested in production environment
+  - ✅ Fixed node-fetch dependency for CommonJS compatibility
+  - ✅ Added proper headers including OpenAI-Beta: realtime=v1
 - ✅ Hooks-based WebRTC architecture:
   - ✅ useWebRTC orchestration hook
   - ✅ Specialized hooks for WebRTC functionality
@@ -220,20 +237,38 @@
   - ✅ Updated WebRTC hooks to properly handle dynamic server URLs
   - ✅ Modified interview-start edge function to create unique VM names
 - ✅ Fixed tenants table RLS policies:
-  - Identified issue with policy using non-existent JWT claim
-  - Created migration with proper lookup through users table
-  - Added separate policies for each operation and role
-  - Successfully applied migration to production
-  - Updated affected components to use tenants table directly
+  - ✅ Identified issue with policy using non-existent JWT claim
+  - ✅ Created migration with proper lookup through users table
+  - ✅ Added separate policies for each operation and role
+  - ✅ Successfully applied migration to production
+  - ✅ Updated affected components to use tenants table directly
+- ✅ Fixed interview_sessions table with company support:
+  - ✅ Added company_id column with proper foreign key reference
+  - ✅ Created RLS policies that handle NULL company_id values
+  - ✅ Added tenant verification for company references
+  - ✅ Applied migration to production database
+  - ✅ Updated TestInterview component to use company selection correctly
+- ✅ Fixed user authentication with proper tenant ID:
+  - ✅ Identified mismatch between JWT metadata and actual tenant relationship
+  - ✅ Updated user metadata to match actual tenant ID in database
+  - ✅ Fixed issue without changing application logic or RLS policies
+  - ✅ Successfully tested login and data access after update
 - ✅ Improved TestInterview page:
-  - Replaced mock data with real database integration
-  - Added company/tenant selection dropdown
-  - Fixed bugs with candidate and position selection
-  - Enhanced UI with better layout and information
-  - Added robust error handling and loading states
-  - Implemented better tenant ID lookup with fallbacks
-  - Added comprehensive debug logging
-  - Created direct sidebar links for easier testing access
+  - ✅ Replaced mock data with real database integration
+  - ✅ Added company/tenant selection dropdown
+  - ✅ Fixed bugs with candidate and position selection
+  - ✅ Enhanced UI with better layout and information
+  - ✅ Added robust error handling and loading states
+  - ✅ Implemented better tenant ID lookup with fallbacks
+  - ✅ Added comprehensive debug logging
+  - ✅ Created direct sidebar links for easier testing access
+- ✅ JWT Claims Hook Configuration:
+  - ✅ Created auth.custom_access_token_hook function with proper JSONB signature
+  - ✅ Applied migration to production database
+  - ✅ Configured JWT hook in Supabase Authentication settings
+  - ✅ Updated getCurrentTenantId to check multiple JWT claim locations
+  - ✅ Fixed 403 Forbidden errors when creating interview sessions
+  - ✅ Documented requirement for users to sign out/in for new JWT tokens
 
 ## In Progress
 - 🔄 Hybrid Architecture Test Migration Plan:
@@ -323,11 +358,14 @@
   - Ensured tables exist before policies reference them
   - Used schema-qualified names in all SQL statements
   - Implemented atomic migrations for complex changes
-- ⚠️ WebRTC SDP Proxy SUSPENDED in production (CRITICAL):
-  - SDP Proxy server was deployed but is currently suspended
-  - Last deployed on May 9, 2025 to Miami region
-  - Requires restart with `fly apps start interview-sdp-proxy`
-  - No interview functionality in production until resolved
+- ✅ WebRTC SDP Proxy SUSPENDED in production (RESOLVED):
+  - Successfully deployed new implementation to interview-hybrid-template on Fly.io
+  - Updated code to use OpenAI Realtime API with proper session creation
+  - Fixed WebSocket connection handling and SDP exchange
+  - Verified implementation by testing in production environment
+  - Fixed authentication to use OpenAI API key directly
+  - Added proper headers including OpenAI-Beta: realtime=v1
+  - Fixed node-fetch dependency (downgraded to v2.6.9)
 - 🔄 Edge Function verification needed:
   - Need to verify interview-start (v5) is ACTIVE
   - Need to verify interview-transcript (v4) is ACTIVE
@@ -337,23 +375,20 @@
   - JWT validation needs to be properly configured
 
 ## Upcoming Priorities
-1. ⚠️ Restart suspended WebRTC SDP Proxy in production
-   - Run `fly apps start interview-sdp-proxy`
-   - Verify operation with `fly apps status interview-sdp-proxy`
-   - Check logs with `fly logs interview-sdp-proxy`
-2. Complete Hybrid Architecture Test Migration Plan
+1. Complete Hybrid Architecture Test Migration Plan
    - Finish Phase 4: Enhanced Hybrid Testing
    - Implement Phase 5: Test Automation
    - Create developer guide for testing
    - Add troubleshooting guide for hybrid architecture test failures
-3. Deploy WebRTC functionality to production
-4. Update the SDP proxy with latest fixes
-5. Deploy edge functions for hybrid architecture support
-6. Test hybrid architecture with real interview sessions
-7. Implement VM per tenant strategy for isolation
-8. Configure JWT validation for API endpoints
-9. Add tenant_id validation to WebRTC sessions
-10. Set up monitoring and alerting for production
+2. Deploy edge functions for hybrid architecture support
+   - Update interview-start function with latest VM isolation fix
+   - Ensure transcript-processor function is properly deployed
+   - Test with new WebRTC implementation
+3. Test hybrid architecture with real interview sessions
+4. Implement VM per tenant strategy for isolation
+5. Configure JWT validation for API endpoints
+6. Add tenant_id validation to WebRTC sessions
+7. Set up monitoring and alerting for production
 
 ## Completed Features
 - ✅ Core project structure and foundation
@@ -499,13 +534,87 @@
 - ✅ Position listing with real database records
 - ✅ Fly.io proof-of-concept for interview transcription
 - ✅ Authentication and permissions system
-- ✅ WebRTC SDP proxy functionality
-- ✅ WebRTC connectivity testing
-- 🔄 WebRTC integration into main application (not yet implemented)
+- ✅ WebRTC SDP proxy functionality (tested locally)
+- ✅ WebRTC hybrid architecture functionality (tested locally)
+- ✅ WebRTC hooks architecture unit tests
+- ✅ VM isolation security model (tested locally)
+- 🔄 WebRTC integration into main application (pending production deployment)
 - 🔄 Candidate profiles with PDL enrichment (not yet in production)
 - 🔄 Multi-tenant candidate authentication (schema created but not deployed)
 - 🔄 Interview session flow testing (implemented locally, pending production)
 - 🔄 Complete end-to-end testing
+
+## WebRTC Testing Infrastructure
+
+The WebRTC implementation has a comprehensive testing infrastructure:
+
+### Testing Categories
+1. **Unit Tests** - Testing individual hooks in isolation:
+   - Located in `src/hooks/webrtc/__tests__/`
+   - Tests for all hooks: useConnectionState, useRetry, useWebRTCConnection, etc.
+   - Uses comprehensive mocks for WebRTC, WebSocket, and Audio APIs
+   - Validates proper state management, error handling, and resource cleanup
+
+2. **Integration Tests** - Testing hook interaction:
+   - Validates complete connection flow
+   - Tests architecture-specific behavior (hybrid approach)
+   - Checks proper SDP exchange and transcript processing
+
+3. **Manual Test Pages** - Interactive interfaces:
+   - `/interview-test-simple` - Main test page with comprehensive debug tools
+   - `/test/openai` - Direct OpenAI connection testing
+   - `/test/full` - End-to-end interview flow testing
+   - `/test/ngrok` - Testing with ngrok tunneling for local development
+   - `/test/webrtc-hooks` - Focused hooks architecture testing
+
+4. **Simulation Tools** - Local testing environment:
+   - Simulation server in `fly-interview-hybrid/simple-server.js`
+   - WebSocket endpoint for SDP exchange without OpenAI integration
+   - Transcript simulation for UI testing without API keys
+   - Session state tracking and debugging tools
+
+### Test Commands
+```bash
+# Run all tests
+npm test
+
+# Run WebRTC-specific tests
+npm run test:webrtc
+
+# Run hooks unit tests
+npm run test:hooks
+
+# Run with coverage reporting
+npm test -- --coverage
+```
+
+### Hybrid Architecture Test Migration Plan
+The project is implementing a structured plan to focus all testing on the hybrid architecture:
+
+- ✅ **Phase 1**: Test Codebase Audit - Completed
+  - Cataloged all existing test files
+  - Identified architecture-specific tests
+  - Documented hook test implementations
+
+- ✅ **Phase 2**: Clean Up and Removal - Completed  
+  - Archived original architecture code
+  - Simplified hybrid hook tests
+  - Consolidated test interface components
+
+- ✅ **Phase 3**: Documentation Updates - Completed
+  - Updated test documentation
+  - Revised architecture documentation
+  - Clarified legacy vs. current approaches
+
+- 🔄 **Phase 4**: Enhanced Hybrid Testing - In Progress
+  - Implementing focused hybrid architecture tests
+  - Adding integration tests
+  - Implementing test helper utilities
+
+- ⬜ **Phase 5**: Test Automation - Planned
+  - Creating streamlined test command
+  - Documenting testing workflows
+  - Adding troubleshooting guide
 
 ## Deployment Status
 **Production-Verified:**
@@ -533,7 +642,8 @@
 - 🔄 Migration file for candidate_tenants pending deployment
 - 🔄 enrich-candidate edge function verification in production
 - 🔄 Interview session management components
-- 🔄 WebRTC SDP proxy integration with main application
+- 🔄 WebRTC hybrid architecture integration with main application
+- 🔄 VM isolation model implementation in production
 - 🔄 Production monitoring and optimization
 - ⬜ Staging environment
 
@@ -541,14 +651,14 @@
 
 ### WebRTC VM Templates
 - **Original SDP Proxy Template:** `interview-sdp-proxy` (SUSPENDED)
-- **Hybrid Architecture Template:** `interview-hybrid-template` (ACTIVE)
-  - **Status**: DEPLOYED
+- **Hybrid Architecture Template:** `interview-hybrid-template` (ACTIVE in local testing)
+  - **Status**: Tested locally, pending production deployment
   - **Primary Region:** `mia` (Miami)
   - **Security Features:**
     - Per-session isolation
     - Secure WebSocket connections
     - VM-specific API keys
-    - JWT authentication support
+    - JWT authentication support (partial implementation)
   - **Deployment Files:**
     - Main production server: `index.js`
     - Docker configuration: `Dockerfile`
@@ -556,7 +666,7 @@
 
 ### VM Isolation Model
 - **Implementation Type:** Per-session isolation
-- **Status:** DEPLOYED
+- **Status:** Tested locally, pending production deployment
 - **Documentation:** docs/architecture/VM_ISOLATION.md
 - **Key Features:**
   - Each interview gets its own dedicated VM
@@ -580,21 +690,52 @@
 - **interview-start**: v6 (ACTIVE) - Updated with VM isolation fix
 - **interview-transcript**: v4 (ACTIVE)
 - **transcript-processor**: v5 (ACTIVE)
+- **See memory-bank/edge-function-versions.md for detailed version tracking**
 
 ### WebRTC Implementations
-1. **Original SDP Proxy** (fly-interview-poc):
+1. **Original SDP Proxy** (fly-interview-poc) - LEGACY/REMOVED:
    - Traditional WebRTC SDP proxy with server-side audio processing
    - Full audio transmission over WebSockets
    - Higher latency and more server resources required
+   - This approach has been DEPRECATED in favor of the hybrid architecture
    - **Status: SUSPENDED in production**
 
-2. **Hybrid OpenAI Approach** (fly-interview-hybrid):
+2. **Hybrid OpenAI Approach** (fly-interview-hybrid) - CURRENT APPROACH:
    - Uses OpenAI's native WebRTC capabilities
    - Fly.io only serves as a secure SDP exchange proxy
    - Direct WebRTC connection between client and OpenAI
    - Lower latency and more efficient resource usage
    - Now with per-session VM isolation
-   - **Status: Deployed VM template, pending full production verification**
+   - **Status: Implemented and tested locally, pending production deployment**
+
+### Front-to-Back Implementation Strategy
+
+We are following a front-to-back implementation strategy for production deployment:
+
+1. **Frontend First Approach**
+   - Complete all client-side components and integrations
+   - Test all WebRTC functionality in local environment
+   - Implement and validate hooks-based architecture
+   - Create comprehensive test routes for different scenarios
+   - Ensure frontend resilience with proper error handling
+
+2. **Backend Incremental Deployment**
+   - Deploy individual backend services once frontend integration is verified
+   - Test each component in isolation before integrating
+   - Update edge functions incrementally with backward compatibility
+   - Maintain clear version tracking for all deployed functions
+
+3. **Security Implementation**
+   - Implement per-session VM isolation for complete security
+   - Add JWT validation progressively to each component
+   - Ensure proper tenant isolation throughout the system
+   - Test security boundaries at each step
+
+4. **Production Verification**
+   - Test each component thoroughly in staging before production
+   - Deploy with careful monitoring and rollback plans
+   - Verify functionality with real-world test interviews
+   - Document all deployment steps and verification procedures
 
 ### Hooks-Based WebRTC Architecture
 - **Status**: Implemented and tested locally
@@ -602,7 +743,7 @@
   - Separation of concerns with specialized hooks
   - Elimination of circular dependencies
   - Improved error handling and reconnection logic
-  - Support for both SDP proxy and direct OpenAI connections
+  - Support for hybrid OpenAI connections
   - Comprehensive unit tests for all hooks
   - Visual connection status indicators
 
@@ -661,10 +802,33 @@
   - Modified interview-start edge function to create unique VM names
   - Updated WebRTC hooks to handle dynamic server URLs
   - Created comprehensive VM isolation documentation
-  - Deployed fix to both edge function and frontend
+  - Successfully tested locally, pending production deployment
   - Created interview-hybrid-template VM for production
 
+- Created edge function version tracking:
+  - Added memory-bank/edge-function-versions.md with comprehensive version history
+  - Documented all edge functions with current versions, deployment dates, and key changes
+  - Created guidelines for version management and rollback procedures
+  - Established central reference for edge function statuses
+
+- Implemented front-to-back implementation strategy:
+  - Defined clear approach for production deployment
+  - Complete frontend components first, then deploy backend services incrementally
+  - Add security measures progressively as components are deployed
+  - Document production deployment process thoroughly
+  - Created pre-deployment checklist for security verification
+
 ## Recent Updates
+
+### June 6, 2024
+- Updated memory bank documentation for better alignment with project status:
+  - Created memory-bank/edge-function-versions.md for comprehensive tracking
+  - Updated hybrid-implementation-checklist.md with VM isolation status
+  - Added front-to-back implementation strategy documentation
+  - Updated references to WebRTC implementation status
+  - Created clearer documentation on JWT implementation status
+  - Standardized production deployment planning across all files
+  - Corrected VM isolation security documentation to reflect local testing status
 
 ### June 4, 2024
 - Fixed critical security issue in VM isolation model:
@@ -672,7 +836,7 @@
   - Modified interview-start edge function to create unique VM per session regardless of architecture
   - Updated WebRTC hooks to properly handle dynamic server URLs from edge functions
   - Created comprehensive documentation (VM_ISOLATION.md) explaining the isolation model
-  - Deployed fix to production with both edge function update and frontend changes
+  - Successfully tested locally, pending production deployment
   - Created interview-hybrid-template VM for the production deployment
   - Enhanced logging for better VM creation and usage tracking
 

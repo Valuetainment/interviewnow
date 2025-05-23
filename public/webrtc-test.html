@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebRTC Test Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+    }
+    .button {
+      display: inline-block;
+      background-color: #007bff;
+      color: white;
+      padding: 10px 15px;
+      text-decoration: none;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      background-color: #f9f9f9;
+    }
+    .info {
+      background-color: #e7f3fe;
+      border-left: 6px solid #2196F3;
+      padding: 15px;
+      margin: 15px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>WebRTC Test Access Page</h1>
+    
+    <div class="info">
+      <p>This standalone page provides direct access to WebRTC testing components without requiring authentication or app initialization. Use these links to test WebRTC functionality directly.</p>
+    </div>
+    
+    <div class="card">
+      <h2>WebRTC Test Options</h2>
+      <p>Click on any of the links below to access the WebRTC test interfaces:</p>
+      
+      <ul>
+        <li><a href="/interview-test-simple" class="button">Simple Test Interface</a></li>
+        <li><a href="/test/ngrok" class="button">Ngrok WebSocket Test</a></li>
+        <li><a href="/test/openai" class="button">Direct OpenAI Test</a></li>
+        <li><a href="/test/webrtc-hooks" class="button">WebRTC Hooks Test</a></li>
+        <li><a href="/test/full" class="button">Full Interview Test</a></li>
+      </ul>
+    </div>
+    
+    <div class="card">
+      <h2>Troubleshooting</h2>
+      <p>If the links above result in 404 errors, try these steps:</p>
+      <ol>
+        <li>Navigate to the root of the application first (/) and then try the links</li>
+        <li>Use the navigation within the application to reach the test pages</li>
+        <li>Check the browser console for any JavaScript errors</li>
+        <li>Ensure the application is properly deployed with SPA routing support</li>
+      </ol>
+    </div>
+    
+    <script>
+      // Add a simple check to see if the app is accessible
+      window.addEventListener('DOMContentLoaded', function() {
+        // Attempt to detect if React app is loaded/accessible
+        setTimeout(function() {
+          if (!window.React && !document.getElementById('root')?.children?.length) {
+            console.warn('React app may not be properly initialized. Try navigating to the root path first.');
+            
+            const warning = document.createElement('div');
+            warning.style.backgroundColor = '#fff3cd';
+            warning.style.color = '#856404';
+            warning.style.padding = '15px';
+            warning.style.margin = '15px 0';
+            warning.style.borderRadius = '4px';
+            warning.innerHTML = '<strong>Warning:</strong> The React application may not be properly initialized. Try navigating to <a href="/">the home page</a> first, then return to this page.';
+            
+            document.querySelector('.container').prepend(warning);
+          }
+        }, 1000);
+      });
+    </script>
+  </div>
+</body>
+</html>

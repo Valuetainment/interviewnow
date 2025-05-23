@@ -79,12 +79,36 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
     }
 
     console.log('Component mounted - initializing session once');
-    
+
+    // First test WebRTC browser support
+    if (!navigator.mediaDevices || !window.RTCPeerConnection) {
+      console.error('WebRTC is not supported in this browser');
+      setError('WebRTC is not supported in this browser. Please try using Chrome, Edge, or Firefox.');
+      return;
+    }
+
+    if (simulationMode && !serverUrl?.includes('simulation=')) {
+      console.warn('Simulation mode is enabled but URL is missing simulation parameter - it may be added automatically');
+    }
+
     // Add a slight delay to ensure DOM is fully mounted
     const initTimeout = setTimeout(() => {
       initialize().catch(err => {
         console.error('Error initializing WebRTC:', err);
-        setError(err instanceof Error ? err.message : 'Failed to initialize WebRTC');
+        let errorMessage = err instanceof Error ? err.message : 'Failed to initialize WebRTC';
+
+        // Provide more helpful error messages based on error content
+        if (errorMessage.includes('Permission denied') || errorMessage.includes('NotAllowedError')) {
+          errorMessage = 'Microphone access was denied. Please allow microphone access and try again.';
+        } else if (errorMessage.includes('NotFoundError') || errorMessage.includes('no devices')) {
+          errorMessage = 'No microphone found. Please connect a microphone and try again.';
+        } else if (errorMessage.includes('WebSocket') || errorMessage.includes('ws://') || errorMessage.includes('wss://')) {
+          errorMessage = `Failed to connect to WebSocket server at ${serverUrl}. Please check that the server is running.`;
+        } else if (simulationMode && !serverUrl?.includes('simulation=true')) {
+          errorMessage = 'Missing simulation parameter in URL. Add ?simulation=true to your server URL.';
+        }
+
+        setError(errorMessage);
       });
     }, 500);
 
@@ -93,7 +117,7 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
       console.log('Component unmounting - cleaning up resources');
       cleanup();
     };
-  }, [sessionId, initialize, cleanup, autoReconnectDisabled]);
+  }, [sessionId, initialize, cleanup, autoReconnectDisabled, simulationMode, serverUrl]);
 
   // Render connection indicator dots based on state
   const renderConnectionDots = () => {
@@ -160,6 +184,45 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
           <div className="error-message">
             <span className="error-icon">⚠️</span>
             <span>{error}</span>
+
+            {/* Show suggested actions based on the error message */}
+            <div className="error-actions">
+              {error.includes('Microphone access') && (
+                <button
+                  onClick={() => window.location.reload()}
+                  className="action-button"
+                >
+                  Retry with Microphone Access
+                </button>
+              )}
+
+              {error.includes('WebSocket server') && (
+                <div className="error-hint">
+                  <p><strong>Check that:</strong></p>
+                  <ul>
+                    <li>The WebSocket server is running</li>
+                    <li>The URL includes "?simulation=true" for testing</li>
+                    <li>There are no firewall or network restrictions</li>
+                  </ul>
+                </div>
+              )}
+
+              {error.includes('simulation parameter') && (
+                <button
+                  onClick={() => {
+                    if (serverUrl && !serverUrl.includes('simulation=true')) {
+                      const newUrl = serverUrl + (serverUrl.includes('?') ? '&' : '?') + 'simulation=true';
+                      window.location.href = window.location.href.split('?')[0] + '?serverUrl=' + encodeURIComponent(newUrl);
+                    } else {
+                      window.location.reload();
+                    }
+                  }}
+                  className="action-button"
+                >
+                  Fix Simulation Parameter
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -239,6 +302,52 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
         .success-icon {
           margin-right: 8px;
           font-size: 18px;
+        }
+        .error-message {
+          background-color: #f8d7da;
+          color: #721c24;
+          padding: 12px 16px;
+          border-radius: 4px;
+          margin-top: 8px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .error-icon {
+          margin-right: 8px;
+          font-size: 18px;
+        }
+        .error-actions {
+          margin-top: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .action-button {
+          background-color: #0d6efd;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 8px 16px;
+          cursor: pointer;
+          font-size: 14px;
+          transition: background-color 0.2s;
+        }
+        .action-button:hover {
+          background-color: #0b5ed7;
+        }
+        .error-hint {
+          background-color: #fff3cd;
+          color: #856404;
+          padding: 10px;
+          border-radius: 4px;
+          margin-top: 8px;
+          font-size: 14px;
+        }
+        .error-hint ul {
+          margin: 8px 0 0 0;
+          padding-left: 20px;
+        }
+        .error-hint li {
+          margin-bottom: 4px;
         }
         .simulation-badge {
           position: absolute;

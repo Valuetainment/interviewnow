@@ -9,7 +9,6 @@ RUN npm install --production
 # Copy application code
 COPY . .
 
-# Expose port
 EXPOSE 8080
 
 # Health check

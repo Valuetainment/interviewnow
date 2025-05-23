@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.5;
+        }
+        #log {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            margin-bottom: 10px;
+            background-color: #f8f8f8;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button {
+            padding: 8px 12px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Connection Test</h1>
+    <div>
+        <label for="url">WebSocket URL:</label>
+        <input type="text" id="url" value="ws://localhost:3001" style="width: 300px;">
+        <button id="connect">Connect</button>
+        <button id="disconnect">Disconnect</button>
+    </div>
+    
+    <div style="margin-top: 10px;">
+        <label for="message">Test Message:</label>
+        <input type="text" id="message" value='{"type":"ping"}' style="width: 300px;">
+        <button id="send">Send</button>
+    </div>
+    
+    <h3>Connection Log:</h3>
+    <div id="log"></div>
+    
+    <script>
+        let socket = null;
+        
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.classList.add(type);
+            entry.textContent = `${new Date().toISOString().substring(11, 23)} - ${message}`;
+            logElement.appendChild(entry);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        document.getElementById('connect').addEventListener('click', () => {
+            if (socket && socket.readyState <= 1) {
+                log('Already connected or connecting', 'error');
+                return;
+            }
+            
+            const url = document.getElementById('url').value;
+            
+            try {
+                log(`Connecting to ${url}...`);
+                socket = new WebSocket(url);
+                
+                socket.onopen = (event) => {
+                    log('Connection established!', 'success');
+                    log(`ReadyState: ${socket.readyState} (OPEN)`);
+                };
+                
+                socket.onmessage = (event) => {
+                    log(`Received: ${event.data}`, 'success');
+                };
+                
+                socket.onerror = (error) => {
+                    log(`WebSocket Error: ${error}`, 'error');
+                    console.error('WebSocket Error:', error);
+                };
+                
+                socket.onclose = (event) => {
+                    log(`Connection closed. Code: ${event.code}, Reason: ${event.reason || 'None'}`, 'info');
+                    socket = null;
+                };
+            } catch (error) {
+                log(`Error creating connection: ${error.message}`, 'error');
+            }
+        });
+        
+        document.getElementById('disconnect').addEventListener('click', () => {
+            if (!socket) {
+                log('Not connected', 'error');
+                return;
+            }
+            
+            log('Closing connection...');
+            socket.close(1000, 'User closed connection');
+        });
+        
+        document.getElementById('send').addEventListener('click', () => {
+            if (!socket || socket.readyState !== 1) {
+                log('Not connected', 'error');
+                return;
+            }
+            
+            const message = document.getElementById('message').value;
+            
+            try {
+                log(`Sending: ${message}`);
+                socket.send(message);
+            } catch (error) {
+                log(`Error sending message: ${error.message}`, 'error');
+            }
+        });
+    </script>
+</body>
+</html>

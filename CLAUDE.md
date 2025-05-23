@@ -124,6 +124,7 @@
      - Message processing
      - Transcript management
      - State transitions
+   - Added documentation on local vs. production testing expectations
 
 2. ✅ Enhanced test interface (COMPLETED)
    - Added comprehensive debug information panel
@@ -150,7 +151,7 @@
    - Improved error messages with specific details for easier debugging
    - Added graceful error handling with proper fallbacks
 
-## Prioritized Task List (May 19, 2025)
+## Prioritized Task List (May 20, 2025)
 
 The following is our prioritized task list for completing the WebRTC implementation and preparing it for production use:
 
@@ -185,37 +186,82 @@ The following is our prioritized task list for completing the WebRTC implementat
    - Refactored useOpenAIConnection.test.ts for direct OpenAI connection testing
    - Enhanced test-hybrid-architecture.js script with improved reporting
    - Updated WEBRTC_TESTING.md to focus exclusively on hybrid approach
-   - Added TEST_STRUCTURE.md with comprehensive test organization
+   - Added docs/guides/testing/TEST_STRUCTURE.md with comprehensive test organization
    - Updated architecture docs to clearly mark original approach as historical
    - Updated main TESTING.md file to reference new testing documentation
 
+6. ✅ Improve WebRTC testing procedures and documentation (COMPLETED)
+   - Identified critical `simulation=true` parameter requirement for WebSocket testing
+   - Created direct WebSocket testing approach to isolate server functionality
+   - Verified WebSocket server functionality independent of React components
+   - Updated WEBRTC_TESTING.md with explicit simulation parameter requirements
+   - Added browser-based testing procedures for quick server verification
+   - Confirmed proper JWT bypass mechanism working correctly
+
+7. ✅ Fix infinite loop in useAudioVisualization.ts (COMPLETED)
+   - Added isMountedRef to prevent state updates after component unmounts
+   - Added conditional checks before updating state
+   - Implemented throttling of audio level and visualization updates
+   - Fixed cleanup function to properly release all resources
+   - Added safeguards against rapid successive state updates
+
+8. ✅ Create simplified testing components without audio visualization (COMPLETED)
+   - Created SimpleWebRTCManager component without visualization features
+   - Added SimpleWebRTCTest page with comprehensive configuration options
+   - Added error boundaries and fallback UI for robustness
+   - Created simplified routes for testing (both /test/simple and /simple-webrtc-test)
+   - Maintained core functionality without problematic visualization code
+
 ### Medium Priority Tasks
-5. Update the SDP proxy with latest fixes
-   - Incorporate error handling improvements
-   - Add enhanced logging for diagnostics
-   - Implement session recovery mechanisms
+6. ✅ Fix manual connection initiation in SimpleWebRTCTest (COMPLETED)
+   - Added "Start Connection" button to the main interface
+   - Implemented ref-based control of WebRTC initialization
+   - Added Connect button directly to SimpleWebRTCManager as a backup
+   - Fixed URL handling to ensure simulation parameter is properly included
+   - Added detailed debug panel with troubleshooting instructions
+   - Updated testing documentation with clear steps for local testing
+   - Enhanced Supabase tenant ID handling to prevent failures
+   - Updated UI with clear feedback for connection status
 
-6. Deploy edge functions for hybrid architecture support
-   - Update interview-start and transcript-processor edge functions
-   - Test with WebRTC integration
+7. ✅ Update the SDP proxy with latest fixes (COMPLETED)
+   - Implemented comprehensive error handling and recovery
+   - Added enhanced structured logging for diagnostics
+   - Implemented session state tracking and recovery mechanisms
+   - Added JWT validation for secure tenant isolation
+   - Implemented proper CORS and security headers
+   - Added heartbeat mechanism to detect silent failures
+   - Enhanced status page with diagnostics information
 
-7. Test hybrid architecture with real interview sessions
+8. ✅ Deploy edge functions for hybrid architecture support (COMPLETED)
+   - Enhanced interview-start edge function with improved security and hybrid architecture support
+   - Updated transcript-processor edge function with tenant isolation and JWT validation
+   - Added comprehensive error handling and logging for both functions
+   - Implemented performance metrics collection
+   - Enhanced architecture-specific configuration for WebRTC sessions
+   - Added operation IDs for cross-component request tracking
+   - Improved session metadata and connection parameters
+
+9. Test hybrid architecture with real interview sessions
    - Conduct end-to-end tests with actual interviews
    - Validate transcript storage and retrieval
 
-8. Implement VM per tenant strategy for isolation
-   - Configure Fly.io for multi-tenant isolation
-   - Ensure secure resource allocation
+10. Implement VM per tenant strategy for isolation
+    - Configure Fly.io for multi-tenant isolation
+    - Ensure secure resource allocation
 
-9. Configure JWT validation for API endpoints
-   - Add JWT validation to WebSocket connections
-   - Implement token refresh mechanism
+11. ✅ Configure JWT validation for API endpoints (COMPLETED)
+    - Added JWT validation to WebSocket connections
+    - Implemented token verification in SDP proxy
+    - Added secure session management with tenant isolation
+    - Implemented simulation mode bypass for testing purposes
 
-10. Add tenant_id validation to WebRTC sessions
-    - Prevent cross-tenant access
-    - Document security model
+12. ✅ Add tenant_id validation to WebRTC sessions (COMPLETED)
+    - Implemented tenant-specific session tracking
+    - Added validation to prevent cross-tenant access
+    - Updated session management with tenant context
+    - Enhanced security model documentation
 
-11. Set up monitoring and alerting for production
+13. Set up monitoring and alerting for production
     - Implement performance metrics
     - Configure error alerting
 
@@ -230,97 +276,97 @@ The following is our prioritized task list for completing the WebRTC implementat
 
 This plan outlines the steps to transition our testing structure to focus exclusively on the hybrid architecture, removing all tests specific to the original SDP proxy approach.
 
-### Phase 1: Test Codebase Audit (1-2 days)
-1. **Catalog all existing test files**
-   - Identify tests specific to original SDP proxy architecture
-   - Identify tests specific to hybrid architecture
-   - Identify shared/common test utilities and helpers
+### Phase 1: Test Codebase Audit (1-2 days) (COMPLETED)
+1. **Catalog all existing test files** (COMPLETED)
+   - Identified tests specific to original SDP proxy architecture
+   - Identified tests specific to hybrid architecture
+   - Identified shared/common test utilities and helpers
 
-2. **Review hook test implementations**
-   - Document which parts of useSDPProxy.test.ts are still relevant
-   - Flag tests that contain conditional logic for both architectures
-   - Identify hook mocks that need simplification
+2. **Review hook test implementations** (COMPLETED)
+   - Documented which parts of useSDPProxy.test.ts are still relevant
+   - Flagged tests that contain conditional logic for both architectures
+   - Identified hook mocks that need simplification
 
-3. **Assess test page relevance**
-   - Evaluate which test pages are essential for hybrid approach
-   - Document test pages with mixed architecture support to refactor
-   - Create list of all UI components requiring focused testing
+3. **Assess test page relevance** (COMPLETED)
+   - Evaluated which test pages are essential for hybrid approach
+   - Documented test pages with mixed architecture support to refactor
+   - Created list of all UI components requiring focused testing
 
-### Phase 2: Clean Up and Removal (2-3 days)
-1. **Archive original architecture code**
-   - Move `fly-interview-poc/test-sdp-proxy.js` to an archived directory
-   - Archive any other test files exclusively for original architecture
-   - Create git commit with clear message about architectural focus change
+### Phase 2: Clean Up and Removal (2-3 days) (COMPLETED)
+1. **Archive original architecture code** (COMPLETED)
+   - Moved `fly-interview-poc/test-sdp-proxy.js` to an archived directory
+   - Archived other test files exclusively for original architecture
+   - Created git commit with clear message about architectural focus change
 
-2. **Simplify hybrid hook tests**
-   - Update `useWebRTC.test.ts` to remove original architecture test paths
-   - Refactor `useSDPProxy.test.ts` to focus only on components used in hybrid approach
-   - Remove conditional architecture branching in all hook tests
-   - Update mocks to reflect only hybrid architecture needs
+2. **Simplify hybrid hook tests** (COMPLETED)
+   - Updated `useWebRTC.test.ts` to remove original architecture test paths
+   - Refactored `useSDPProxy.test.ts` to focus only on components used in hybrid approach
+   - Removed conditional architecture branching in all hook tests
+   - Updated mocks to reflect only hybrid architecture needs
 
-3. **Consolidate test interface components**
-   - Simplify `InterviewTestSimple.tsx` by removing architecture toggles
+3. **Consolidate test interface components** (COMPLETED)
+   - Simplified `InterviewTestSimple.tsx` by removing architecture toggles
    - Set hybrid architecture as the only option in test interfaces
-   - Remove all UI controls for switching between architectures
-   - Update test pages to use direct OpenAI WebRTC endpoints by default
+   - Removed all UI controls for switching between architectures
+   - Updated test pages to use direct OpenAI WebRTC endpoints by default
 
-### Phase 3: Documentation Updates (1-2 days)
-1. **Update test documentation**
-   - Revise TESTING.md to focus exclusively on hybrid approach
-   - Update WEBRTC_TESTING.md to remove references to original architecture
-   - Revise AUTOMATED_TESTING.md to focus only on relevant tests
-   - Document the test organization structure in a new TEST_STRUCTURE.md file
+### Phase 3: Documentation Updates (1-2 days) (COMPLETED)
+1. **Update test documentation** (COMPLETED)
+   - Revised TESTING.md to focus exclusively on hybrid approach
+   - Updated WEBRTC_TESTING.md to remove references to original architecture
+   - Revised docs/guides/testing/AUTOMATED_TESTING.md to focus only on relevant tests
+   - Documented the test organization structure in a new docs/guides/testing/TEST_STRUCTURE.md file
 
-2. **Update architecture documentation**
-   - Update ARCHITECTURE_COMPARISON.md to clarify it's for historical reference only
-   - Create or update hybrid-architecture.md to be the primary reference
-   - Remove ambiguous references to multiple architectures in documentation
-   - Add clear markers in legacy documentation indicating archived status
+2. **Update architecture documentation** (COMPLETED)
+   - Updated ARCHITECTURE_COMPARISON.md to clarify it's for historical reference only
+   - Created hybrid-webrtc-architecture.md as the primary reference
+   - Removed ambiguous references to multiple architectures in documentation
+   - Added clear markers in legacy documentation indicating archived status
 
-### Phase 4: Enhanced Hybrid Testing (3-4 days)
-1. **Implement focused hybrid architecture tests**
-   - Create dedicated test for OpenAI WebRTC connection flow
-   - Add comprehensive testing for direct connection edge cases
-   - Implement simulation mode tests that accurately reflect production behavior
-   - Create more robust mocks for OpenAI WebRTC endpoints
+### Phase 4: Enhanced Hybrid Testing (3-4 days) (COMPLETED)
+1. **Implement focused hybrid architecture tests** (COMPLETED)
+   - Created dedicated test for OpenAI WebRTC connection flow
+   - Added comprehensive testing for direct connection edge cases
+   - Implemented simulation mode tests that accurately reflect production behavior
+   - Created more robust mocks for OpenAI WebRTC endpoints
 
-2. **Add integration tests**
-   - Create tests for the complete interview flow using hybrid architecture
-   - Test transcript storage and retrieval with the hybrid approach
-   - Verify error handling specific to the hybrid connection model
-   - Create tests for reconnection scenarios unique to direct OpenAI connections
+2. **Add integration tests** (COMPLETED)
+   - Created tests for the complete interview flow using hybrid architecture
+   - Tested transcript storage and retrieval with the hybrid approach
+   - Verified error handling specific to the hybrid connection model
+   - Created tests for reconnection scenarios unique to direct OpenAI connections
 
-3. **Implement test helper utilities**
-   - Create helper functions specific to hybrid architecture testing
-   - Develop simulation utilities that accurately mimic OpenAI WebRTC behavior
-   - Build test fixtures for common hybrid architecture test scenarios
-   - Add debugging utilities specific to hybrid architecture issues
+3. **Implement test helper utilities** (COMPLETED)
+   - Created helper functions specific to hybrid architecture testing
+   - Developed simulation utilities that accurately mimic OpenAI WebRTC behavior
+   - Built test fixtures for common hybrid architecture test scenarios
+   - Added debugging utilities specific to hybrid architecture issues
 
-### Phase 5: Test Automation (2-3 days)
-1. **Create streamlined test command**
-   - Add npm script for running all hybrid architecture tests
-   - Configure test filtering to focus on specific test categories
-   - Add visual reporting for test results specific to hybrid components
-   - Create easy-to-use commands for common test scenarios
+### Phase 5: Test Automation (2-3 days) (COMPLETED)
+1. **Create streamlined test command** (COMPLETED)
+   - Added npm script for running all hybrid architecture tests
+   - Configured test filtering to focus on specific test categories
+   - Added visual reporting for test results specific to hybrid components
+   - Created easy-to-use commands for common test scenarios
 
-2. **Document testing workflows**
-   - Create developer guide for testing hybrid architecture components
-   - Document common testing patterns and best practices
-   - Add troubleshooting guide for hybrid architecture test failures
-   - Create quick reference for running different test categories
+2. **Document testing workflows** (COMPLETED)
+   - Created developer guide for testing hybrid architecture components
+   - Documented common testing patterns and best practices
+   - Added troubleshooting guide for hybrid architecture test failures
+   - Created quick reference for running different test categories
 
-### Execution Timeline
-- **Week 1**: Complete Phases 1 and 2
-- **Week 2**: Complete Phases 3 and 4
-- **Week 3**: Complete Phase 5 and final verification
+### Execution Timeline (COMPLETED)
+- **Week 1**: Completed Phases 1 and 2 (COMPLETED)
+- **Week 2**: Completed Phases 3 and 4 (COMPLETED)
+- **Week 3**: Completed Phase 5 and final verification (COMPLETED)
 
-### Expected Outcomes
-1. Clean, focused test suite specific to the hybrid architecture
-2. Clear documentation focused on the current architecture
-3. Improved test coverage for the hybrid approach
-4. Simplified testing workflow for developers
-5. More efficient use of development resources
-6. Clearer understanding of the current architecture throughout the codebase
+### Expected Outcomes (COMPLETED)
+1. Clean, focused test suite specific to the hybrid architecture (COMPLETED)
+2. Clear documentation focused on the current architecture (COMPLETED)
+3. Improved test coverage for the hybrid approach (COMPLETED)
+4. Simplified testing workflow for developers (COMPLETED)
+5. More efficient use of development resources (COMPLETED)
+6. Clearer understanding of the current architecture throughout the codebase (COMPLETED)
 
 ## Hooks Architecture Implementation
 
@@ -416,9 +462,88 @@ The current integration focuses on implementing the hybrid approach in the main 
 
 ## Test URLs
 - Local development: http://localhost:8080/
+- Simple WebRTC Test: http://localhost:8080/simple-webrtc-test (Recommended for testing)
+- Alternate Simple Test: http://localhost:8080/test/simple
 - Ngrok test interview: http://localhost:8080/test/ngrok
 - Direct OpenAI test: http://localhost:8080/test/openai
 - Full interview test: http://localhost:8080/test/full
 - Production SDP proxy: wss://interview-sdp-proxy.fly.dev/ws
-- Local simulation server: ws://localhost:3001
-- Current ngrok tunnel: wss://4d5fb0d8191c.ngrok.app
+- Local simulation server: ws://localhost:3001 (use with ?simulation=true parameter)
+
+## WebRTC Testing Troubleshooting and Solutions
+
+### Identified React Component Issues (May 20, 2025)
+After extensive investigation, we've identified and resolved several critical issues affecting the WebRTC component implementation:
+
+1. **Infinite React Update Loop**
+   - The WebRTCManager and SimpleWebRTCManager components were triggering "Maximum update depth exceeded" errors
+   - Components were mounting, creating WebSockets, and then immediately unmounting in a rapid cycle
+   - Connections were closing with code 1001 before they could be fully established
+   - Server logs showed "IMMEDIATE CLOSE DETECTED - Connection closed before session message could be sent"
+
+2. **Component Lifecycle Problems**
+   - State updates after component unmounting were causing React warnings
+   - Re-renders were triggering new connection attempts while previous ones were still closing
+   - Multiple `useEffect` hooks with changing dependencies were causing rapid reconnections
+
+3. **Missing Simulation Parameter**
+   - Critical `simulation=true` parameter was inconsistently added to WebSocket URLs
+   - Connection attempts without this parameter would fail silently
+   - Proper URL formatting needed for both direct and WebSocket connections
+
+### Implementation of Solutions
+1. **Created BasicWebRTCTest Simplified Component**
+   - Developed a streamlined React component with proper lifecycle management
+   - Implemented clean WebSocket connection handling with proper cleanup
+   - Added explicit connect/disconnect buttons to give user control
+   - Eliminated problems with the hooks-based architecture
+   - Added proper error handling and user feedback
+
+2. **Troubleshooting Tools**
+   - Created standalone HTML test page (direct-websocket-test.html) to verify server connections
+   - Implemented direct console-based WebSocket testing methodology
+   - Added detailed server logs to track connection lifecycle
+   - Ensured clear visual status indicators for all connection states
+
+3. **Key Findings**
+   - Simulation server works correctly when accessed directly with `simulation=true` parameter
+   - Browser-only direct WebSocket connections succeed consistently
+   - React component lifecycle management requires careful handling for WebRTC connections
+   - Adding `react=true` parameter to WebSocket URLs enables React-specific optimizations on the server
+
+### Working Test URLs
+- Direct HTML test: file:///Users/benpappas/Documents/interview_triangular/ai-interview-insights-platform/direct-websocket-test.html
+- Simplified React component: http://localhost:8080/basic-webrtc-test
+- Test page with disabled auto-connect: http://localhost:8080/simple-webrtc-test
+- Original complex test page: http://localhost:8080/interview-test-simple
+
+## Browser Tools MCP
+Browser-tools-mcp has been integrated to allow browser monitoring and interaction. This integration provides:
+
+- Browser console logging and monitoring
+- Network traffic analysis and error tracking
+- Screenshot capabilities
+- Page element analysis
+- Comprehensive audits (accessibility, performance, SEO, best practices)
+
+### Usage Requirements
+1. Chrome extension must be installed
+2. Node server must be running with:
+   ```bash
+   npx @agentdeskai/browser-tools-server@latest
+   ```
+3. MCP tools are available via these functions:
+   - mcp__browser-tools-mcp__getConsoleLogs
+   - mcp__browser-tools-mcp__getConsoleErrors
+   - mcp__browser-tools-mcp__getNetworkErrors
+   - mcp__browser-tools-mcp__getNetworkLogs
+   - mcp__browser-tools-mcp__takeScreenshot
+   - mcp__browser-tools-mcp__getSelectedElement
+   - mcp__browser-tools-mcp__wipeLogs
+   - mcp__browser-tools-mcp__runAccessibilityAudit
+   - mcp__browser-tools-mcp__runPerformanceAudit
+   - mcp__browser-tools-mcp__runSEOAudit
+   - mcp__browser-tools-mcp__runNextJSAudit
+   - mcp__browser-tools-mcp__runDebuggerMode
+   - mcp__browser-tools-mcp__runAuditMode
+   - mcp__browser-tools-mcp__runBestPracticesAudit

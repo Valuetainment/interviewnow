@@ -1,5 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import './TranscriptPanel.css';
+
+interface TranscriptEntry {
+  text: string;
+  speaker: string;
+  timestamp?: string;
+}
 
 interface TranscriptPanelProps {
   transcript: string;
@@ -18,35 +25,54 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
   
   // Initialize Supabase client
   const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+    import.meta.env.VITE_SUPABASE_URL || '',
+    import.meta.env.VITE_SUPABASE_ANON_KEY || ''
   );
   
+  const [transcriptEntries, setTranscriptEntries] = useState<TranscriptEntry[]>([]);
+
   // Load existing transcript entries
   useEffect(() => {
     const loadTranscript = async () => {
       if (!interviewId) return;
-      
+
+      // Skip database lookup for test session IDs (starting with 'test-')
+      if (interviewId.startsWith('test-')) {
+        console.log('Test session detected - skipping database transcript load');
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
         setError(null);
-        
+
         const { data, error } = await supabase
           .from('transcript_entries')
-          .select('text, timestamp')
+          .select('text, speaker, timestamp')
           .eq('interview_session_id', interviewId)
           .order('timestamp', { ascending: true });
-          
+
         if (error) {
           throw error;
         }
-        
-        const fullTranscript = data
-          ?.map(entry => entry.text)
+
+        // Format the entries with proper speakers
+        const entries = data?.map(entry => ({
+          text: entry.text,
+          speaker: entry.speaker || 'unknown',
+          timestamp: entry.timestamp
+        })) || [];
+
+        setTranscriptEntries(entries);
+
+        // Also maintain the legacy format for backwards compatibility
+        const fullTranscript = entries
+          .map(entry => entry.text)
           .join(' ') || '';
-          
+
         setSavedTranscript(fullTranscript);
-        
+
       } catch (error) {
         console.error('Error loading transcript:', error);
         setError('Failed to load transcript');
@@ -54,9 +80,15 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
         setIsLoading(false);
       }
     };
-    
+
     loadTranscript();
-    
+
+    // Skip subscription for test sessions
+    if (interviewId.startsWith('test-')) {
+      console.log('Test session detected - skipping real-time subscription');
+      return;
+    }
+
     // Set up real-time subscription for new transcript entries
     const transcriptSubscription = supabase
       .channel('transcript-updates')
@@ -69,13 +101,26 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
           filter: `interview_session_id=eq.${interviewId}`
         },
         (payload) => {
+          // Add the new entry to our list
+          setTranscriptEntries(prev => [
+            ...prev,
+            {
+              text: payload.new.text,
+              speaker: payload.new.speaker || 'unknown',
+              timestamp: payload.new.timestamp
+            }
+          ]);
+
+          // Update the legacy format
           setSavedTranscript(prev => `${prev} ${payload.new.text}`);
         }
       )
       .subscribe();
-      
+
     return () => {
-      transcriptSubscription.unsubscribe();
+      if (transcriptSubscription) {
+        transcriptSubscription.unsubscribe();
+      }
     };
   }, [interviewId, supabase]);
   
@@ -87,9 +132,51 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
   }, [transcript, savedTranscript]);
   
   // Combine saved transcript with real-time transcript
-  const fullTranscript = savedTranscript + 
-    (savedTranscript && transcript ? ' ' : '') + 
+  const fullTranscript = savedTranscript +
+    (savedTranscript && transcript ? ' ' : '') +
     transcript;
+
+  // Create a reference to track the last seen transcript for test sessions
+  const lastTranscriptRef = useRef<string>('');
+  const processedTranscripts = useRef<Set<string>>(new Set());
+
+  // For test sessions, handle transcript updates differently with stronger deduplication
+  useEffect(() => {
+    if (interviewId.startsWith('test-') && transcript && transcript !== lastTranscriptRef.current) {
+      // Update our reference to avoid duplication
+      lastTranscriptRef.current = transcript;
+
+      // Don't process exact duplicates
+      if (processedTranscripts.current.has(transcript)) {
+        console.log('Skipping duplicate transcript');
+        return;
+      }
+
+      // Add to processed set
+      processedTranscripts.current.add(transcript);
+
+      // Clear existing entries if it's a welcome message (common phrase in all welcome messages)
+      if (transcript.includes('Hello from the ngrok WebSocket test server')) {
+        console.log('Received welcome message - resetting transcript list');
+        // Reset transcript list with just the welcome message
+        setTranscriptEntries([{
+          text: 'Connected to WebSocket server successfully!',
+          speaker: 'system',
+          timestamp: new Date().toISOString()
+        }]);
+      } else {
+        // For other messages, add as a new entry with timestamp to ensure uniqueness
+        console.log('Adding new transcript entry:',
+          transcript.length > 30 ? transcript.substring(0, 30) + '...' : transcript);
+
+        setTranscriptEntries(prev => [...prev, {
+          text: transcript,
+          speaker: 'ai',
+          timestamp: new Date().toISOString()
+        }]);
+      }
+    }
+  }, [transcript, interviewId]);
   
   return (
     <div className="transcript-panel">
@@ -102,13 +189,24 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
           <div className="loading-indicator">Loading transcript...</div>
         ) : error ? (
           <div className="error-message">{error}</div>
-        ) : fullTranscript ? (
+        ) : transcriptEntries.length > 0 ? (
           <div className="transcript-content">
-            {fullTranscript.split(/(?<=[.!?])\s+/).map((sentence, index) => (
-              <p key={index} className="transcript-sentence">
-                {sentence.trim()}
-              </p>
+            {transcriptEntries.map((entry, index) => (
+              <div key={index} className={`transcript-entry ${entry.speaker}`}>
+                <span className="speaker-label">
+                  {entry.speaker === 'ai' ? 'AI Interviewer: ' :
+                   entry.speaker === 'candidate' ? 'Candidate: ' : ''}
+                </span>
+                <span className="transcript-text">{entry.text}</span>
+              </div>
             ))}
+
+            {/* Display any real-time transcript not yet saved */}
+            {transcript && (
+              <div className="transcript-entry realtime">
+                <span className="transcript-text">{transcript}</span>
+              </div>
+            )}
           </div>
         ) : (
           <div className="empty-transcript">

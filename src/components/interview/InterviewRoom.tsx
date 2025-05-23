@@ -241,6 +241,7 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({
             sessionId={interviewId}
             onTranscriptUpdate={handleTranscriptUpdate}
             onConnectionStateChange={handleConnectionStateChange}
+            serverUrl={interviewData.webrtc_server_url || undefined}
           />
           
           <div className="interview-status">

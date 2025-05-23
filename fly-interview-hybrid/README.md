@@ -164,4 +164,98 @@ Content-Type: application/json
 - Verify OpenAI API key is valid
 - Check for WebSocket connection errors in browser console
 - Ensure proper CORS configuration
-- Use simulation mode to test without OpenAI API 
+- Use simulation mode to test without OpenAI API
+
+## Security Considerations (Additional)
+
+- Never exposes the OpenAI API key to the client
+- Uses WebSockets with proper CORS settings
+- Implements session isolation
+- Uses helmet.js for HTTP security headers
+- Supports JWT validation with simulation bypass for testing
+
+## Testing Methods
+
+There are multiple ways to test the WebSocket server and WebRTC functionality:
+
+### 1. Direct WebSocket Testing
+
+To directly test just the WebSocket server in the browser console:
+
+1. Start the server:
+   ```bash
+   node simple-server.js
+   ```
+
+2. Open http://localhost:3001 in your browser
+
+3. Open browser developer tools (F12) and run:
+   ```javascript
+   // Create WebSocket connection with simulation parameter
+   const socket = new WebSocket('ws://localhost:3001?simulation=true');
+
+   // Connection opened
+   socket.addEventListener('open', (event) => {
+     console.log('WebSocket Connected!');
+
+     // Send a ping message
+     socket.send(JSON.stringify({type: 'ping'}));
+     console.log('Sent: ping message');
+   });
+
+   // Listen for messages
+   socket.addEventListener('message', (event) => {
+     console.log('Message from server:', JSON.parse(event.data));
+   });
+   ```
+
+**IMPORTANT:** The `simulation=true` parameter is required for testing without JWT tokens.
+
+### 2. Using The SimpleWebRTCTest Page
+
+To test the full WebRTC implementation with React components:
+
+1. Start the WebSocket server:
+   ```bash
+   cd fly-interview-hybrid
+   node simple-server.js
+   ```
+
+2. In another terminal, start the React dev server:
+   ```bash
+   cd ..  # Return to project root
+   npm run dev
+   ```
+
+3. Open http://localhost:8080/simple-webrtc-test in your browser
+
+4. On the SimpleWebRTCTest page:
+   - Verify the server URL is set to `ws://localhost:3001?simulation=true`
+   - Ensure "Simulation Mode" is checked
+   - Click the "Start Connection" button to manually initiate the connection
+   - Use the debug panel for troubleshooting steps if needed
+
+5. Check the browser console (F12) for detailed connection logs.
+
+**Troubleshooting:**
+- If the connection doesn't start, try the "Connect" button in the SimpleWebRTCManager panel
+- Ensure no other tabs or windows are connecting to the same WebSocket server
+- Verify the server is running and listening on port 3001
+- Check that CORS settings in simple-server.js allow your frontend origin
+
+## Next Steps
+
+1. ✅ Fix React component issues in useAudioVisualization.ts causing infinite loops
+2. ✅ Add manual initialization option to SimpleWebRTCTest to prevent browser freezing
+3. ✅ Add detailed debug information to help with troubleshooting
+4. ✅ Enhance error handling in React components
+5. ✅ Implement refs to allow parent components to control WebRTC initialization
+6. Add multi-tenant isolation
+7. Improve integration with the main application
+8. Test with real interview sessions
+9. Set up monitoring and alerting for production deployment
+10. Add support for reconnection to interrupted sessions
+
+## License
+
+ISC

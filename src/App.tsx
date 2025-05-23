@@ -17,6 +17,8 @@ import CandidateProfile from "./pages/CandidateProfile";
 import CompanySettings from "./pages/CompanySettings";
 import TestInterview from "./pages/TestInterview";
 import InterviewTestSimple from "./pages/InterviewTestSimple";
+import SimpleWebRTCTest from "./pages/SimpleWebRTCTest";
+import BasicWebRTCTest from "./pages/BasicWebRTCTest";
 import Transcripts from "./pages/Transcripts";
 import Positions2 from "./pages/Positions2";
 import PositionDetail2 from "./pages/PositionDetail2";
@@ -84,6 +86,14 @@ const App = () => (
             {/* WebRTC test pages - all grouped under /test/ path for organization */}
             <Route path="/test/ngrok" element={<InterviewTestSimple />} />
             <Route path="/test/webrtc-hooks" element={<InterviewTestSimple />} />
+            <Route path="/test/openai" element={<InterviewTestSimple />} />
+            <Route path="/test/full" element={<InterviewTestSimple />} />
+            <Route path="/test/simple" element={<SimpleWebRTCTest />} />
+
+            {/* Dedicated path for simplest test page access */}
+            <Route path="/interview-test-simple" element={<InterviewTestSimple />} />
+            <Route path="/simple-webrtc-test" element={<SimpleWebRTCTest />} />
+            <Route path="/basic-webrtc-test" element={<BasicWebRTCTest />} />
 
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />

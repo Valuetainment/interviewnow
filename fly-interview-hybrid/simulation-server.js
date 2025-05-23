@@ -8,7 +8,10 @@ const app = express();
 const server = http.createServer(app);
 
 // Create WebSocket server
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({
+  server,
+  path: '/ws' // Add explicit path
+});
 
 // Store active sessions
 const sessions = new Map();
@@ -57,10 +60,10 @@ a=ssrc:${Math.floor(Math.random() * 4294967295)} cname:simulation`
 }
 
 // Handle WebSocket connections
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
   // Generate session ID
   const sessionId = uuidv4();
-  
+
   // Initialize session
   sessions.set(sessionId, {
     ws,
@@ -70,8 +73,12 @@ wss.on('connection', (ws) => {
     responseInterval: null,
     lastActivity: Date.now()
   });
-  
-  console.log(`New connection established: ${sessionId}`);
+
+  console.log(`New WebSocket connection established:`);
+  console.log(`  Session ID: ${sessionId}`);
+  console.log(`  Client Address: ${req.socket.remoteAddress}`);
+  console.log(`  Request URL: ${req.url}`);
+  console.log(`  Connection Time: ${new Date().toISOString()}`);
   
   // Send session ID to client
   ws.send(JSON.stringify({
@@ -231,11 +238,45 @@ setInterval(() => {
   }
 }, 60000); // Check every minute
 
+// Add a basic HTTP route for health check
+app.get('/', (req, res) => {
+  res.send(`
+    <html>
+      <head>
+        <title>WebRTC Simulation Server</title>
+        <style>
+          body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+          h1 { color: #333; }
+          .status { background: #eafaea; border-left: 5px solid #4caf50; padding: 10px; }
+          pre { background: #f5f5f5; padding: 10px; border-radius: 5px; }
+        </style>
+      </head>
+      <body>
+        <h1>WebRTC Simulation Server</h1>
+        <div class="status">
+          <h2>Server Status: Running</h2>
+          <p>WebSocket server is active and listening on port ${PORT}</p>
+          <p>Active sessions: ${sessions.size}</p>
+          <p>Server started at: ${new Date().toISOString()}</p>
+        </div>
+        <h2>Test Instructions</h2>
+        <p>To test, visit: <a href="http://localhost:8080/interview-test-simple" target="_blank">http://localhost:8080/interview-test-simple</a></p>
+        <p>Make sure the WebSocket URL is set to: <pre>ws://localhost:3000/ws</pre></p>
+      </body>
+    </html>
+  `);
+});
+
 // Serve static files
 app.use(express.static('public'));
 
 // Start server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Simulation server running on port ${PORT}`);
+  console.log(`==================================================`);
+  console.log(`🚀 Simulation server running on port ${PORT}`);
+  console.log(`📡 WebSocket server ready at: ws://localhost:${PORT}/ws`);
+  console.log(`🌐 HTTP interface: http://localhost:${PORT}`);
+  console.log(`🧪 Test page: http://localhost:8080/interview-test-simple`);
+  console.log(`==================================================`);
 });

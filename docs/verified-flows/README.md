@@ -19,6 +19,10 @@ A flow is considered "verified" when it meets the following criteria:
 - [Tenant and Company Flow](./TENANT_COMPANY_FLOW.md) - The multi-tenant system design with company creation and management.
 - [Company API Flow](./COMPANY_API_FLOW.md) - The direct API approach for company CRUD operations without Edge Functions.
 - [Position Creation Flow](./POSITION_CREATION_FLOW.md) - The complete workflow for creating positions with AI-generated descriptions and competency management.
+- [Interview Execution Flow](./INTERVIEW_EXECUTION_FLOW.md) - The detailed 5-stage interview process from setup to completion using WebRTC.
+  - Includes both the original SDP proxy and the new hybrid OpenAI WebRTC architecture
+  - Simulation testing environment for rapid development and testing
+  - Step-by-step flow from connection establishment to transcript processing
 
 ## Using These Documents
 
