@@ -1,0 +1,357 @@
+openapi: 3.0.0
+info:
+  title: AI Interview Insights Platform API
+  description: API for AI-driven hiring platform with resume processing, interviews, and assessments
+  version: 1.0.0
+  contact:
+    name: Triangular AI Support
+    email: support@triangularai.com
+servers:
+  - url: https://your-project-id.supabase.co/functions/v1
+    description: Production server
+  - url: http://localhost:54321/functions/v1
+    description: Local development server
+security:
+  - bearerAuth: []
+paths:
+  /analyze-resume:
+    post:
+      summary: Analyze resume with AI
+      description: Processes resume content and extracts structured data using OpenAI
+      tags:
+        - Resume Processing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - resume_text
+                - candidate_id
+              properties:
+                resume_text:
+                  type: string
+                  description: Extracted text content from resume
+                candidate_id:
+                  type: string
+                  format: uuid
+                  description: UUID of the candidate
+            example:
+              resume_text: "John Doe\nSoftware Engineer\n5 years experience..."
+              candidate_id: "123e4567-e89b-12d3-a456-426614174000"
+      responses:
+        '200':
+          description: Successfully analyzed resume
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  skills:
+                    type: array
+                    items:
+                      type: string
+                  experience:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        company:
+                          type: string
+                        role:
+                          type: string
+                        duration:
+                          type: string
+                  education:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        institution:
+                          type: string
+                        degree:
+                          type: string
+                        year:
+                          type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /process-resume:
+    post:
+      summary: Extract text from PDF resume
+      description: Uses PDF.co to extract text content from uploaded PDF
+      tags:
+        - Resume Processing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - file_url
+              properties:
+                file_url:
+                  type: string
+                  format: uri
+                  description: URL of the uploaded PDF file
+            example:
+              file_url: "https://your-bucket.supabase.co/storage/v1/object/public/resumes/123.pdf"
+      responses:
+        '200':
+          description: Successfully extracted text from PDF
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  text:
+                    type: string
+                    description: Extracted text content
+                  pages:
+                    type: integer
+                    description: Number of pages in PDF
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /enrich-candidate:
+    post:
+      summary: Enrich candidate profile
+      description: Uses People Data Labs to enrich candidate information
+      tags:
+        - Candidates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - candidate_id
+              properties:
+                candidate_id:
+                  type: string
+                  format: uuid
+                email:
+                  type: string
+                  format: email
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Successfully enriched candidate profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enriched_data:
+                    type: object
+                    description: Enriched data from People Data Labs
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Candidate not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /generate-position:
+    post:
+      summary: Generate position with AI
+      description: Creates job description and competencies using OpenAI
+      tags:
+        - Positions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - company_id
+              properties:
+                title:
+                  type: string
+                  description: Job title
+                company_id:
+                  type: string
+                  format: uuid
+                requirements:
+                  type: string
+                  description: Basic requirements for the position
+                preferences:
+                  type: object
+                  properties:
+                    tone:
+                      type: string
+                      enum: [professional, casual, technical]
+                    focus_areas:
+                      type: array
+                      items:
+                        type: string
+      responses:
+        '200':
+          description: Successfully generated position
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  description:
+                    type: string
+                  competencies:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        weight:
+                          type: number
+                          minimum: 0
+                          maximum: 1
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /interview-start:
+    post:
+      summary: Start interview session
+      description: Initializes WebRTC interview session with OpenAI
+      tags:
+        - Interviews
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - session_id
+                - position_id
+              properties:
+                session_id:
+                  type: string
+                  format: uuid
+                position_id:
+                  type: string
+                  format: uuid
+                architecture:
+                  type: string
+                  enum: [hybrid, direct]
+                  default: hybrid
+                  description: WebRTC architecture mode
+      responses:
+        '200':
+          description: Interview session initialized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sdp_proxy_url:
+                    type: string
+                    format: uri
+                  session_token:
+                    type: string
+                  openai_config:
+                    type: object
+                    properties:
+                      api_key:
+                        type: string
+                      voice:
+                        type: string
+                      instructions:
+                        type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Session or position not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /transcript-processor:
+    post:
+      summary: Process interview transcript
+      description: Processes and stores interview transcript segments
+      tags:
+        - Interviews
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - session_id
+                - transcript
+                - speaker
+              properties:
+                session_id:
+                  type: string
+                  format: uuid
+                transcript:
+                  type: string
+                speaker:
+                  type: string
+                  enum: [candidate, ai, system]
+                timestamp:
+                  type: string
+                  format: date-time
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: Transcript processed successfully
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase JWT token with tenant_id in app_metadata
+  
+  responses:
+    UnauthorizedError:
+      description: Authentication information is missing or invalid
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Invalid or missing JWT token"
+    
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Internal server error occurred"
+
+tags:
+  - name: Resume Processing
+    description: Operations for processing and analyzing resumes
+  - name: Candidates
+    description: Candidate profile management
+  - name: Positions
+    description: Job position management
+  - name: Interviews
+    description: Interview session management
