@@ -6,7 +6,7 @@ import { Database } from './types';
 const isDevelopment = import.meta.env.DEV || false; // Check if in development mode, default to false
 // const isDevelopment = true; // TEMPORARY: Force local development mode for testing
 
-// Production credentials (remote Supabase)
+// Production credentials (remote Supabase) - hardcoded as constants
 const REMOTE_SUPABASE_URL = "https://gypnutyegqxelvsqjedu.supabase.co";
 const REMOTE_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5cG51dHllZ3F4ZWx2c3FqZWR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU4NzQ1MTUsImV4cCI6MjA2MTQ1MDUxNX0.1GnoF-EZ5jr_DJgcgeCJcqy-NASlEFGt1XavwbiIELA";
 
@@ -14,9 +14,9 @@ const REMOTE_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdX
 const LOCAL_SUPABASE_URL = "http://127.0.0.1:54321";
 const LOCAL_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0";
 
-// Use local or remote credentials based on environment
-const supabaseUrl = isDevelopment ? LOCAL_SUPABASE_URL : REMOTE_SUPABASE_URL;
-const supabaseAnonKey = isDevelopment ? LOCAL_SUPABASE_KEY : REMOTE_SUPABASE_KEY;
+// Use local or remote credentials based on environment - with explicit fallback
+const supabaseUrl = isDevelopment ? LOCAL_SUPABASE_URL : (REMOTE_SUPABASE_URL || "https://gypnutyegqxelvsqjedu.supabase.co");
+const supabaseAnonKey = isDevelopment ? LOCAL_SUPABASE_KEY : (REMOTE_SUPABASE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5cG51dHllZ3F4ZWx2c3FqZWR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU4NzQ1MTUsImV4cCI6MjA2MTQ1MDUxNX0.1GnoF-EZ5jr_DJgcgeCJcqy-NASlEFGt1XavwbiIELA");
 
 // Defensive check for production issues
 if (!supabaseUrl || !supabaseAnonKey) {
@@ -39,24 +39,40 @@ console.log('Supabase client initialized with:', {
 // import { supabase } from "@/integrations/supabase/client";
 
 // Create a singleton instance to avoid re-initialization issues
-let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null;
-
+// Store on window object to survive module re-evaluations in production
 const getSupabaseClient = () => {
-  if (!supabaseInstance) {
-    console.log('[SUPABASE] Creating new client instance');
-    supabaseInstance = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-      },
-      realtime: {
-        params: {
-          eventsPerSecond: 10,
-        },
-      },
-    });
+  // Check if we already have an instance stored globally
+  if (typeof window !== 'undefined' && (window as any).__supabaseClient) {
+    return (window as any).__supabaseClient;
   }
-  return supabaseInstance;
+
+  console.log('[SUPABASE] Creating new client instance with:', {
+    url: supabaseUrl,
+    hasKey: !!supabaseAnonKey
+  });
+
+  // Double-check values before creating client
+  const finalUrl = supabaseUrl || "https://gypnutyegqxelvsqjedu.supabase.co";
+  const finalKey = supabaseAnonKey || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5cG51dHllZ3F4ZWx2c3FqZWR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU4NzQ1MTUsImV4cCI6MjA2MTQ1MDUxNX0.1GnoF-EZ5jr_DJgcgeCJcqy-NASlEFGt1XavwbiIELA";
+
+  const client = createClient<Database>(finalUrl, finalKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10,
+      },
+    },
+  });
+
+  // Store instance globally
+  if (typeof window !== 'undefined') {
+    (window as any).__supabaseClient = client;
+  }
+
+  return client;
 };
 
 export const supabase = getSupabaseClient();
