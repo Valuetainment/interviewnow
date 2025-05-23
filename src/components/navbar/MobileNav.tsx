@@ -28,9 +28,18 @@ interface MobileNavProps {
 }
 
 const MobileNav: React.FC<MobileNavProps> = ({ isMenuOpen, isHomePage }) => {
-  const [open, setOpen] = useState(isMenuOpen);
+  const [open, setOpen] = useState(false);
   const { user } = useAuth();
+  const location = useLocation();
   
+  // Don't display dashboard navigation in dashboard routes to avoid redundancy
+  const isDashboardRoute = location.pathname.startsWith('/dashboard') || 
+                          location.pathname.startsWith('/candidates') ||
+                          location.pathname.startsWith('/positions') ||
+                          location.pathname.startsWith('/companies') ||
+                          location.pathname.startsWith('/sessions') ||
+                          location.pathname.startsWith('/reports');
+
   return (
     <Sheet open={isMenuOpen} onOpenChange={setOpen}>
       <SheetContent side="left" className="pr-0">
@@ -39,21 +48,32 @@ const MobileNav: React.FC<MobileNavProps> = ({ isMenuOpen, isHomePage }) => {
             <MobileLink to="/" onOpenChange={setOpen}>
               Home
             </MobileLink>
-            <MobileLink to="/about" onOpenChange={setOpen}>
-              About
-            </MobileLink>
-            <MobileLink to="/pricing" onOpenChange={setOpen}>
-              Pricing
-            </MobileLink>
-            <MobileLink to="/contact" onOpenChange={setOpen}>
-              Contact
-            </MobileLink>
             
-            {user && (
+            {!isDashboardRoute && (
+              <div className="flex flex-col space-y-2">
+                <h4 className="font-medium">Features</h4>
+                <MobileLink to="/features/interviews" onOpenChange={setOpen} className="text-muted-foreground">
+                  AI Interviews
+                </MobileLink>
+                <MobileLink to="/features/assessments" onOpenChange={setOpen} className="text-muted-foreground">
+                  Assessments
+                </MobileLink>
+                <MobileLink to="/features/resume-parsing" onOpenChange={setOpen} className="text-muted-foreground">
+                  Resume Parsing
+                </MobileLink>
+                <MobileLink to="/features/analytics" onOpenChange={setOpen} className="text-muted-foreground">
+                  Analytics
+                </MobileLink>
+              </div>
+            )}
+            
+            {!isDashboardRoute && (
               <>
-                <div className="h-px bg-border my-2" />
-                <MobileLink to="/dashboard" onOpenChange={setOpen}>
-                  Dashboard
+                <MobileLink to="/pricing" onOpenChange={setOpen}>
+                  Pricing
+                </MobileLink>
+                <MobileLink to="/about" onOpenChange={setOpen}>
+                  About
                 </MobileLink>
               </>
             )}

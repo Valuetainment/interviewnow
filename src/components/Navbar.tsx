@@ -14,11 +14,13 @@ const Navbar: React.FC = () => {
   const isDashboardRoute = location.pathname.startsWith('/dashboard') || 
                           location.pathname.startsWith('/candidates') ||
                           location.pathname.startsWith('/positions') ||
+                          location.pathname.startsWith('/companies') ||
+                          location.pathname.startsWith('/company') ||
                           location.pathname.startsWith('/sessions') ||
-                          location.pathname.startsWith('/company');
+                          location.pathname.startsWith('/reports');
   
   if (isDashboardRoute) {
-    return null;
+    return null; // Don't render the navbar on dashboard routes
   }
 
   return (
@@ -30,50 +32,24 @@ const Navbar: React.FC = () => {
               InterviewAI
             </span>
           </Link>
-          {!isHomePage && (
-            <nav className="flex items-center space-x-6 text-sm font-medium">
-              <Link
-                to="/"
-                className="transition-colors hover:text-foreground/80"
-              >
-                Home
-              </Link>
-              <Link
-                to="/about"
-                className="transition-colors hover:text-foreground/80"
-              >
-                About
-              </Link>
-              <Link
-                to="/pricing"
-                className="transition-colors hover:text-foreground/80"
-              >
-                Pricing
-              </Link>
-              <Link
-                to="/contact"
-                className="transition-colors hover:text-foreground/80"
-              >
-                Contact
-              </Link>
-            </nav>
-          )}
         </div>
-        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
-          <div className="w-full flex-1 md:grow-0">
-            <div className="md:hidden">
-              <Button
-                variant="ghost"
-                className="mr-2 px-0 text-base hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-              >
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle Menu</span>
-              </Button>
-              <MobileNav isMenuOpen={isMenuOpen} isHomePage={isHomePage} />
-            </div>
-          </div>
+
+        {/* Desktop Navigation - Only for public pages */}
+        <div className="hidden md:flex items-center space-x-4">
+          {/* Auth buttons */}
           <AuthButtons />
+        </div>
+
+        {/* Mobile Menu Button */}
+        <div className="md:hidden">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            <Menu className="h-6 w-6" />
+          </Button>
+          <MobileNav isMenuOpen={isMenuOpen} isHomePage={isHomePage} />
         </div>
       </div>
     </header>
