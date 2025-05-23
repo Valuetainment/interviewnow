@@ -101,13 +101,31 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Create triggers for updated_at timestamp
-CREATE TRIGGER update_transcript_entries_updated_at
-BEFORE UPDATE ON transcript_entries
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_video_segments_updated_at
-BEFORE UPDATE ON video_segments
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column(); 
+-- Conditionally create triggers for updated_at timestamp
+DO $$ 
+BEGIN
+    -- Check if transcript_entries trigger exists
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger 
+        WHERE tgname = 'update_transcript_entries_updated_at'
+    ) THEN
+        EXECUTE 'CREATE TRIGGER update_transcript_entries_updated_at
+                BEFORE UPDATE ON transcript_entries
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column()';
+    END IF;
+    
+    -- Check if video_segments table exists before trying to create its trigger
+    IF EXISTS (
+        SELECT FROM pg_tables 
+        WHERE schemaname = 'public' AND tablename = 'video_segments'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM pg_trigger 
+        WHERE tgname = 'update_video_segments_updated_at'
+    ) THEN
+        EXECUTE 'CREATE TRIGGER update_video_segments_updated_at
+                BEFORE UPDATE ON video_segments
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column()';
+    END IF;
+END $$; 

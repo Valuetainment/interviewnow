@@ -8,6 +8,9 @@ const helmet = require('helmet');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
+const pino = require('pino');
+const pinoHttp = require('pino-http');
+const promBundle = require('express-prom-bundle');
 
 // Initialize Express app
 const app = express();
@@ -60,6 +63,16 @@ const corsHeaders = {
 
 // Store active sessions
 const sessions = new Map();
+
+// Add Prometheus metrics
+const metricsMiddleware = promBundle({
+  includeMethod: true,
+  includePath: true,
+  promClient: {
+    collectDefaultMetrics: {},
+  },
+});
+app.use(metricsMiddleware);
 
 // Handle WebSocket connections
 wss.on('connection', (ws, req) => {
@@ -403,6 +416,11 @@ app.get('/', (req, res) => {
   res.send('WebRTC SDP Proxy Server is running');
 });
 
+// Additional health check endpoint to match Dockerfile HEALTHCHECK
+app.get('/healthz', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 // Get API key status endpoint (does not expose the actual key)
 app.get('/api/key-status', (req, res) => {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -431,8 +449,14 @@ app.get('/api/sessions/:sessionId', (req, res) => {
 });
 
 // Start server
+<<<<<<< HEAD
 server.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port} and listening on all interfaces (0.0.0.0:${port})`);
+=======
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+>>>>>>> feat/webrtc-integration
   console.log(`Simulation mode: ${process.env.SIMULATION_MODE === 'true' ? 'ENABLED' : 'DISABLED'}`);
 }).on('error', (err) => {
   console.error('Error starting server:', err);

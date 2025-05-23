@@ -29,29 +29,40 @@ CREATE POLICY "Users can insert transcript entries for active sessions"
     AND s.tenant_id IN (SELECT tenant_id FROM tenant_users WHERE user_id = (SELECT auth.uid()))
   ));
 
--- Drop and recreate video_segments policies with correct auth function calls
-DROP POLICY IF EXISTS "Users can view video segments for sessions they have access to" ON video_segments;
-DROP POLICY IF EXISTS "Users can insert video segments for active sessions" ON video_segments;
-
--- Recreate with proper (SELECT auth.uid()) pattern
-CREATE POLICY "Users can view video segments for sessions they have access to"
-  ON video_segments
-  FOR SELECT
-  USING (EXISTS (
-    SELECT 1 FROM interview_sessions s
-    WHERE s.id = video_segments.interview_session_id
-    AND (
-      s.tenant_id IN (SELECT tenant_id FROM tenant_users WHERE user_id = (SELECT auth.uid()))
-      OR s.candidate_id IN (SELECT id FROM candidates WHERE email = (SELECT auth.email()))
-    )
-  ));
-
-CREATE POLICY "Users can insert video segments for active sessions"
-  ON video_segments
-  FOR INSERT
-  WITH CHECK (EXISTS (
-    SELECT 1 FROM interview_sessions s
-    WHERE s.id = video_segments.interview_session_id
-    AND s.status = 'in_progress'
-    AND s.tenant_id IN (SELECT tenant_id FROM tenant_users WHERE user_id = (SELECT auth.uid()))
-  )); 
+-- Safely handle video_segments operations
+DO $$ 
+BEGIN
+    -- Check if the video_segments table exists before attempting operations on it
+    IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'video_segments') THEN
+        -- Drop existing policies
+        EXECUTE 'DROP POLICY IF EXISTS "Users can view video segments for sessions they have access to" ON video_segments';
+        EXECUTE 'DROP POLICY IF EXISTS "Users can insert video segments for active sessions" ON video_segments';
+        
+        -- Recreate with proper (SELECT auth.uid()) pattern
+        EXECUTE $POLICY$
+        CREATE POLICY "Users can view video segments for sessions they have access to"
+          ON video_segments
+          FOR SELECT
+          USING (EXISTS (
+            SELECT 1 FROM interview_sessions s
+            WHERE s.id = video_segments.interview_session_id
+            AND (
+              s.tenant_id IN (SELECT tenant_id FROM tenant_users WHERE user_id = (SELECT auth.uid()))
+              OR s.candidate_id IN (SELECT id FROM candidates WHERE email = (SELECT auth.email()))
+            )
+          ))
+        $POLICY$;
+        
+        EXECUTE $POLICY$
+        CREATE POLICY "Users can insert video segments for active sessions"
+          ON video_segments
+          FOR INSERT
+          WITH CHECK (EXISTS (
+            SELECT 1 FROM interview_sessions s
+            WHERE s.id = video_segments.interview_session_id
+            AND s.status = 'in_progress'
+            AND s.tenant_id IN (SELECT tenant_id FROM tenant_users WHERE user_id = (SELECT auth.uid()))
+          ))
+        $POLICY$;
+    END IF;
+END $$; 

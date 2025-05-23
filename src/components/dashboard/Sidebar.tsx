@@ -11,7 +11,8 @@ import {
   Search,
   BarChart,
   TestTube,
-  Beaker
+  Beaker,
+  Mic
 } from 'lucide-react';
 
 import {
@@ -210,6 +211,21 @@ const DashboardSidebar: React.FC = () => {
         <SidebarGroup>
           <SidebarGroupLabel>Admin</SidebarGroupLabel>
           <SidebarMenu>
+            <SidebarMenuItem>
+              <Link to="/interview-test-production">
+                <SidebarMenuButton 
+                  asChild
+                  isActive={isActive('/interview-test-production')}
+                  tooltip="Test Production Interview"
+                >
+                  <div className="flex items-center gap-2">
+                    <Mic />
+                    <span>Test Production Interview</span>
+                  </div>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
+            
             <SidebarMenuItem>
               <Link to="/settings">
                 <SidebarMenuButton 
