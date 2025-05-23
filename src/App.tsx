@@ -10,6 +10,7 @@ import NotFound from "./pages/NotFound";
 import CreatePosition from "./pages/CreatePosition";
 import CreateSession from "./pages/CreateSession";
 import InterviewRoom from "./pages/InterviewRoom";
+import InterviewRoomHybrid from "./pages/InterviewRoomHybrid";
 import SessionDetail from "./pages/SessionDetail";
 import Sessions from "./pages/Sessions";
 import Candidate from "./pages/Candidate";
@@ -84,6 +85,9 @@ const App = () => (
             
             {/* Full-screen interview room (no dashboard layout) */}
             <Route path="/interview-room/:id" element={<InterviewRoom />} />
+            
+            {/* Hybrid WebRTC interview room for admin flow */}
+            <Route path="/interview/:id" element={<InterviewRoomHybrid />} />
 
             {/* WebRTC test pages - all grouped under /test/ path for organization */}
             <Route path="/test/ngrok" element={<InterviewTestSimple />} />

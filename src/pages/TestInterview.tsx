@@ -238,8 +238,8 @@ const TestInterview = () => {
         selectedCompany
       });
       
-      // Navigate to the full WebRTC test page with real session details
-      const navigationUrl = `/test/full?session=${sessionId}&candidate=${selectedCandidate}&position=${selectedPosition}&tenant=${tenantId}&company=${selectedCompany}&debug=true`;
+      // Navigate to the hybrid interview room with the session ID
+      const navigationUrl = `/interview/${sessionId}`;
       console.log('[DEBUG] Navigation URL:', navigationUrl);
       
       // Use window.location to avoid React re-initialization issues
