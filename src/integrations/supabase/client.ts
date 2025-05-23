@@ -18,6 +18,18 @@ const LOCAL_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXB
 const supabaseUrl = isDevelopment ? LOCAL_SUPABASE_URL : REMOTE_SUPABASE_URL;
 const supabaseAnonKey = isDevelopment ? LOCAL_SUPABASE_KEY : REMOTE_SUPABASE_KEY;
 
+// Defensive check for production issues
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('[SUPABASE] Critical: Missing configuration', {
+    url: supabaseUrl,
+    hasKey: !!supabaseAnonKey,
+    isDevelopment,
+    env: import.meta.env
+  });
+  // This should never happen with hardcoded values, but helps debug
+  throw new Error('Supabase configuration is missing. URL: ' + supabaseUrl);
+}
+
 console.log('Supabase client initialized with:', { 
   url: supabaseUrl, 
   isDevelopment 
@@ -26,17 +38,28 @@ console.log('Supabase client initialized with:', {
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10,
-    },
-  },
-});
+// Create a singleton instance to avoid re-initialization issues
+let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null;
+
+const getSupabaseClient = () => {
+  if (!supabaseInstance) {
+    console.log('[SUPABASE] Creating new client instance');
+    supabaseInstance = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10,
+        },
+      },
+    });
+  }
+  return supabaseInstance;
+};
+
+export const supabase = getSupabaseClient();
 
 // Helper to get current tenant ID from auth context
 export const getCurrentTenantId = async (): Promise<string | null> => {

@@ -242,10 +242,9 @@ const TestInterview = () => {
       const navigationUrl = `/test/full?session=${sessionId}&candidate=${selectedCandidate}&position=${selectedPosition}&tenant=${tenantId}&company=${selectedCompany}&debug=true`;
       console.log('[DEBUG] Navigation URL:', navigationUrl);
       
-      // Try alternative navigation method to avoid potential issues
-      setTimeout(() => {
-        navigate(navigationUrl);
-      }, 100);
+      // Use window.location to avoid React re-initialization issues
+      // This forces a full page reload which ensures Supabase is properly initialized
+      window.location.href = navigationUrl;
     } catch (error) {
       console.error('Error starting interview:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to start interview');
