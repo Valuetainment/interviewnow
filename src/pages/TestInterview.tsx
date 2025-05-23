@@ -228,8 +228,24 @@ const TestInterview = () => {
       setIsStartingInterview(false);
       toast.success('Interview created successfully!');
       
+      // Debug logging
+      console.log('[DEBUG] Interview session created successfully');
+      console.log('[DEBUG] About to navigate with params:', {
+        sessionId,
+        selectedCandidate,
+        selectedPosition,
+        tenantId,
+        selectedCompany
+      });
+      
       // Navigate to the full WebRTC test page with real session details
-      navigate(`/test/full?session=${sessionId}&candidate=${selectedCandidate}&position=${selectedPosition}&tenant=${tenantId}&company=${selectedCompany}`);
+      const navigationUrl = `/test/full?session=${sessionId}&candidate=${selectedCandidate}&position=${selectedPosition}&tenant=${tenantId}&company=${selectedCompany}&debug=true`;
+      console.log('[DEBUG] Navigation URL:', navigationUrl);
+      
+      // Try alternative navigation method to avoid potential issues
+      setTimeout(() => {
+        navigate(navigationUrl);
+      }, 100);
     } catch (error) {
       console.error('Error starting interview:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to start interview');

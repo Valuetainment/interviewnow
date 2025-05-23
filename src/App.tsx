@@ -19,7 +19,6 @@ import TestInterview from "./pages/TestInterview";
 import InterviewTestSimple from "./pages/InterviewTestSimple";
 import SimpleWebRTCTest from "./pages/SimpleWebRTCTest";
 import BasicWebRTCTest from "./pages/BasicWebRTCTest";
-import FullInterviewTest from "./pages/FullInterviewTest";
 import Transcripts from "./pages/Transcripts";
 import Positions2 from "./pages/Positions2";
 import PositionDetail2 from "./pages/PositionDetail2";
@@ -30,6 +29,8 @@ import EditCompany from "./pages/EditCompany";
 import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
 import InterviewTestProduction from "./pages/InterviewTestProduction";
+import DiagnosticTest from "./pages/DiagnosticTest";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from './hooks/useAuth';
 
 // Import layout components
@@ -88,13 +89,20 @@ const App = () => (
             <Route path="/test/ngrok" element={<InterviewTestSimple />} />
             <Route path="/test/webrtc-hooks" element={<InterviewTestSimple />} />
             <Route path="/test/openai" element={<InterviewTestSimple />} />
-            <Route path="/test/full" element={<InterviewTestSimple />} />
+            <Route path="/test/full" element={
+              <ErrorBoundary>
+                <InterviewTestSimple />
+              </ErrorBoundary>
+            } />
             <Route path="/test/simple" element={<SimpleWebRTCTest />} />
 
             {/* Dedicated path for simplest test page access */}
             <Route path="/interview-test-simple" element={<InterviewTestSimple />} />
             <Route path="/simple-webrtc-test" element={<SimpleWebRTCTest />} />
             <Route path="/basic-webrtc-test" element={<BasicWebRTCTest />} />
+            
+            {/* Diagnostic route */}
+            <Route path="/diagnostic" element={<DiagnosticTest />} />
 
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
