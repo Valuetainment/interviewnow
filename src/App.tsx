@@ -19,6 +19,7 @@ import TestInterview from "./pages/TestInterview";
 import InterviewTestSimple from "./pages/InterviewTestSimple";
 import SimpleWebRTCTest from "./pages/SimpleWebRTCTest";
 import BasicWebRTCTest from "./pages/BasicWebRTCTest";
+import FullInterviewTest from "./pages/FullInterviewTest";
 import Transcripts from "./pages/Transcripts";
 import Positions2 from "./pages/Positions2";
 import PositionDetail2 from "./pages/PositionDetail2";
