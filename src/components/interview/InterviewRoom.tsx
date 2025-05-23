@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import { WebRTCManager } from './WebRTCManager';
 import { TranscriptPanel } from './TranscriptPanel';
 
@@ -51,12 +51,6 @@ export const InterviewRoom: React.FC<InterviewRoomProps> = ({
   const [interviewData, setInterviewData] = useState<InterviewData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Initialize Supabase client
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  );
   
   // Fetch interview data
   useEffect(() => {

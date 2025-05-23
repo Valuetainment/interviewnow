@@ -3,7 +3,8 @@ import { useWebSocketConnection } from './useWebSocketConnection';
 import { useWebRTCConnection } from './useWebRTCConnection';
 import { ConnectionState } from './useConnectionState';
 import { useTranscriptManager } from './useTranscriptManager';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { supabase as defaultSupabaseClient } from '@/integrations/supabase/client';
 
 export interface SDPProxyConfig {
   serverUrl: string;
@@ -35,11 +36,8 @@ export function useSDPProxy(
   // Store the server URL in a ref so we can update it
   const serverUrlRef = useRef<string>(config.serverUrl);
   
-  // Create or use provided Supabase client
-  const supabase = config.supabaseClient || createClient(
-    import.meta.env.VITE_SUPABASE_URL || '',
-    import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-  );
+  // Use provided Supabase client or default
+  const supabase = config.supabaseClient || defaultSupabaseClient;
 
   // Use transcript manager
   const { saveTranscript } = useTranscriptManager({

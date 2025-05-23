@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { supabase as defaultSupabaseClient } from '@/integrations/supabase/client';
 
 export interface TranscriptEntry {
   id?: string;
@@ -31,11 +32,8 @@ export function useTranscriptManager({
 }: TranscriptManagerConfig): TranscriptManagerHandlers {
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
 
-  // Create or use provided Supabase client
-  const supabase = supabaseClient || createClient(
-    import.meta.env.VITE_SUPABASE_URL || '',
-    import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-  );
+  // Use provided Supabase client or default
+  const supabase = supabaseClient || defaultSupabaseClient;
 
   // Add a transcript entry to the local state
   const addTranscriptEntry = useCallback((entry: TranscriptEntry) => {

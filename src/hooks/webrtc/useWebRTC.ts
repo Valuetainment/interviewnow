@@ -3,7 +3,7 @@ import { ConnectionState } from './useConnectionState';
 import { useSDPProxy } from './useSDPProxy';
 import { useOpenAIConnection } from './useOpenAIConnection';
 import { useTranscriptManager } from './useTranscriptManager';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface WebRTCConfig {
   serverUrl?: string;
@@ -50,12 +50,6 @@ export function useWebRTC(
   const [isReady, setIsReady] = useState(false);
   const [internalConnectionState, setInternalConnectionState] = useState<ConnectionState>('disconnected');
   const [error, setError] = useState<string | null>(null);
-
-  // Create Supabase client
-  const supabase = createClient(
-    import.meta.env.VITE_SUPABASE_URL || '',
-    import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-  );
 
   // Use transcript manager
   const { clearTranscript } = useTranscriptManager({

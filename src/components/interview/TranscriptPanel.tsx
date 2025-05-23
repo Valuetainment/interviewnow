@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import './TranscriptPanel.css';
 
 interface TranscriptEntry {
@@ -22,13 +22,6 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
   const [error, setError] = useState<string | null>(null);
   
   const transcriptContainerRef = useRef<HTMLDivElement>(null);
-  
-  // Initialize Supabase client
-  const supabase = createClient(
-    import.meta.env.VITE_SUPABASE_URL || '',
-    import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-  );
-  
   const [transcriptEntries, setTranscriptEntries] = useState<TranscriptEntry[]>([]);
 
   // Load existing transcript entries
