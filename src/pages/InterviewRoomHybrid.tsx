@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, getCurrentTenantId } from '@/integrations/supabase/client';
 import { WebRTCManager } from '@/components/interview/WebRTCManager';
 import { TranscriptPanel } from '@/components/interview/TranscriptPanel';
 import {
@@ -99,10 +99,17 @@ const InterviewRoomHybrid = () => {
       setIsStarting(true);
       setError(null);
 
+      // Get tenant ID
+      const tenantId = await getCurrentTenantId();
+      if (!tenantId) {
+        throw new Error('Unable to determine tenant ID');
+      }
+
       // Call the interview-start edge function
       const { data, error } = await supabase.functions.invoke('interview-start', {
         body: {
           interview_session_id: session.id,
+          tenant_id: tenantId,
           architecture: 'hybrid' // Use hybrid architecture
         }
       });
