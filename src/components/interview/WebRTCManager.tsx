@@ -117,7 +117,8 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
       console.log('Component unmounting - cleaning up resources');
       cleanup();
     };
-  }, [sessionId, initialize, cleanup, autoReconnectDisabled, simulationMode, serverUrl]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, initialize, autoReconnectDisabled, simulationMode, serverUrl]);
 
   // Render connection indicator dots based on state
   const renderConnectionDots = () => {
