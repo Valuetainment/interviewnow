@@ -43,7 +43,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
         const { data, error } = await supabase
           .from('transcript_entries')
           .select('text, speaker, timestamp')
-          .eq('interview_session_id', interviewId)
+          .eq('session_id', interviewId)
           .order('timestamp', { ascending: true });
 
         if (error) {
@@ -91,7 +91,7 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
           event: 'INSERT',
           schema: 'public',
           table: 'transcript_entries',
-          filter: `interview_session_id=eq.${interviewId}`
+          filter: `session_id=eq.${interviewId}`
         },
         (payload) => {
           // Add the new entry to our list

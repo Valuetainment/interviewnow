@@ -115,7 +115,7 @@ serve(async (req) => {
     const { data: transcriptData, error: transcriptError } = await supabaseClient
       .from('transcript_entries')
       .insert({
-        interview_session_id,
+        session_id: interview_session_id, // Note: column is named session_id, not interview_session_id
         tenant_id: sessionData.tenant_id, // Ensure tenant_id is set for security
         text,
         timestamp: timestamp || new Date().toISOString(),
