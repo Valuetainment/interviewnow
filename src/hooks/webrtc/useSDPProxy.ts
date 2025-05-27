@@ -333,7 +333,8 @@ export function useSDPProxy(
   const cleanup = useCallback(() => {
     cleanupWebRTC();
     disconnectWebSocket();
-  }, [cleanupWebRTC, disconnectWebSocket]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Add method to update server URL
   const setServerUrl = useCallback((url: string) => {
