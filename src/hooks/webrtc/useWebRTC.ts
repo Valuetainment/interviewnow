@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ConnectionState } from './useConnectionState';
 import { useSDPProxy } from './useSDPProxy';
 import { useOpenAIConnection } from './useOpenAIConnection';
@@ -99,7 +99,10 @@ export function useWebRTC(
   );
 
   // Get the current connection implementation
-  const activeConnection = useDirectOpenAI ? openAIConnection : sdpProxyConnection;
+  const activeConnection = useMemo(
+    () => useDirectOpenAI ? openAIConnection : sdpProxyConnection,
+    [useDirectOpenAI, openAIConnection, sdpProxyConnection]
+  );
 
   // Extracted status properties
   const status: WebRTCStatus = {
@@ -136,8 +139,9 @@ export function useWebRTC(
       if (!config.simulationMode && !useDirectOpenAI) {
         try {
           const { data: tenantData, error: tenantError } = await supabase
-            .from('tenant_users')
+            .from('users')
             .select('tenant_id')
+            .eq('id', (await supabase.auth.getUser()).data.user?.id)
             .single();
 
           if (tenantError) {
