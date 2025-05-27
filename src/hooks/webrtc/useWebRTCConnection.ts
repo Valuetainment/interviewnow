@@ -307,8 +307,9 @@ export function useWebRTCConnection(
       
       return false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    cleanup, 
+    // cleanup removed - only called at start, doesn't need to trigger re-creation
     setIsConnecting, 
     setError, 
     setConnectionState, 
