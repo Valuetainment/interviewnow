@@ -36,6 +36,7 @@ export function useSDPProxy(
 ): SDPProxyHandlers {
   // Store the server URL in a ref so we can update it
   const serverUrlRef = useRef<string>(config.serverUrl);
+  const isInitializingRef = useRef<boolean>(false);
   
   // Use provided Supabase client or default
   const supabase = config.supabaseClient || defaultSupabaseClient;
@@ -129,6 +130,10 @@ export function useSDPProxy(
                 onConnectionStateChange('connected');
               }
             }, 500);
+          } else {
+            // Production mode - session message received, initialization should continue
+            console.log('Production mode - session established, WebRTC initialization should proceed');
+            // The initialization flow in the initialize function will handle the rest
           }
           break;
 
@@ -201,7 +206,7 @@ export function useSDPProxy(
     } catch (error) {
       console.error('Error handling WebSocket message:', error);
     }
-  }, [config.simulationMode, onConnectionStateChange, pcRef, handleAnswer, addIceCandidate, saveTranscript]);
+  }, [config.simulationMode, onConnectionStateChange, pcRef, handleAnswer, addIceCandidate, saveTranscript, sendWebSocketMessage]);
 
   // Create and send SDP offer to server
   const createAndSendOffer = useCallback(async () => {
@@ -238,6 +243,13 @@ export function useSDPProxy(
       console.log('SDPProxy is disabled, skipping initialization');
       return false;
     }
+
+    if (isInitializingRef.current) {
+      console.log('Already initializing - skipping duplicate initialization');
+      return false;
+    }
+
+    isInitializingRef.current = true;
 
     try {
       // Check if we have a valid server URL
@@ -296,10 +308,14 @@ export function useSDPProxy(
         throw new Error('Failed to send SDP offer');
       }
       
+      isInitializingRef.current = false;
       return true;
     } catch (error) {
       console.error('Error initializing session:', error);
+      isInitializingRef.current = false;
       return false;
+    } finally {
+      isInitializingRef.current = false;
     }
   }, [
     config.disabled,
@@ -339,7 +355,7 @@ export function useSDPProxy(
 
   // Clean up resources
   const cleanup = useCallback(() => {
-    if (!config.disabled) {
+    if (!config.disabled && !isInitializingRef.current) {
       cleanupWebRTC();
       disconnectWebSocket();
     }
