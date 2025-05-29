@@ -217,7 +217,6 @@ export function useWebRTC(
     config.simulationMode,
     useDirectOpenAI,
     supabase,
-    activeConnection,
     clearTranscript,
     sdpProxyConnection
   ]);

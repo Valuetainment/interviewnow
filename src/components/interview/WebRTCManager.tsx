@@ -121,7 +121,7 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
       cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, autoReconnectDisabled, simulationMode, serverUrl]);
+  }, [sessionId]);
 
   // Render connection indicator dots based on state
   const renderConnectionDots = () => {
