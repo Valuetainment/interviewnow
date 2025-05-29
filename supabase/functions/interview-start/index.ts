@@ -125,10 +125,15 @@ async function setupFlyVM(
     // Different URL paths for different architectures
     const wsPath = architecture === 'hybrid' ? 'ws' : 'socket';
 
+    // TEMPORARY FIX: Use the existing interview-hybrid-template app
+    // In production, we would actually provision a new VM here
+    const baseUrl = 'wss://interview-hybrid-template.fly.dev';
+    
     // VM URL with enhanced security parameters
-    const vmUrl = `wss://${vmName}.fly.dev/${wsPath}?token=${secureToken}&session=${sessionId}&tenant=${tenantId}`;
+    const vmUrl = `${baseUrl}/${wsPath}?token=${secureToken}&session=${sessionId}&tenant=${tenantId}`;
 
-    console.log(`VM URL generated for ${architecture} architecture with per-session isolation [${operationId}]`);
+    console.log(`VM URL generated for ${architecture} architecture using template app [${operationId}]`);
+    console.log(`TODO: In production, provision actual VM: ${vmName}`);
     return { url: vmUrl, architecture };
   } catch (error) {
     console.error(`Error setting up Fly VM [${operationId}]:`, error);
