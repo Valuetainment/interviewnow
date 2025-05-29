@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import './WebRTCManager.css';
 import { useWebRTC, WebRTCConfig } from '../../hooks/webrtc';
 
@@ -39,8 +39,8 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [autoReconnectDisabled, setAutoReconnectDisabled] = useState<boolean>(false);
 
-  // Configure WebRTC settings
-  const webRTCConfig: WebRTCConfig = {
+  // Configure WebRTC settings - memoize to prevent re-renders
+  const webRTCConfig: WebRTCConfig = React.useMemo(() => ({
     serverUrl: serverUrl || (simulationMode ? 'wss://interview-simulation-proxy.fly.dev/ws' : undefined),
     simulationMode,
     openAIMode,
@@ -48,7 +48,7 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
     jobDescription,
     resume,
     openAISettings
-  };
+  }), [serverUrl, simulationMode, openAIMode, openAIKey, jobDescription, resume, openAISettings]);
 
   // Use our main WebRTC hook for all functionality
   const { 
