@@ -41,6 +41,15 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
   // Local state for component-specific UI elements
   const [error, setError] = useState<string | null>(null);
   const [autoReconnectDisabled, setAutoReconnectDisabled] = useState<boolean>(false);
+  
+  // Refs for tracking initialization
+  const hasInitializedRef = React.useRef<boolean>(false);
+  const serverUrlRef = React.useRef<string | undefined>(serverUrl);
+  
+  // Update ref when serverUrl changes
+  React.useEffect(() => {
+    serverUrlRef.current = serverUrl;
+  }, [serverUrl]);
 
   // Configure WebRTC settings - memoize to prevent re-renders
   const webRTCConfig: WebRTCConfig = React.useMemo(() => ({
@@ -81,7 +90,7 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
       return;
     }
 
-    console.log('Component mounted - initializing session once');
+    console.log('Component mounted - checking initialization readiness');
 
     // First test WebRTC browser support
     if (!navigator.mediaDevices || !window.RTCPeerConnection) {
@@ -94,25 +103,61 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
       console.warn('Simulation mode is enabled but URL is missing simulation parameter - it may be added automatically');
     }
 
+    // Function to attempt initialization
+    const attemptInit = () => {
+      if (!hasInitializedRef.current && serverUrlRef.current) {
+        hasInitializedRef.current = true;
+        console.log('Server URL available, initializing WebRTC');
+        initialize().catch(err => {
+          console.error('Error initializing WebRTC:', err);
+          hasInitializedRef.current = false; // Reset on error so it can retry
+          let errorMessage = err instanceof Error ? err.message : 'Failed to initialize WebRTC';
+
+          // Provide more helpful error messages based on error content
+          if (errorMessage.includes('Permission denied') || errorMessage.includes('NotAllowedError')) {
+            errorMessage = 'Microphone access was denied. Please allow microphone access and try again.';
+          } else if (errorMessage.includes('NotFoundError') || errorMessage.includes('no devices')) {
+            errorMessage = 'No microphone found. Please connect a microphone and try again.';
+          } else if (errorMessage.includes('WebSocket') || errorMessage.includes('ws://') || errorMessage.includes('wss://')) {
+            errorMessage = `Failed to connect to WebSocket server. Please check that the server is running.`;
+          }
+
+          setError(errorMessage);
+        });
+      }
+    };
+
+    // Try immediately if serverUrl is already available
+    attemptInit();
+
+    // If not available yet, poll for it
+    const checkInterval = setInterval(() => {
+      if (serverUrlRef.current && !hasInitializedRef.current) {
+        console.log('Server URL now available via polling');
+        attemptInit();
+        clearInterval(checkInterval);
+      }
+    }, 100);
+
+    // Clear interval after 10 seconds to prevent indefinite polling
+    const timeoutId = setTimeout(() => {
+      clearInterval(checkInterval);
+      if (!hasInitializedRef.current && !serverUrlRef.current) {
+        console.error('Timeout waiting for server URL');
+        setError('Failed to get server configuration. Please try again.');
+      }
+    }, 10000);
 
     return () => {
+      clearInterval(checkInterval);
+      clearTimeout(timeoutId);
       console.log('Component unmounting - cleaning up resources');
       cleanup();
+      hasInitializedRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
-  // Initialize when serverUrl becomes available
-  useEffect(() => {
-    if (serverUrl && status.connectionState === 'disconnected') {
-      console.log('Server URL available, initializing WebRTC');
-      initialize().catch(err => {
-        console.error('Error initializing WebRTC:', err);
-        let errorMessage = err instanceof Error ? err.message : 'Failed to initialize WebRTC';
-        setError(errorMessage);
-      });
-    }
-  }, [serverUrl, status.connectionState, initialize]);
 
   // Render connection indicator dots based on state
   const renderConnectionDots = () => {
