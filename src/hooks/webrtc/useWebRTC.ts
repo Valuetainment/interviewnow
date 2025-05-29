@@ -77,7 +77,8 @@ export function useWebRTC(
       openAIKey: config.openAIKey || '',
       openAISettings: config.openAISettings,
       jobDescription: config.jobDescription,
-      resume: config.resume
+      resume: config.resume,
+      disabled: !useDirectOpenAI  // Disable when not using direct OpenAI mode
     },
     handleConnectionStateChange,
     onTranscriptUpdate
@@ -92,7 +93,8 @@ export function useWebRTC(
         ? (config.serverUrl || 'wss://interview-sdp-proxy.fly.dev/ws')
         : (config.serverUrl || ''), // Will be populated from edge function response
       simulationMode: config.simulationMode,
-      supabaseClient: supabase
+      supabaseClient: supabase,
+      disabled: !!useDirectOpenAI  // Disable when using direct OpenAI mode
     },
     handleConnectionStateChange,
     onTranscriptUpdate

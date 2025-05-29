@@ -12,6 +12,7 @@ export interface OpenAIConnectionConfig {
   };
   jobDescription?: string;
   resume?: string;
+  disabled?: boolean;
 }
 
 export interface OpenAIConnectionHandlers {
@@ -162,6 +163,12 @@ export function useOpenAIConnection(
 
   // Initialize direct OpenAI connection
   const initialize = useCallback(async (): Promise<boolean> => {
+    // If disabled, don't initialize
+    if (config.disabled) {
+      console.log('OpenAIConnection is disabled, skipping initialization');
+      return false;
+    }
+
     if (!config.openAIKey) {
       console.error('OpenAI API key is required for direct OpenAI mode');
       return false;
@@ -240,20 +247,28 @@ export function useOpenAIConnection(
       return false;
     }
   }, [
+    config.disabled,
     config.openAIKey,
     initializeWebRTC,
     configureOpenAISession,
     handleDataChannelMessage
   ]);
 
+  // Wrap cleanup to check disabled
+  const wrappedCleanup = useCallback(() => {
+    if (!config.disabled) {
+      cleanup();
+    }
+  }, [config.disabled, cleanup]);
+
   return {
     initialize,
-    cleanup,
-    connectionState,
-    error,
-    isConnecting,
-    isConnected,
-    audioLevel,
-    isRecording
+    cleanup: wrappedCleanup,
+    connectionState: config.disabled ? 'disconnected' : connectionState,
+    error: config.disabled ? null : error,
+    isConnecting: config.disabled ? false : isConnecting,
+    isConnected: config.disabled ? false : isConnected,
+    audioLevel: config.disabled ? 0 : audioLevel,
+    isRecording: config.disabled ? false : isRecording
   };
 }

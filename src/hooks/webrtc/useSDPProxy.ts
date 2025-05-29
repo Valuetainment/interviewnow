@@ -10,6 +10,7 @@ export interface SDPProxyConfig {
   serverUrl: string;
   simulationMode?: boolean;
   supabaseClient?: SupabaseClient;
+  disabled?: boolean;
 }
 
 export interface SDPProxyHandlers {
@@ -232,6 +233,12 @@ export function useSDPProxy(
 
   // Initialize WebRTC session
   const initializeSession = useCallback(async (): Promise<boolean> => {
+    // If disabled, don't initialize
+    if (config.disabled) {
+      console.log('SDPProxy is disabled, skipping initialization');
+      return false;
+    }
+
     try {
       // Check if we have a valid server URL
       if (!serverUrlRef.current && !config.simulationMode) {
@@ -295,6 +302,7 @@ export function useSDPProxy(
       return false;
     }
   }, [
+    config.disabled,
     config.simulationMode, 
     config.serverUrl, 
     sessionId, 
@@ -331,8 +339,10 @@ export function useSDPProxy(
 
   // Clean up resources
   const cleanup = useCallback(() => {
-    cleanupWebRTC();
-    disconnectWebSocket();
+    if (!config.disabled) {
+      cleanupWebRTC();
+      disconnectWebSocket();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -345,12 +355,12 @@ export function useSDPProxy(
   return {
     initialize: initializeSession,
     cleanup,
-    connectionState,
-    error,
-    isConnecting: isRtcConnecting,
-    isConnected: isRtcConnected && isWsConnected,
-    audioLevel,
-    isRecording,
+    connectionState: config.disabled ? 'disconnected' : connectionState,
+    error: config.disabled ? null : error,
+    isConnecting: config.disabled ? false : isRtcConnecting,
+    isConnected: config.disabled ? false : (isRtcConnected && isWsConnected),
+    audioLevel: config.disabled ? 0 : audioLevel,
+    isRecording: config.disabled ? false : isRecording,
     setServerUrl
   };
 }
