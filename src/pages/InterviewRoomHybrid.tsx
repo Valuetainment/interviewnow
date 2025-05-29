@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase, getCurrentTenantId } from '@/integrations/supabase/client';
@@ -141,14 +141,14 @@ const InterviewRoomHybrid = () => {
     }
   };
 
-  const handleTranscriptUpdate = (text: string) => {
+  const handleTranscriptUpdate = useCallback((text: string) => {
     setTranscript(prev => prev ? `${prev}\n${text}` : text);
-  };
+  }, []);
 
-  const handleConnectionStateChange = (state: string) => {
+  const handleConnectionStateChange = useCallback((state: string) => {
     setConnectionState(state);
     console.log('Connection state:', state);
-  };
+  }, []);
 
   const endInterview = async () => {
     try {
@@ -292,7 +292,7 @@ const InterviewRoomHybrid = () => {
                   <WebRTCManager
                     sessionId={session.id}
                     serverUrl={interviewConfig.serverUrl}
-                    openAIConfig={interviewConfig.openAIConfig}
+                    openAISettings={interviewConfig.openAIConfig}
                     onTranscriptUpdate={handleTranscriptUpdate}
                     onConnectionStateChange={handleConnectionStateChange}
                   />

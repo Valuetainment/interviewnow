@@ -2,6 +2,13 @@ import React, { useState, useEffect } from 'react';
 import './WebRTCManager.css';
 import { useWebRTC, WebRTCConfig } from '../../hooks/webrtc';
 
+// Default settings moved outside component to prevent recreation
+const DEFAULT_OPENAI_SETTINGS = {
+  voice: 'alloy',
+  temperature: 0.7,
+  maximumLength: 5
+};
+
 interface WebRTCManagerProps {
   sessionId: string;
   onTranscriptUpdate: (text: string) => void;
@@ -29,11 +36,7 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
   openAIKey = '',
   jobDescription = '',
   resume = '',
-  openAISettings = {
-    voice: 'alloy',
-    temperature: 0.7,
-    maximumLength: 5
-  }
+  openAISettings = DEFAULT_OPENAI_SETTINGS
 }) => {
   // Local state for component-specific UI elements
   const [error, setError] = useState<string | null>(null);

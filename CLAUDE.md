@@ -145,3 +145,67 @@ npm run dev
 git add -A && git commit -m "fix: Implement disabled pattern to prevent dual hook instantiation"
 git push origin main
 ```
+
+## Project Status Update (May 29, 2025)
+
+### WebRTC Integration Progress Update 🟡
+
+#### Major Fixes Completed:
+1. **✅ Infinite Loop Fixed** - No more 57k-120k logs!
+   - Implemented disabled pattern for dual hook instantiation
+   - Removed `initialize` from WebRTCManager useEffect dependencies
+   - Memoized webRTCConfig object to prevent re-renders
+
+2. **✅ Edge Function Fixed** - interview-start now returns correct URL
+   - Was generating VM URLs without provisioning VMs
+   - Now uses existing interview-hybrid-template.fly.dev
+   - TODO: Implement actual VM provisioning with Fly Machines API
+
+3. **✅ WebSocket Connects** - Successfully connects to Fly.io
+   - Connection established with proper JWT token
+   - Session message received from server
+
+#### Current Blocker: Component Re-rendering
+**Problem**: WebSocket connects then immediately disconnects
+- Fly.io logs show connections lasting only 16ms
+- WebSocket closes with code 1000 (normal closure)
+- Component cleanup running multiple times
+- Can't complete SDP exchange due to disconnection
+
+**Root Cause**: InterviewRoomHybrid component issues
+- Callback functions (`handleTranscriptUpdate`, `handleConnectionStateChange`) recreated on every render
+- Props mismatch: passing `openAIConfig` but WebRTCManager expects `openAISettings`
+- These cause WebRTCManager to re-mount, disconnecting WebSocket
+
+**Next Fix Required**:
+```typescript
+// Memoize callbacks in InterviewRoomHybrid
+const handleTranscriptUpdate = useCallback((text: string) => {
+  setTranscript(prev => prev ? `${prev}\n${text}` : text);
+}, []);
+
+const handleConnectionStateChange = useCallback((state: string) => {
+  setConnectionState(state);
+}, []);
+```
+
+#### What's Working:
+- ✅ No infinite loops
+- ✅ Microphone permission prompts appear
+- ✅ WebSocket connects to Fly.io
+- ✅ Edge function returns valid URLs
+- ✅ Basic flow is correct
+
+#### What's Not Working:
+- ❌ WebSocket disconnects immediately after connecting
+- ❌ Can't send SDP offer (WebSocket not connected)
+- ❌ End Interview button not responding (due to re-renders)
+- ❌ No audio connection established yet
+
+#### Architecture Status:
+The hybrid WebRTC architecture is correct:
+1. Browser → Edge Function → Get WebSocket URL
+2. Browser ← WebSocket → Fly.io (for SDP exchange)
+3. Browser ← WebRTC → OpenAI (for audio, after SDP exchange)
+
+We're stuck at step 2 - the WebSocket keeps disconnecting before SDP exchange.
