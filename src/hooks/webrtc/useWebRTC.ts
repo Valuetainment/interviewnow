@@ -169,8 +169,8 @@ export function useWebRTC(
           }
 
           // Use the server URL provided by the edge function
-          if (data.webrtc_server_url || data.vm_url) {
-            const serverUrl = data.webrtc_server_url || data.vm_url;
+          if (data.webrtc_server_url || data.vm_url || data.websocket_url) {
+            const serverUrl = data.webrtc_server_url || data.vm_url || data.websocket_url;
             console.log(`Using server URL from edge function: ${serverUrl}`);
             console.log(`Using VM with per-session isolation for interview ${sessionId}`);
             

@@ -121,8 +121,8 @@ const InterviewRoomHybrid = () => {
 
       // Set the configuration for WebRTC
       setInterviewConfig({
-        serverUrl: data.vm_url || data.websocket_url,
-        openAIConfig: data.openai_config
+        serverUrl: data.webrtc_server_url || data.vm_url || data.websocket_url,
+        openAIConfig: data.openai_api_config || data.openai_config
       });
 
       // Update session status to in_progress
