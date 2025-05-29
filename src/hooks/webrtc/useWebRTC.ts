@@ -169,12 +169,13 @@ export function useWebRTC(
           }
 
           // Use the server URL provided by the edge function
-          if (data.webrtc_server_url) {
-            console.log(`Using server URL from edge function: ${data.webrtc_server_url}`);
+          if (data.webrtc_server_url || data.vm_url) {
+            const serverUrl = data.webrtc_server_url || data.vm_url;
+            console.log(`Using server URL from edge function: ${serverUrl}`);
             console.log(`Using VM with per-session isolation for interview ${sessionId}`);
             
             // Update the SDP proxy connection with the correct server URL
-            sdpProxyConnection.setServerUrl(data.webrtc_server_url);
+            sdpProxyConnection.setServerUrl(serverUrl);
           } else {
             throw new Error('Missing WebRTC server URL from edge function');
           }
@@ -218,7 +219,8 @@ export function useWebRTC(
     useDirectOpenAI,
     supabase,
     clearTranscript,
-    sdpProxyConnection
+    activeConnection,
+    sdpProxyConnection.setServerUrl
   ]);
 
   // Clean up resources

@@ -94,34 +94,25 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
       console.warn('Simulation mode is enabled but URL is missing simulation parameter - it may be added automatically');
     }
 
-    // Add a slight delay to ensure DOM is fully mounted
-    const initTimeout = setTimeout(() => {
-      initialize().catch(err => {
-        console.error('Error initializing WebRTC:', err);
-        let errorMessage = err instanceof Error ? err.message : 'Failed to initialize WebRTC';
-
-        // Provide more helpful error messages based on error content
-        if (errorMessage.includes('Permission denied') || errorMessage.includes('NotAllowedError')) {
-          errorMessage = 'Microphone access was denied. Please allow microphone access and try again.';
-        } else if (errorMessage.includes('NotFoundError') || errorMessage.includes('no devices')) {
-          errorMessage = 'No microphone found. Please connect a microphone and try again.';
-        } else if (errorMessage.includes('WebSocket') || errorMessage.includes('ws://') || errorMessage.includes('wss://')) {
-          errorMessage = `Failed to connect to WebSocket server at ${serverUrl}. Please check that the server is running.`;
-        } else if (simulationMode && !serverUrl?.includes('simulation=true')) {
-          errorMessage = 'Missing simulation parameter in URL. Add ?simulation=true to your server URL.';
-        }
-
-        setError(errorMessage);
-      });
-    }, 500);
 
     return () => {
-      clearTimeout(initTimeout);
       console.log('Component unmounting - cleaning up resources');
       cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
+
+  // Initialize when serverUrl becomes available
+  useEffect(() => {
+    if (serverUrl && status.connectionState === 'disconnected') {
+      console.log('Server URL available, initializing WebRTC');
+      initialize().catch(err => {
+        console.error('Error initializing WebRTC:', err);
+        let errorMessage = err instanceof Error ? err.message : 'Failed to initialize WebRTC';
+        setError(errorMessage);
+      });
+    }
+  }, [serverUrl, status.connectionState, initialize]);
 
   // Render connection indicator dots based on state
   const renderConnectionDots = () => {

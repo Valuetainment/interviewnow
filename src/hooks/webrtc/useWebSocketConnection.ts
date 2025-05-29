@@ -367,7 +367,8 @@ export function useWebSocketConnection(
     return () => {
       disconnect();
     };
-  }, [disconnect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     wsRef,

@@ -255,6 +255,7 @@ export function useSDPProxy(
       // Check if we have a valid server URL
       if (!serverUrlRef.current && !config.simulationMode) {
         console.error('Server URL not provided. Cannot initialize without a valid WebRTC server URL.');
+        isInitializingRef.current = false;
         return false;
       }
       
