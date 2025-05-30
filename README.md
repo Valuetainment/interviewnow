@@ -25,7 +25,8 @@ A multi-tenant SaaS platform for end-to-end AI-driven hiring processes built on 
 9. **[✅ Checklists](memory-bank/checklist.md)** - Implementation status tracking
 
 **⚠️ Critical Updates**: 
-- WebRTC SDP proxy has been fixed and uses OpenAI Realtime API
+- WebRTC architecture identified: Fly.io needs to use HTTP-based SDP exchange with OpenAI
+- Implementation fix planned: See [WebRTC Fix Action Plan](WEBRTC_FIX_ACTION_PLAN.md)
 - JWT custom_access_token_hook is configured for tenant isolation
 - VM isolation is per-session (not per-tenant) for security
 - Sign out and back in after JWT configuration changes
@@ -174,12 +175,14 @@ See [memory-bank/checklist.md](memory-bank/checklist.md) for detailed implementa
 - Per-session VM isolation for security
 
 ### Recently Fixed 🔧
-- WebRTC SDP proxy now using OpenAI Realtime API
+- Identified correct OpenAI WebRTC implementation (HTTP-based SDP exchange)
+- Fixed component re-rendering issues causing WebSocket disconnections
 - JWT claims properly configured for tenant isolation
 - VM isolation changed from per-tenant to per-session
 - Interview sessions table includes company_id with RLS policies
 
 ### In Progress 🚧
+- Implementing proper OpenAI WebRTC SDP exchange in Fly.io proxy
 - Production deployment of WebRTC functionality
 - Assessment engine implementation
 - End-to-end integration testing

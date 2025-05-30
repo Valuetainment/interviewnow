@@ -11,6 +11,11 @@ export interface SDPProxyConfig {
   simulationMode?: boolean;
   supabaseClient?: SupabaseClient;
   disabled?: boolean;
+  openAISettings?: {
+    voice?: string;
+    model?: string;
+    instructions?: string;
+  };
 }
 
 export interface SDPProxyHandlers {
@@ -37,6 +42,9 @@ export function useSDPProxy(
   // Store the server URL in a ref so we can update it
   const serverUrlRef = useRef<string>(config.serverUrl);
   const isInitializingRef = useRef<boolean>(false);
+  const ephemeralKeyRef = useRef<string | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
+  const dataChannelRef = useRef<RTCDataChannel | null>(null);
   
   // Use provided Supabase client or default
   const supabase = config.supabaseClient || defaultSupabaseClient;
@@ -107,12 +115,54 @@ export function useSDPProxy(
     }
   );
 
+  // Generate ephemeral key from Fly.io proxy
+  const generateEphemeralKey = useCallback(async () => {
+    if (!serverUrlRef.current || !sessionIdRef.current) {
+      throw new Error('Server URL and session ID are required');
+    }
+    
+    try {
+      // Extract base URL from WebSocket URL
+      const baseUrl = serverUrlRef.current
+        .replace('wss://', 'https://')
+        .replace('ws://', 'http://')
+        .replace(/\/ws.*$/, ''); // Remove WebSocket path
+      
+      const response = await fetch(`${baseUrl}/api/generate-ephemeral-key`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          sessionId: sessionIdRef.current,
+          voice: config.openAISettings?.voice || 'alloy',
+          model: config.openAISettings?.model || 'gpt-4o-realtime-preview-2024-12-17'
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to generate ephemeral key');
+      }
+      
+      const data = await response.json();
+      ephemeralKeyRef.current = data.client_secret.value;
+      
+      console.log('Ephemeral key generated successfully');
+      return data.client_secret;
+    } catch (error) {
+      console.error('Error generating ephemeral key:', error);
+      throw error;
+    }
+  }, [config.openAISettings]);
+
   // Handle WebSocket messages
   const handleWebSocketMessage = useCallback((message: any) => {
     try {
       switch (message.type) {
         case 'session':
           console.log('Received session message with ID:', message.sessionId);
+          sessionIdRef.current = message.sessionId;
 
           // For simulation mode, we can just mark as connected
           if (config.simulationMode) {
@@ -131,9 +181,11 @@ export function useSDPProxy(
               }
             }, 500);
           } else {
-            // Production mode - session message received, initialization should continue
-            console.log('Production mode - session established, WebRTC initialization should proceed');
-            // The initialization flow in the initialize function will handle the rest
+            // Production mode - session message received, generate ephemeral key
+            console.log('Production mode - session established, generating ephemeral key');
+            generateEphemeralKey().catch(error => {
+              console.error('Failed to generate ephemeral key:', error);
+            });
           }
           break;
 
@@ -196,7 +248,13 @@ export function useSDPProxy(
           // Handle DataChannel message (for hybrid architecture)
           if (message.dataChannel) {
             console.log('Received dataChannel message:', message.dataChannel);
+            handleDataChannelMessage(message.dataChannel);
           }
+          break;
+        
+        case 'ice_status':
+          // OpenAI handles ICE automatically
+          console.log('ICE status:', message.message);
           break;
 
         case 'error':
@@ -206,7 +264,52 @@ export function useSDPProxy(
     } catch (error) {
       console.error('Error handling WebSocket message:', error);
     }
-  }, [config.simulationMode, onConnectionStateChange, pcRef, handleAnswer, addIceCandidate, saveTranscript, sendWebSocketMessage]);
+  }, [config.simulationMode, onConnectionStateChange, pcRef, handleAnswer, addIceCandidate, saveTranscript, sendWebSocketMessage, generateEphemeralKey]);
+
+  // Handle data channel messages from OpenAI
+  const handleDataChannelMessage = useCallback((event: MessageEvent) => {
+    try {
+      const data = JSON.parse(event.data);
+      console.log('OpenAI data channel event:', data.type);
+      
+      switch (data.type) {
+        case 'response.audio_transcript.done':
+          // Final transcript
+          if (data.transcript) {
+            saveTranscript(data.transcript, 'ai');
+          }
+          break;
+          
+        case 'response.audio_transcript.delta':
+          // Incremental transcript
+          if (data.delta) {
+            saveTranscript(data.delta, 'ai');
+          }
+          break;
+          
+        case 'conversation.item.input_audio_transcription.completed':
+          // User's speech transcript
+          if (data.transcript) {
+            saveTranscript(data.transcript, 'candidate');
+          }
+          break;
+          
+        case 'response.done':
+          // Response completed
+          console.log('OpenAI response completed');
+          break;
+          
+        case 'error':
+          console.error('OpenAI error:', data.error);
+          break;
+          
+        default:
+          console.log('Unhandled OpenAI event:', data.type);
+      }
+    } catch (error) {
+      console.error('Error parsing data channel message:', error);
+    }
+  }, [saveTranscript]);
 
   // Create and send SDP offer to server
   const createAndSendOffer = useCallback(async () => {
@@ -216,6 +319,43 @@ export function useSDPProxy(
     }
 
     try {
+      // Create data channel for OpenAI events (must be done before creating offer)
+      if (!dataChannelRef.current) {
+        const dc = pcRef.current.createDataChannel('oai-events', {
+          ordered: true
+        });
+        
+        dc.onopen = () => {
+          console.log('OpenAI data channel opened');
+          
+          // Send initial configuration
+          if (config.openAISettings?.instructions) {
+            dc.send(JSON.stringify({
+              type: 'session.update',
+              session: {
+                instructions: config.openAISettings.instructions,
+                voice: config.openAISettings.voice || 'alloy',
+                input_audio_transcription: {
+                  model: 'whisper-1'
+                },
+                turn_detection: {
+                  type: 'server_vad',
+                  threshold: 0.5,
+                  prefix_padding_ms: 300,
+                  silence_duration_ms: 800
+                }
+              }
+            }));
+          }
+        };
+        
+        dc.onmessage = handleDataChannelMessage;
+        dc.onerror = (error) => console.error('Data channel error:', error);
+        dc.onclose = () => console.log('Data channel closed');
+        
+        dataChannelRef.current = dc;
+      }
+      
       // Create offer
       const offer = await createOffer();
       
@@ -234,7 +374,7 @@ export function useSDPProxy(
       console.error('Error creating and sending offer:', error);
       return false;
     }
-  }, [pcRef, wsRef, createOffer, sendWebSocketMessage]);
+  }, [pcRef, wsRef, createOffer, sendWebSocketMessage, config.openAISettings, handleDataChannelMessage]);
 
   // Initialize WebRTC session
   const initializeSession = useCallback(async (): Promise<boolean> => {
@@ -357,8 +497,18 @@ export function useSDPProxy(
   // Clean up resources
   const cleanup = useCallback(() => {
     if (!config.disabled && !isInitializingRef.current) {
+      // Clean up data channel
+      if (dataChannelRef.current) {
+        dataChannelRef.current.close();
+        dataChannelRef.current = null;
+      }
+      
       cleanupWebRTC();
       disconnectWebSocket();
+      
+      // Clear refs
+      ephemeralKeyRef.current = null;
+      sessionIdRef.current = null;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

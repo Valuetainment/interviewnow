@@ -81,6 +81,6 @@ kill_timeout = '5s'
   port = 9091
   path = '/metrics'
   
-[mounts]
-  destination = "/data"
-  source = "interview_app_data"
+# [mounts]
+#   destination = "/data"
+#   source = "interview_app_data"

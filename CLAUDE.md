@@ -209,3 +209,41 @@ The hybrid WebRTC architecture is correct:
 3. Browser ← WebRTC → OpenAI (for audio, after SDP exchange)
 
 We're stuck at step 2 - the WebSocket keeps disconnecting before SDP exchange.
+
+## Project Status Update (May 30, 2025)
+
+### WebRTC Architecture Discovery 🔍
+
+#### Major Discovery:
+- **OpenAI uses HTTP for SDP exchange**, not WebSocket!
+- Current Fly.io implementation incorrectly tries to use OpenAI's WebSocket API
+- The architecture diagram is correct, but the implementation is wrong
+
+#### What Needs to Change:
+1. **Fly.io SDP Proxy**:
+   - Add ephemeral key generation endpoint (`POST /api/generate-ephemeral-key`)
+   - Fix SDP exchange to use HTTP POST with `Content-Type: application/sdp`
+   - Remove WebSocket connection to OpenAI (keep only Browser ↔ Fly.io WebSocket)
+
+2. **Frontend Hooks**:
+   - Add ephemeral key generation before SDP offer
+   - Ensure data channel is named 'oai-events'
+   - Handle OpenAI-specific event types
+
+#### Key Implementation Details:
+- Ephemeral keys expire in 60 seconds
+- SDP must be sent as plain text, not JSON
+- No ICE candidate exchange needed (OpenAI handles it)
+- Audio still flows directly Browser ↔ OpenAI (maintaining low latency)
+
+#### Documentation Created:
+- [WebRTC Fix Action Plan](WEBRTC_FIX_ACTION_PLAN.md) - Comprehensive implementation plan
+- [WebRTC Implementation Guide](WEBRTC_IMPLEMENTATION_GUIDE.md) - Ready-to-use code snippets
+- [WebRTC Fix Summary](WEBRTC_FIX_SUMMARY.md) - Quick reference guide
+
+#### Next Steps:
+1. Implement ephemeral key generation in Fly.io
+2. Fix SDP exchange to use HTTP instead of WebSocket
+3. Update frontend hooks to match OpenAI's requirements
+4. Test end-to-end connection with real OpenAI API
+5. Deploy to production

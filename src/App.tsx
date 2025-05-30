@@ -33,6 +33,7 @@ import InterviewTestProduction from "./pages/InterviewTestProduction";
 import DiagnosticTest from "./pages/DiagnosticTest";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from './hooks/useAuth';
+import { WebRTCTestPage } from './pages/WebRTCTestPage';
 
 // Import layout components
 import MainLayout from './components/layouts/MainLayout';
@@ -107,6 +108,9 @@ const App = () => (
             
             {/* Diagnostic route */}
             <Route path="/diagnostic" element={<DiagnosticTest />} />
+            
+            {/* WebRTC implementation test page */}
+            <Route path="/test-webrtc" element={<WebRTCTestPage />} />
 
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
