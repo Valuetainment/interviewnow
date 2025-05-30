@@ -164,6 +164,15 @@ export function useSDPProxy(
           console.log('Received session message with ID:', message.sessionId);
           sessionIdRef.current = message.sessionId;
 
+          // Now that we have the session ID, send init message
+          sendWebSocketMessage({
+            type: 'init',
+            sessionId: sessionIdRef.current,
+            simulationMode: config.simulationMode,
+            client: 'webrtc-hooks',
+            timestamp: new Date().toISOString()
+          });
+
           // For simulation mode, we can just mark as connected
           if (config.simulationMode) {
             console.log('Simulation mode - marking connection as established');
@@ -181,11 +190,16 @@ export function useSDPProxy(
               }
             }, 500);
           } else {
-            // Production mode - session message received, generate ephemeral key
+            // Production mode - session message received, generate ephemeral key then create offer
             console.log('Production mode - session established, generating ephemeral key');
-            generateEphemeralKey().catch(error => {
-              console.error('Failed to generate ephemeral key:', error);
-            });
+            generateEphemeralKey()
+              .then(() => {
+                console.log('Ephemeral key generated, creating SDP offer');
+                return createAndSendOffer();
+              })
+              .catch(error => {
+                console.error('Failed to generate ephemeral key or create offer:', error);
+              });
           }
           break;
 
@@ -264,7 +278,7 @@ export function useSDPProxy(
     } catch (error) {
       console.error('Error handling WebSocket message:', error);
     }
-  }, [config.simulationMode, onConnectionStateChange, pcRef, handleAnswer, addIceCandidate, saveTranscript, sendWebSocketMessage, generateEphemeralKey]);
+  }, [config.simulationMode, onConnectionStateChange, pcRef, handleAnswer, addIceCandidate, saveTranscript, sendWebSocketMessage, generateEphemeralKey, createAndSendOffer]);
 
   // Handle data channel messages from OpenAI
   const handleDataChannelMessage = useCallback((event: MessageEvent) => {
@@ -404,21 +418,9 @@ export function useSDPProxy(
         const simulationServerUrl = serverUrlRef.current || config.serverUrl;
         await connectWebSocket(simulationServerUrl);
         
-        // In simulation mode, send init message and bypass WebRTC
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-          sendWebSocketMessage({
-            type: 'init',
-            sessionId,
-            simulationMode: true,
-            client: 'webrtc-hooks',
-            timestamp: new Date().toISOString()
-          });
-          
-          // Skip WebRTC initialization in simulation mode
-          return true;
-        }
-        
-        return false;
+        // In simulation mode, wait for session message to send init
+        // The init message will be sent in handleWebSocketMessage when 'session' is received
+        return true;
       }
       
       // Normal mode - initialize both WebSocket and WebRTC
@@ -435,19 +437,7 @@ export function useSDPProxy(
         throw new Error('Failed to initialize WebRTC connection');
       }
       
-      // Send initialization message
-      sendWebSocketMessage({
-        type: 'init',
-        sessionId,
-        simulationMode: false
-      });
-      
-      // Create and send SDP offer
-      const offerSent = await createAndSendOffer();
-      
-      if (!offerSent) {
-        throw new Error('Failed to send SDP offer');
-      }
+      // Init message and SDP offer will be sent in handleWebSocketMessage when 'session' is received
       
       isInitializingRef.current = false;
       return true;
@@ -462,12 +452,10 @@ export function useSDPProxy(
     config.disabled,
     config.simulationMode, 
     config.serverUrl, 
-    sessionId, 
     connectWebSocket, 
     wsRef, 
     sendWebSocketMessage,
-    initializeWebRTC,
-    createAndSendOffer
+    initializeWebRTC
   ]);
 
   // Set up ICE candidate event handler for sending candidates to server
