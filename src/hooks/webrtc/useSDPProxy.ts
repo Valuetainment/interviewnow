@@ -209,25 +209,10 @@ export function useSDPProxy(
           console.log('Received session message with ID:', message.sessionId);
           sessionIdRef.current = message.sessionId;
 
-          // Now that we have the session ID, send init message
-          sendWebSocketMessage({
-            type: 'init',
-            sessionId: sessionIdRef.current,
-            simulationMode: config.simulationMode,
-            client: 'webrtc-hooks',
-            timestamp: new Date().toISOString()
-          });
-
           // For simulation mode, we can just mark as connected
           if (config.simulationMode) {
             console.log('Simulation mode - marking connection as established');
-            // Send a ping right away to keep connection alive
-            sendWebSocketMessage({
-              type: 'ping',
-              timestamp: new Date().toISOString(),
-              keepAlive: true
-            });
-
+            
             // Then mark as connected
             setTimeout(() => {
               if (onConnectionStateChange) {
@@ -235,8 +220,9 @@ export function useSDPProxy(
               }
             }, 500);
           } else {
-            // Production mode - session message received, will trigger offer creation
-            console.log('Production mode - session established');
+            // Production mode - session message received
+            // The useEffect will handle ephemeral key generation and offer creation
+            console.log('Production mode - session established, ready for WebRTC setup');
           }
           break;
 
