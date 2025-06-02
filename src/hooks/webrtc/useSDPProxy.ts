@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { useWebSocketConnection } from './useWebSocketConnection';
 import { useWebRTCConnection } from './useWebRTCConnection';
 import { ConnectionState } from './useConnectionState';
@@ -190,16 +190,8 @@ export function useSDPProxy(
               }
             }, 500);
           } else {
-            // Production mode - session message received, generate ephemeral key then create offer
-            console.log('Production mode - session established, generating ephemeral key');
-            generateEphemeralKey()
-              .then(() => {
-                console.log('Ephemeral key generated, creating SDP offer');
-                return createAndSendOffer();
-              })
-              .catch(error => {
-                console.error('Failed to generate ephemeral key or create offer:', error);
-              });
+            // Production mode - session message received, will trigger offer creation
+            console.log('Production mode - session established');
           }
           break;
 
@@ -278,7 +270,7 @@ export function useSDPProxy(
     } catch (error) {
       console.error('Error handling WebSocket message:', error);
     }
-  }, [config.simulationMode, onConnectionStateChange, pcRef, handleAnswer, addIceCandidate, saveTranscript, sendWebSocketMessage, generateEphemeralKey, createAndSendOffer]);
+  }, [config.simulationMode, onConnectionStateChange, pcRef, handleAnswer, addIceCandidate, saveTranscript, sendWebSocketMessage, generateEphemeralKey, handleDataChannelMessage]);
 
   // Handle data channel messages from OpenAI
   const handleDataChannelMessage = useCallback((event: MessageEvent) => {
@@ -458,6 +450,24 @@ export function useSDPProxy(
     initializeWebRTC
   ]);
 
+  // Handle ephemeral key generation and offer creation when session is established
+  useEffect(() => {
+    if (!config.disabled && !config.simulationMode && sessionIdRef.current && isWsConnected && pcRef.current) {
+      // Only proceed if we don't have an ephemeral key yet
+      if (!ephemeralKeyRef.current) {
+        console.log('Session established, generating ephemeral key and creating offer');
+        generateEphemeralKey()
+          .then(() => {
+            console.log('Ephemeral key generated, creating SDP offer');
+            return createAndSendOffer();
+          })
+          .catch(error => {
+            console.error('Failed to generate ephemeral key or create offer:', error);
+          });
+      }
+    }
+  }, [config.disabled, config.simulationMode, isWsConnected, generateEphemeralKey, createAndSendOffer]);
+
   // Set up ICE candidate event handler for sending candidates to server
   useCallback(() => {
     if (pcRef.current) {
@@ -471,7 +481,7 @@ export function useSDPProxy(
         }
       };
     }
-  }, [pcRef, wsRef, sendWebSocketMessage]);
+  }, []);
 
   // Get combined connection state
   const connectionState: ConnectionState = 
