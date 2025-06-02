@@ -115,6 +115,51 @@ export function useSDPProxy(
     }
   );
 
+  // Handle data channel messages from OpenAI
+  const handleDataChannelMessage = useCallback((event: MessageEvent) => {
+    try {
+      const data = JSON.parse(event.data);
+      console.log('OpenAI data channel event:', data.type);
+      
+      switch (data.type) {
+        case 'response.audio_transcript.done':
+          // Final transcript
+          if (data.transcript) {
+            saveTranscript(data.transcript, 'ai');
+          }
+          break;
+          
+        case 'response.audio_transcript.delta':
+          // Incremental transcript
+          if (data.delta) {
+            saveTranscript(data.delta, 'ai');
+          }
+          break;
+          
+        case 'conversation.item.input_audio_transcription.completed':
+          // User's speech transcript
+          if (data.transcript) {
+            saveTranscript(data.transcript, 'candidate');
+          }
+          break;
+          
+        case 'response.done':
+          // Response completed
+          console.log('OpenAI response completed');
+          break;
+          
+        case 'error':
+          console.error('OpenAI error:', data.error);
+          break;
+          
+        default:
+          console.log('Unhandled OpenAI event:', data.type);
+      }
+    } catch (error) {
+      console.error('Error parsing data channel message:', error);
+    }
+  }, [saveTranscript]);
+
   // Generate ephemeral key from Fly.io proxy
   const generateEphemeralKey = useCallback(async () => {
     if (!serverUrlRef.current || !sessionIdRef.current) {
@@ -270,52 +315,7 @@ export function useSDPProxy(
     } catch (error) {
       console.error('Error handling WebSocket message:', error);
     }
-  }, [config.simulationMode, onConnectionStateChange, pcRef, handleAnswer, addIceCandidate, saveTranscript, sendWebSocketMessage, generateEphemeralKey, handleDataChannelMessage]);
-
-  // Handle data channel messages from OpenAI
-  const handleDataChannelMessage = useCallback((event: MessageEvent) => {
-    try {
-      const data = JSON.parse(event.data);
-      console.log('OpenAI data channel event:', data.type);
-      
-      switch (data.type) {
-        case 'response.audio_transcript.done':
-          // Final transcript
-          if (data.transcript) {
-            saveTranscript(data.transcript, 'ai');
-          }
-          break;
-          
-        case 'response.audio_transcript.delta':
-          // Incremental transcript
-          if (data.delta) {
-            saveTranscript(data.delta, 'ai');
-          }
-          break;
-          
-        case 'conversation.item.input_audio_transcription.completed':
-          // User's speech transcript
-          if (data.transcript) {
-            saveTranscript(data.transcript, 'candidate');
-          }
-          break;
-          
-        case 'response.done':
-          // Response completed
-          console.log('OpenAI response completed');
-          break;
-          
-        case 'error':
-          console.error('OpenAI error:', data.error);
-          break;
-          
-        default:
-          console.log('Unhandled OpenAI event:', data.type);
-      }
-    } catch (error) {
-      console.error('Error parsing data channel message:', error);
-    }
-  }, [saveTranscript]);
+  }, [config.simulationMode, onConnectionStateChange, pcRef, handleAnswer, addIceCandidate, saveTranscript, sendWebSocketMessage, handleDataChannelMessage]);
 
   // Create and send SDP offer to server
   const createAndSendOffer = useCallback(async () => {
