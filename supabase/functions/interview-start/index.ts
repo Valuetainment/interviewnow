@@ -323,7 +323,8 @@ serve(async (req) => {
       );
     }
 
-    // Generate a WebRTC session ID with tenant context
+    // Generate a WebRTC session ID with tenant context for database storage
+    // Note: Fly.io server will generate its own sessionId for WebSocket management
     const webrtcSessionId = `${tenant_id}:${interview_session_id}:${crypto.randomUUID()}`;
 
     // Update the interview session with WebRTC information
