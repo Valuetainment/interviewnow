@@ -247,3 +247,73 @@ We're stuck at step 2 - the WebSocket keeps disconnecting before SDP exchange.
 3. Update frontend hooks to match OpenAI's requirements
 4. Test end-to-end connection with real OpenAI API
 5. Deploy to production
+
+## Project Status Update (June 2, 2025)
+
+### WebRTC Integration Critical Debugging Phase 🔴
+
+#### Current Status:
+**We've successfully implemented the HTTP-based SDP exchange architecture** but are stuck at a fundamental issue - **no network requests reach Fly.io despite WebSocket showing as connected**.
+
+#### What's Working:
+- ✅ **Frontend loads without crashes** - Fixed all circular dependency issues
+- ✅ **Edge function works** - Returns WebRTC server URLs correctly
+- ✅ **WebSocket connection established** - Status shows `WS_CONNECTED`
+- ✅ **Microphone permission granted** - Audio capture permissions working
+- ✅ **Fly.io server deployed** - HTTP-based ephemeral key endpoint implemented
+
+#### Critical Issue: The "Ghost Connection" Problem 🚨
+**Symptoms:**
+- Frontend shows WebSocket as connected (`WS_CONNECTED`)
+- **Zero activity in Fly.io logs** - No HTTP requests, no WebSocket messages
+- No ephemeral key generation attempts
+- No SDP exchange attempts
+- WebRTC never progresses beyond initial connection
+
+#### Root Cause Analysis:
+**Problem**: The ephemeral key generation logic isn't triggering even though all conditions appear met.
+
+**Investigation findings:**
+1. **Session message handler implemented** - Logic moved from useEffect to WebSocket message handler
+2. **Dependencies fixed** - No more circular dependency loops
+3. **WebSocket connects** - But may not be receiving/processing session messages properly
+4. **Refs vs State issue** - useEffect dependencies don't trigger on ref changes
+
+#### Current Architecture Status:
+```
+✅ TestInterview → Creates session → Redirects to /interview/:id
+✅ InterviewRoomHybrid → Calls interview-start edge function → Gets WebSocket URL  
+✅ WebRTCManager → Initializes → Shows WS_CONNECTED
+❌ Ephemeral key generation → NEVER TRIGGERS
+❌ SDP exchange → NEVER STARTS
+❌ OpenAI connection → NEVER ESTABLISHED
+```
+
+#### Debugging Steps Taken:
+1. **Fixed circular dependencies** in useSDPProxy hook
+2. **Moved ephemeral key logic** from useEffect to session message handler
+3. **Added extensive logging** to track conditions
+4. **Fixed function dependencies** in useCallback hooks
+5. **Deployed multiple debugging iterations**
+
+#### Current Hypothesis:
+The WebSocket connection is established but **session messages aren't being received or processed correctly**. This could be due to:
+
+1. **Message protocol mismatch** between frontend and Fly.io server
+2. **Session ID generation/matching issues** 
+3. **WebSocket message routing problems**
+4. **Timing issues** with session message handling
+
+#### Next Debugging Steps:
+1. **Add visible debugging** to see what messages are actually sent/received
+2. **Check session ID consistency** between frontend and Fly.io
+3. **Verify WebSocket message format** matches server expectations
+4. **Test with simulation mode** to isolate WebSocket vs HTTP issues
+
+#### Architecture Remains Sound:
+The hybrid WebRTC approach is correct:
+- Browser ↔ Fly.io (WebSocket for SDP signaling)  
+- Fly.io ↔ OpenAI (HTTP for SDP exchange)
+- Browser ↔ OpenAI (Direct WebRTC for audio)
+
+**We're 90% there** - all major architectural issues resolved, just need to debug the message flow.
