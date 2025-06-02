@@ -176,6 +176,7 @@ export function useWebRTC(
           if (data.architecture === 'hybrid' && data.webrtc_server_url) {
             console.log(`Using hybrid architecture with ephemeral tokens`);
             console.log(`Server URL for tokens: ${data.webrtc_server_url}`);
+            console.log(`[DEPLOYMENT VERIFICATION] New code deployed at ${new Date().toISOString()}`);
             
             // Switch to hybrid mode using OpenAI connection with ephemeral tokens
             setHybridServerUrl(data.webrtc_server_url);
