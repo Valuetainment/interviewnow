@@ -119,6 +119,9 @@ const InterviewRoomHybrid = () => {
 
       console.log('Interview configuration received:', data);
 
+      // Show visible debug info
+      toast.success(`WebRTC URL: ${data.webrtc_server_url || 'MISSING'}`);
+
       // Set the configuration for WebRTC
       setInterviewConfig({
         serverUrl: data.webrtc_server_url || data.vm_url || data.websocket_url,
@@ -134,8 +137,9 @@ const InterviewRoomHybrid = () => {
       toast.success('Interview started successfully');
     } catch (err) {
       console.error('Error starting interview:', err);
-      setError(err instanceof Error ? err.message : 'Failed to start interview');
-      toast.error('Failed to start interview');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to start interview';
+      setError(errorMessage);
+      toast.error(`Interview start failed: ${errorMessage}`);
     } finally {
       setIsStarting(false);
     }
