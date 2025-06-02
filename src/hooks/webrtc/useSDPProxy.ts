@@ -146,7 +146,7 @@ export function useSDPProxy(
       }
       
       const data = await response.json();
-      ephemeralKeyRef.current = data.client_secret.value;
+      ephemeralKeyRef.current = data.client_secret;
       
       console.log('Ephemeral key generated successfully');
       return data.client_secret;

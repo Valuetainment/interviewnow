@@ -180,7 +180,7 @@ wss.on('connection', (ws, req) => {
                 {
                   method: 'POST',
                   headers: {
-                    'Authorization': `Bearer ${session.ephemeralKey.value}`,
+                    'Authorization': `Bearer ${session.ephemeralKey}`,
                     'Content-Type': 'application/sdp'
                   },
                   body: offerSdp // Send only the SDP string, not the full object
