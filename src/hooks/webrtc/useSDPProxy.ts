@@ -173,6 +173,8 @@ export function useSDPProxy(
         .replace('ws://', 'http://')
         .replace(/\/ws.*$/, ''); // Remove WebSocket path
       
+      console.log('Generating ephemeral key for session:', sessionIdRef.current);
+      
       const response = await fetch(`${baseUrl}/api/generate-ephemeral-key`, {
         method: 'POST',
         headers: {
@@ -442,17 +444,60 @@ export function useSDPProxy(
       // Only proceed if we don't have an ephemeral key yet
       if (!ephemeralKeyRef.current) {
         console.log('Session established, generating ephemeral key and creating offer');
-        generateEphemeralKey()
-          .then(() => {
-            console.log('Ephemeral key generated, creating SDP offer');
-            return createAndSendOffer();
-          })
-          .catch(error => {
+        
+        // Generate ephemeral key inline to avoid dependency issues
+        const generateKey = async () => {
+          try {
+            if (!serverUrlRef.current || !sessionIdRef.current) {
+              throw new Error('Server URL and session ID are required');
+            }
+            
+            const baseUrl = serverUrlRef.current
+              .replace('wss://', 'https://')
+              .replace('ws://', 'http://')
+              .replace(/\/ws.*$/, '');
+            
+            console.log('Generating ephemeral key for session:', sessionIdRef.current);
+            
+            const response = await fetch(`${baseUrl}/api/generate-ephemeral-key`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sessionId: sessionIdRef.current,
+                voice: config.openAISettings?.voice || 'alloy',
+                model: config.openAISettings?.model || 'gpt-4o-realtime-preview-2024-12-17'
+              })
+            });
+            
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.message || 'Failed to generate ephemeral key');
+            }
+            
+            const data = await response.json();
+            ephemeralKeyRef.current = data.client_secret;
+            console.log('Ephemeral key generated successfully');
+            
+            // Now create and send offer
+            if (pcRef.current && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+              const offer = await createOffer();
+              if (offer) {
+                sendWebSocketMessage({
+                  type: 'sdp_offer',
+                  offer: offer
+                });
+                console.log('SDP offer sent to server');
+              }
+            }
+          } catch (error) {
             console.error('Failed to generate ephemeral key or create offer:', error);
-          });
+          }
+        };
+        
+        generateKey();
       }
     }
-  }, [config.disabled, config.simulationMode, isWsConnected, generateEphemeralKey, createAndSendOffer]);
+  }, [config.disabled, config.simulationMode, isWsConnected]);
 
   // Set up ICE candidate event handler for sending candidates to server
   useCallback(() => {

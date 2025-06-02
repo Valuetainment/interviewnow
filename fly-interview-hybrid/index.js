@@ -375,11 +375,13 @@ app.post('/api/generate-ephemeral-key', async (req, res) => {
     const { sessionId, voice = 'alloy', model = 'gpt-4o-realtime-preview-2024-12-17' } = req.body;
     
     console.log(`Generating ephemeral key for session ${sessionId}`);
+    console.log(`Available sessions:`, Array.from(sessions.keys()));
     
     // Verify session exists
     const session = sessions.get(sessionId);
     if (!session) {
-      return res.status(404).json({ error: 'Session not found' });
+      console.error(`Session ${sessionId} not found. Available sessions:`, Array.from(sessions.keys()));
+      return res.status(404).json({ error: `Session ${sessionId} not found` });
     }
     
     // Get OpenAI API key
