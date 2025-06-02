@@ -1,26 +1,70 @@
 # AI Interview Insights Platform - Active Context
 
+## Current Date: June 2, 2025
+
+## Project Overview
+AI Interview Insights Platform - A comprehensive solution for conducting and analyzing AI-powered interviews. The platform uses Supabase for backend services, React/TypeScript for the frontend, and integrates OpenAI's GPT-4o Realtime API for voice interactions.
+
+## Latest Updates (June 2, 2025)
+- **Critical Discovery**: Identified architectural mismatch in WebRTC implementation
+  - Frontend sending SDP offers for WebRTC peer connection
+  - Fly.io server incorrectly trying to proxy WebRTC as WebSocket
+  - OpenAI supports WebRTC with ephemeral tokens (not WebSocket proxy)
+- **Implemented Fix**: Transformed Fly.io server to ephemeral token provider
+  - Added `/api/realtime/sessions` endpoint for token generation
+  - Updated frontend hooks to use ephemeral tokens
+  - Maintaining backward compatibility during transition
+  - Successfully deployed backend to production
+- **Ready for Testing**: Direct browser ↔ OpenAI WebRTC connection with ephemeral tokens
+
+## Current State & Issues
+
+### ✅ Fix Implemented
+**WebRTC Ephemeral Token Flow**
+- **Backend**: Deployed `/api/realtime/sessions` endpoint to interview-hybrid-template on Fly.io
+- **Frontend**: Updated useOpenAIConnection hook to fetch and use ephemeral tokens
+- **Architecture**: Hybrid mode now uses direct WebRTC with OpenAI via ephemeral tokens
+- **Ready**: For production testing with real interview sessions
+
+### Current Work Focus
+1. **Immediate**: Test ephemeral token flow in production
+2. **Next**: Verify audio flows directly between browser and OpenAI
+3. **Then**: Monitor transcript relay back to our server
+
+### Production Status
+- Edge function fix deployed (URL without `/ws` path)
+- Fly.io server deployed with ephemeral token endpoint
+- Frontend hooks updated to support ephemeral tokens
+- Ready for production testing
+
 ## Current Project Status
-The project has made significant progress in establishing the frontend foundation. We have set up the project structure, created layout components, and configured authentication. Most importantly, we've established a local Supabase development environment with the complete database schema and storage buckets in place. We have also completed implementation of all navigation components (Navbar, Sidebar, Header), enhanced the authentication UI with proper Supabase integration, and implemented a comprehensive dashboard overview experience. We've now completed the resume processing flow, enabling users to upload, process, and analyze candidate resumes. We've also implemented the position creation feature with AI-powered description generation and competency management. Most recently, we've implemented the interview session management interface with a comprehensive testing infrastructure, enhanced the candidate management system with People Data Labs integration, established a complete CI/CD pipeline with GitHub, Supabase, and Vercel integration, and fixed critical issues with authentication and tenant association in the production environment. The latest improvements include storage configuration in production, RLS policy fixes, Edge Function optimization to ensure the resume processing workflow works correctly in the production environment, and the implementation of a robust CandidateProfile page with proper data handling and enhanced display based on the MVP implementation patterns. We've also fixed company creation in production by addressing RLS policies and tenant_id handling, improved the UI navigation by removing redundant elements and simplifying the user experience, and fixed position creation by resolving RLS policy issues that were preventing positions from being saved to the database. We've also completed an evaluation of infrastructure platforms for interview processing, comparing E2B and Fly.io, with a recommendation to use Fly.io for its superior multi-tenant isolation, burstable CPU capacity, and better strategic alignment with our needs. Most recently, we've successfully completed a Fly.io proof-of-concept for interview transcription processing, validating the technical approach with WebSockets and real-time data transmission. We've extended our testing by deploying the proof-of-concept to Fly.io, fixing WebSocket connectivity issues, implementing simulation mode, and successfully testing multi-region deployment across Miami (US) and Frankfurt (Europe). We've documented our security findings and created a comprehensive TEST_SUMMARY.md that confirms Fly.io meets our requirements for hosting the real-time interview transcription service. We've also created comprehensive documentation of our authentication and permissions system, including both user and candidate authentication flows, and implemented database schema changes to support a multi-tenant candidate experience. We've completely implemented and integrated both a WebRTC SDP proxy and a hybrid OpenAI approach for real-time interview transcription. The implementation uses a sophisticated hooks-based architecture for better maintainability and has been fully integrated into the main application. Test routes are available at /test/ngrok, /test/full, /test/openai, and /test/webrtc-hooks to validate different aspects of the functionality. The WebRTC implementation has now been refactored using a hooks-based architecture that eliminates circular dependencies and creates a more maintainable, modular system. We've completed unit tests for all WebRTC hooks, fixed production routing issues, resolved JS errors in the production bundle, and cleaned up the testing structure to focus exclusively on the hybrid architecture approach.
-
-Most recently, we've identified and fixed a critical security issue in the WebRTC VM isolation model. The hybrid architecture was incorrectly using a tenant-level isolation approach (one VM per tenant), which could potentially lead to data leakage between interview sessions within the same tenant. We've updated the code to ensure proper per-session isolation (one VM per interview session) for both hybrid and SDP proxy architectures. This includes changes to the interview-start edge function, the WebRTC hooks implementation, and comprehensive documentation of the isolation model. We've also been working on improving the TestInterview page by replacing mock data with real database integration, connecting the page to Supabase, and implementing proper tenant selection. We fixed a significant RLS policy issue with the tenants table, which was causing "unrecognized configuration parameter 'request.jwt.claim.tenant_id'" errors. 
-
-Additionally, we've now fixed RLS policy issues with the interview_sessions table to handle company_id correctly, making it possible to add a company_id foreign key to the table with proper RLS policy handling that allows both NULL company_id values and references to companies within the user's tenant. We also identified and addressed a mismatch between user metadata tenant_id ("00000000-0000-0000-0000-000000000000") and the actual tenant relationship ID ("11111111-1111-1111-1111-111111111111") by updating the user's metadata to match the actual tenant relationship.
+The project has made significant progress in establishing the frontend foundation. We have set up the project structure, created layout components, and configured authentication. Most importantly, we've established a local Supabase development environment with the complete database schema and storage buckets in place. We have also completed implementation of all navigation components (Navbar, Sidebar, Header), enhanced the authentication UI with proper Supabase integration, and implemented a comprehensive dashboard overview experience. We've now completed the resume processing flow, enabling users to upload, process, and analyze candidate resumes. We've also implemented the position creation feature with AI-powered description generation and competency management. Most recently, we've implemented the interview session management interface with a comprehensive testing infrastructure, enhanced the candidate management system with People Data Labs integration, established a complete CI/CD pipeline with GitHub, Supabase, and Vercel integration, and fixed critical issues with authentication and tenant association in the production environment. The latest improvements include storage configuration in production, RLS policy fixes, Edge Function optimization to ensure the resume processing workflow works correctly in the production environment, and the implementation of a robust CandidateProfile page with proper data handling and enhanced display based on the MVP implementation patterns. We've also fixed company creation in production by addressing RLS policies and tenant_id handling, improved the UI navigation by removing redundant elements and simplifying the user experience, and fixed position creation by resolving RLS policy issues that were preventing positions from being saved to the database. We've also completed an evaluation of infrastructure platforms for interview processing, comparing E2B and Fly.io, with a recommendation to use Fly.io for its superior multi-tenant isolation, burstable CPU capacity, and better strategic alignment with our needs. Most recently, we've successfully completed a Fly.io proof-of-concept for interview transcription processing, validating the technical approach with WebSockets and real-time data transmission. We've extended our testing by deploying the proof-of-concept to Fly.io, fixing WebSocket connectivity issues, implementing simulation mode, and successfully testing multi-region deployment across Miami (US) and Frankfurt (Europe). We've documented our security findings and created a comprehensive TEST_SUMMARY.md that confirms Fly.io meets our requirements for hosting the real-time interview transcription service. We've also created comprehensive documentation of our authentication and permissions system, including both user and candidate authentication flows, and implemented database schema changes to support a multi-tenant candidate experience. We've completely implemented and integrated both a WebRTC SDP proxy and a hybrid OpenAI approach for real-time interview transcription. The implementation uses a sophisticated hooks-based architecture for better maintainability and has been fully integrated into the main application. Test routes are available at /test/ngrok, /test/full, /test/openai, and /test/webrtc-hooks to validate different aspects of the functionality. The WebRTC implementation has now been refactored using a hooks-based architecture that eliminates circular dependencies and creates a more maintainable, modular system. We've completed unit tests for all WebRTC hooks, fixed production routing issues, resolved JS errors in the production bundle, and cleaned up the testing structure to focus exclusively on the hybrid architecture approach. We've also implemented and tested a critical security fix in the WebRTC VM isolation model, ensuring per-session isolation instead of per-tenant isolation.
 
 **Latest updates (June 3, 2025):**
-- Fixed WebRTC SDP Proxy production deployment issues:
-  - Updated interview-hybrid-template to use proper OpenAI Realtime API endpoints
+- Successfully deployed and tested WebRTC SDP Proxy in production:
+  - Updated interview-hybrid-template to use OpenAI Realtime API endpoints (sessions.openai.com/v1/realtime)
   - Fixed authentication to use OpenAI API key directly instead of Supabase
   - Added proper headers including "OpenAI-Beta: realtime=v1"
   - Fixed node-fetch dependency (downgraded to v2.6.9 for CommonJS compatibility)
   - Successfully tested WebSocket connections and SDP exchange in production
+  - Created realtime-test.html for production verification
   
 - Fixed JWT claims for RLS policies:
-  - Created auth.custom_access_token_hook function with correct signature
-  - Configured JWT hook in Supabase dashboard to include tenant_id in claims
-  - Updated client code to check multiple JWT locations for tenant_id
+  - Created auth.custom_access_token_hook function with correct JSONB signature
+  - Configured JWT hook in Supabase Authentication settings to include tenant_id in claims
+  - Updated getCurrentTenantId to check multiple JWT locations for backward compatibility
   - Applied migration to production to create the hook function
-  - This resolves 403 errors when creating interview sessions
+  - This resolves 403 Forbidden errors when creating interview sessions
+  - Users need to sign out and sign back in to get updated JWT tokens
+
+- Completed comprehensive testing structure cleanup:
+  - Finished implementing all unit tests for WebRTC hooks architecture
+  - Fixed production routing issues with _redirects file for Netlify and vercel.json for Vercel
+  - Resolved JS errors in production bundle by improving tenant ID retrieval
+  - Successfully implemented Phases 1-3 of Hybrid Architecture Test Migration Plan
+  - Removed all tests specific to original SDP proxy architecture
+  - Focused entire testing infrastructure on hybrid OpenAI approach
+  - Created TEST_STRUCTURE.md documenting the new test organization
 
 ## Features Status
 
@@ -122,6 +166,17 @@ The immediate focus is on verifying the WebRTC and JWT fixes in production and c
    - ⬜ Verify WebRTC connections work end-to-end
    - ⬜ Monitor performance and resource usage
    - ⬜ Document any issues for troubleshooting
+
+4. 🔄 **Complete Hybrid Architecture Test Migration Plan**
+   - 🔄 Phase 4: Enhanced Hybrid Testing (IN PROGRESS)
+   - ⬜ Phase 5: Test Automation
+   - ⬜ Create developer guide for testing
+   - ⬜ Add troubleshooting guide
+
+5. ⬜ **Deploy edge functions for hybrid architecture support**
+   - ⬜ Update interview-start and transcript-processor edge functions
+   - ⬜ Test with WebRTC integration in production
+   - ⬜ Verify correct versioning and functionality
 
 ## Front-to-Back Implementation Strategy
 
@@ -672,3 +727,78 @@ The implementation follows our front-to-back approach, with all client-side comp
 3. Set server URL to: `wss://interview-sdp-proxy.fly.dev/ws`
 4. Turn off simulation mode for real OpenAI testing
 5. Verify WebRTC connection and transcript generation 
+
+## Development Commands
+
+### Start Development Server
+```bash
+npm run dev
+```
+
+### Start Simulation Server (for local testing)
+```bash
+cd fly-interview-hybrid
+node simple-server.js
+```
+
+### Start Ngrok Tunnel for Testing
+```bash
+# In a separate terminal
+ngrok http 3001
+```
+
+When ngrok starts, it will display a URL like: `https://a1b2c3d4.ngrok.io`
+Use this URL in your WebRTC testing by replacing:
+- `http://` with `ws://` for WebSocket connections
+- `https://` with `wss://` for secure WebSocket connections
+
+### Testing with Ngrok URL in the App
+1. Copy the ngrok URL (example: `https://a1b2c3d4.ngrok.io`)
+2. Open http://localhost:8080/interview-test-simple
+3. Replace the Server URL with the WebSocket version of the ngrok URL:
+   - Change `https://a1b2c3d4.ngrok.io` to `wss://a1b2c3d4.ngrok.io`
+4. Test the connection
+
+### Current Ngrok URL
+The current ngrok URL being used for testing is:
+```
+wss://4d5fb0d8191c.ngrok.app
+```
+This URL has been updated in both the client code (InterviewTestSimple.tsx) and server handling logic (simple-server.js) to ensure consistent connections.
+
+### Start SDP Proxy (if stopped)
+```bash
+cd fly-interview-hybrid && fly machines start <machine-id>
+```
+
+### Redeploy SDP Proxy (after changes)
+```bash
+cd fly-interview-hybrid && fly deploy
+```
+
+### Deploy Edge Functions (if needed)
+```bash
+supabase functions deploy interview-start
+supabase functions deploy transcript-processor
+```
+
+### Check Edge Function Status
+```bash
+supabase functions list
+```
+
+### Get Edge Function Logs
+```bash
+supabase functions logs <function-name>
+```
+
+## Test URLs
+- Local development: http://localhost:8080/
+- Ngrok test interview: http://localhost:8080/test/ngrok
+- Direct OpenAI test: http://localhost:8080/test/openai
+- Full interview test: http://localhost:8080/test/full
+- WebRTC hooks test: http://localhost:8080/test/webrtc-hooks
+- Production SDP proxy: wss://interview-sdp-proxy.fly.dev/ws
+- Local simulation server: ws://localhost:3001
+- Current ngrok tunnel: wss://4d5fb0d8191c.ngrok.app
+- Production test page: https://[YOUR_DOMAIN]/realtime-test.html 

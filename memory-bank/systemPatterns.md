@@ -796,70 +796,42 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 ## WebRTC Implementation Patterns
 
-### Original SDP Proxy Approach
-The initial WebRTC implementation used a traditional SDP proxy approach:
+### WebRTC Architecture (Corrected Implementation)
+
+The platform uses OpenAI's WebRTC support for ultra-low latency voice interactions:
+
+#### Ephemeral Token Flow
+1. **Token Request**: Browser requests ephemeral token from our server
+2. **Token Generation**: Server uses API key to get token from OpenAI REST API
+3. **Direct Connection**: Browser establishes WebRTC peer connection with OpenAI
+4. **Audio Stream**: Audio flows directly between browser and OpenAI (P2P)
+5. **Transcript Relay**: Browser forwards transcripts to our server via WebSocket
+
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant OurServer
+    participant OpenAI_REST
+    participant OpenAI_WebRTC
+    
+    Browser->>OurServer: Request ephemeral token
+    OurServer->>OpenAI_REST: POST /v1/realtime/sessions
+    OpenAI_REST-->>OurServer: Ephemeral token + config
+    OurServer-->>Browser: Token (expires in 1 min)
+    
+    Browser->>OpenAI_WebRTC: WebRTC offer + token
+    OpenAI_WebRTC-->>Browser: WebRTC answer
+    
+    Note over Browser,OpenAI_WebRTC: Direct P2P audio connection
+    
+    Browser->>OurServer: Forward transcripts
 ```
-┌─────────────────┐     ┌─────────────────────┐     ┌────────────────┐
-│                 │     │                     │     │                │
-│  Client Browser │────►│  SDP Proxy Server   │────►│  OpenAI API    │
-│                 │     │  (Full Audio        │     │                │
-│                 │◄────│   Processing)       │◄────│                │
-└─────────────────┘     └─────────────────────┘     └────────────────┘
-```
 
-### Hybrid WebRTC Architecture
-The current implementation uses a hybrid approach with direct OpenAI connection:
-```
-┌─────────────────┐     ┌─────────────────────┐     
-│                 │     │                     │     
-│  Client Browser │────►│  SDP Proxy Server   │     
-│                 │     │  (Credential        │     
-│                 │◄────│   Management Only)  │     
-└────────┬────────┘     └─────────────────────┘     
-         │                        
-         │                        
-         ▼                        
-┌─────────────────┐               
-│                 │               
-│   OpenAI API    │               
-│   (Direct       │               
-│    WebRTC)      │               
-└─────────────────┘               
-```
-
-### Detailed Hybrid Architecture Flow
-
-1. **Session Initialization**:
-   - Client requests session via `interview-start` edge function
-   - Function validates tenant and creates session in database
-   - Function provisions VM on Fly.io for this specific session
-   - Function returns session configuration with VM endpoint
-
-2. **Connection Establishment**:
-   - Client connects to session-specific WebSocket endpoint on Fly.io
-   - Client creates WebRTC offer and sends via WebSocket
-   - Server processes offer and exchanges with OpenAI
-   - SDP answer returned to client via WebSocket
-   - ICE candidates exchanged for NAT traversal
-   - Direct WebRTC connection established between client and OpenAI
-
-3. **Audio Processing**:
-   - Audio streams directly between client and OpenAI
-   - API keys remain secure on server, never exposed to client
-   - Transcription happens in real-time through OpenAI
-   - Transcript events come through WebRTC data channel
-
-4. **Transcript Management**:
-   - Transcript segments sent to Supabase via edge function
-   - Stored with proper tenant isolation using RLS policies
-   - Real-time updates available through Supabase subscription
-   - Session data persisted for later review
-
-5. **Session Termination**:
-   - Connection closed by client or server
-   - Final transcript processing and storage
-   - VM resources cleaned up and deallocated
-   - Session marked as completed in database
+#### Key Benefits
+- **Ultra-low latency**: Direct P2P connection
+- **Security**: API key never exposed to client
+- **Multi-tenancy**: Server controls access via tokens
+- **Full visibility**: Transcripts forwarded to server
 
 ### Per-Session VM Isolation
 
@@ -924,9 +896,100 @@ The WebRTC implementation uses a hooks-based pattern:
 └───────────────────────────────────────────────────────────┘
 ```
 
+#### Core Hooks Implementation
+
+**useConnectionState**: Manages connection state and provides consistent state reporting
+```typescript
+export const useConnectionState = () => {
+  const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
+  const [error, setError] = useState<string | null>(null);
+  
+  return {
+    connectionState,
+    setConnectionState,
+    error,
+    setError,
+    isConnected: connectionState === 'connected',
+    isConnecting: connectionState === 'connecting',
+  };
+};
+```
+
+**useRetry**: Handles retry logic with exponential backoff
+```typescript
+export const useRetry = (maxRetries = 5, baseDelay = 1000) => {
+  const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
+  
+  const retry = useCallback(async (fn: () => Promise<void>) => {
+    if (retryCount >= maxRetries) return;
+    
+    setIsRetrying(true);
+    const delay = baseDelay * Math.pow(2, retryCount);
+    
+    await new Promise(resolve => setTimeout(resolve, delay));
+    await fn();
+    
+    setRetryCount(prev => prev + 1);
+    setIsRetrying(false);
+  }, [retryCount, maxRetries, baseDelay]);
+  
+  const reset = () => setRetryCount(0);
+  
+  return { retry, reset, retryCount, isRetrying };
+};
+```
+
+**useAudioVisualization**: Handles audio capture and visualization
+```typescript
+export const useAudioVisualization = () => {
+  const [audioLevel, setAudioLevel] = useState(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  
+  const startVisualization = useCallback((stream: MediaStream) => {
+    const audioContext = new AudioContext();
+    const analyser = audioContext.createAnalyser();
+    const source = audioContext.createMediaStreamSource(stream);
+    
+    source.connect(analyser);
+    analyser.fftSize = 256;
+    
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    
+    const updateLevel = () => {
+      analyser.getByteFrequencyData(dataArray);
+      const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+      setAudioLevel(average / 255);
+      
+      requestAnimationFrame(updateLevel);
+    };
+    
+    updateLevel();
+    
+    audioContextRef.current = audioContext;
+    analyserRef.current = analyser;
+  }, []);
+  
+  const stopVisualization = useCallback(() => {
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    setAudioLevel(0);
+  }, []);
+  
+  return { audioLevel, startVisualization, stopVisualization };
+};
+```
+
 This pattern:
 - Separates concerns into focused hooks
 - Eliminates circular dependencies
 - Improves testability with isolated components
 - Enhances maintainability with clear interfaces
-- Enables composition of functionality 
+- Enables composition of functionality
+- Provides comprehensive unit test coverage
+- Supports both SDP proxy and direct OpenAI connections
+- Handles error states and recovery gracefully
+- Manages resources properly with cleanup on unmount

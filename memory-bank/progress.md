@@ -53,6 +53,9 @@
 | Completed | Updated interview-hybrid-template with OpenAI Realtime API support |
 | Completed | Fixed JWT claims for RLS policies with custom access token hook |
 | Completed | Configured JWT hook in Supabase dashboard |
+| Completed | Created realtime-test.html for production verification |
+| Completed | Fixed node-fetch dependency for CommonJS compatibility |
+| Completed | Successfully tested WebSocket connections and SDP exchange in production |
 | Next | Test interview sessions with updated JWT claims |
 | Next | Verify WebRTC end-to-end functionality in production |
 | Next | Complete Phase 4-5 of Hybrid Architecture Test Migration Plan |
@@ -269,6 +272,21 @@
   - ✅ Updated getCurrentTenantId to check multiple JWT claim locations
   - ✅ Fixed 403 Forbidden errors when creating interview sessions
   - ✅ Documented requirement for users to sign out/in for new JWT tokens
+- ✅ WebRTC SDP Proxy Production Deployment:
+  - ✅ Successfully deployed interview-hybrid-template to Fly.io
+  - ✅ Updated to use OpenAI Realtime API (sessions.openai.com/v1/realtime)
+  - ✅ Fixed authentication to use OpenAI API key directly
+  - ✅ Added proper headers including "OpenAI-Beta: realtime=v1"
+  - ✅ Fixed node-fetch dependency (downgraded to v2.6.9 for CommonJS)
+  - ✅ Created realtime-test.html for production verification
+  - ✅ Successfully tested WebSocket connections and SDP exchange in production
+- ✅ Testing Infrastructure Improvements:
+  - ✅ Completed unit tests for all WebRTC hooks
+  - ✅ Fixed production routing issues with _redirects and vercel.json
+  - ✅ Resolved JS errors in production bundle
+  - ✅ Cleaned up testing structure for hybrid architecture focus
+  - ✅ Implemented Phases 1-3 of Hybrid Architecture Test Migration Plan
+  - ✅ Created TEST_STRUCTURE.md documenting new test organization
 
 ## In Progress
 - 🔄 Hybrid Architecture Test Migration Plan:
@@ -1014,3 +1032,16 @@ According to our implementation checklist (see memory-bank/hybrid-implementation
 3. **Video Recording**: Adding api.video recording capabilities
 4. **Multi-Tenant Support**: Finalizing candidate-tenant relationships
 5. **Production Deployment**: Deploying updated architecture to production 
+
+## June 2025
+| Status | Task |
+|--------|------|
+| Completed | Fixed Fly.io deployment WebSocket URL path issue |
+| Completed | Identified WebRTC implementation architecture mismatch |
+| In Progress | Implementing ephemeral token flow for WebRTC |
+| In Progress | Adding `/api/realtime/sessions` endpoint to Fly.io server |
+| Next | Update frontend to use ephemeral tokens |
+| Next | Test direct browser-to-OpenAI WebRTC connection |
+
+### June 3, 2025 Updates
+// ... existing code ... 

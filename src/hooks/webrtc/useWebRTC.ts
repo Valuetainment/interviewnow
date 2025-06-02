@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+
 import { ConnectionState } from './useConnectionState';
 import { useSDPProxy } from './useSDPProxy';
 import { useOpenAIConnection } from './useOpenAIConnection';
@@ -50,6 +51,8 @@ export function useWebRTC(
   const [isReady, setIsReady] = useState(false);
   const [internalConnectionState, setInternalConnectionState] = useState<ConnectionState>('disconnected');
   const [error, setError] = useState<string | null>(null);
+  const [hybridServerUrl, setHybridServerUrl] = useState<string | null>(null);
+  const [useHybridMode, setUseHybridMode] = useState(false);
 
   // Use transcript manager
   const { clearTranscript } = useTranscriptManager({
@@ -68,13 +71,14 @@ export function useWebRTC(
   }, [onConnectionStateChange]);
 
   // Determine which connection implementation to use
-  const useDirectOpenAI = config.openAIMode && config.openAIKey;
+  const useDirectOpenAI = (config.openAIMode && config.openAIKey) || useHybridMode;
   
   // Use the appropriate connection implementation
   const openAIConnection = useOpenAIConnection(
     sessionId,
     {
-      openAIKey: config.openAIKey || '',
+      openAIKey: config.openAIKey,
+      serverUrl: useHybridMode ? hybridServerUrl || undefined : config.serverUrl, // Use hybrid server URL when in hybrid mode
       openAISettings: config.openAISettings,
       jobDescription: config.jobDescription,
       resume: config.resume,
@@ -135,7 +139,7 @@ export function useWebRTC(
         throw new Error('OpenAI API key is required for direct OpenAI mode');
       }
 
-      console.log(`Initializing WebRTC in ${useDirectOpenAI ? 'Direct OpenAI' : config.simulationMode ? 'Simulation' : 'SDP Proxy'} mode`);
+      console.log(`Initializing WebRTC in ${useDirectOpenAI ? (useHybridMode ? 'Hybrid' : 'Direct OpenAI') : config.simulationMode ? 'Simulation' : 'SDP Proxy'} mode`);
 
       // Get tenant ID for the current user if not in simulation or OpenAI mode
       if (!config.simulationMode && !useDirectOpenAI) {
@@ -168,14 +172,21 @@ export function useWebRTC(
             throw new Error(data.error || 'Unknown error initializing interview');
           }
 
-          // Use the server URL provided by the edge function
-          if (data.webrtc_server_url || data.vm_url || data.websocket_url) {
-            const serverUrl = data.webrtc_server_url || data.vm_url || data.websocket_url;
-            console.log(`Using server URL from edge function: ${serverUrl}`);
+          // Check if we're using hybrid architecture with ephemeral tokens
+          if (data.architecture === 'hybrid' && data.webrtc_server_url) {
+            console.log(`Using hybrid architecture with ephemeral tokens`);
+            console.log(`Server URL for tokens: ${data.webrtc_server_url}`);
+            
+            // Switch to hybrid mode using OpenAI connection with ephemeral tokens
+            setHybridServerUrl(data.webrtc_server_url);
+            setUseHybridMode(true);
+          } else if (data.webrtc_server_url) {
+            // Original SDP proxy mode
+            console.log(`Using server URL from edge function: ${data.webrtc_server_url}`);
             console.log(`Using VM with per-session isolation for interview ${sessionId}`);
             
             // Update the SDP proxy connection with the correct server URL
-            sdpProxyConnection.setServerUrl(serverUrl);
+            sdpProxyConnection.setServerUrl(data.webrtc_server_url);
           } else {
             throw new Error('Missing WebRTC server URL from edge function');
           }
@@ -217,10 +228,12 @@ export function useWebRTC(
     config.openAIKey,
     config.simulationMode,
     useDirectOpenAI,
+    useHybridMode,
+    hybridServerUrl,
     supabase,
     clearTranscript,
-    activeConnection,
-    sdpProxyConnection.setServerUrl
+    sdpProxyConnection,
+    activeConnection
   ]);
 
   // Clean up resources

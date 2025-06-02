@@ -84,16 +84,12 @@ wss.on('connection', (ws, req) => {
   // Initialize session data
   sessions.set(sessionId, {
     ws: ws,
-    sessionId: sessionId,
     offers: [], // Store SDP offers
     answers: [], // Store SDP answers
-    iceCandidates: [], // For debugging only - OpenAI handles ICE
-    ephemeralKey: null, // OpenAI ephemeral key
-    keyExpiry: null, // Key expiration timestamp
-    model: null, // OpenAI model
-    voice: null, // OpenAI voice
-    connected: Date.now(),
-    lastActivity: Date.now()
+    iceCandidates: [],
+    openaiSessionId: null,
+    openaiClientId: null,
+    connected: Date.now()
   });
   
   // Send session ID to client
@@ -115,15 +111,12 @@ wss.on('connection', (ws, req) => {
         throw new Error('Session not found');
       }
       
-      // Update last activity timestamp
-      session.lastActivity = Date.now();
-      
       console.log(`Received message of type: ${data.type}`);
       
       switch (data.type) {
         case 'sdp_offer':
           // Client sent an SDP offer that should be proxied to OpenAI
-          console.log('Received SDP offer from client');
+          console.log('Received SDP offer');
           
           try {
             if (process.env.SIMULATION_MODE === 'true') {
@@ -133,7 +126,7 @@ wss.on('connection', (ws, req) => {
               // Store the offer
               session.offers.push(data.offer);
               
-              // Create a simulated answer
+              // Create a simulated answer (in real implementation, this would come from OpenAI)
               const mockAnswer = {
                 type: 'answer',
                 sdp: `v=0\r\no=- ${Date.now()} 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=msid-semantic: WMS\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\nc=IN IP4 0.0.0.0\r\na=rtcp:9 IN IP4 0.0.0.0\r\na=ice-ufrag:mock\r\na=ice-pwd:mockmockmockmockmockmock\r\na=ice-options:trickle\r\na=fingerprint:sha-256 00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00\r\na=setup:active\r\na=mid:0\r\na=recvonly\r\na=rtcp-mux\r\na=rtpmap:111 opus/48000/2\r\na=fmtp:111 minptime=10;useinbandfec=1\r\n`
@@ -145,103 +138,118 @@ wss.on('connection', (ws, req) => {
               // Send mock answer back to client
               ws.send(JSON.stringify({ 
                 type: 'sdp_answer', 
-                answer: {
-                  type: 'answer',
-                  sdp: mockAnswer.sdp
-                },
+                answer: mockAnswer.sdp,
                 headers: corsHeaders
               }));
               
             } else {
-              // Real mode - Use HTTP-based SDP exchange with OpenAI
-              console.log('Processing SDP offer for OpenAI WebRTC');
-              
-              // Check if we have a valid ephemeral key
-              if (!session.ephemeralKey || session.keyExpiry < Date.now()) {
-                throw new Error('Ephemeral key missing or expired. Call /api/generate-ephemeral-key first.');
-              }
+              // Real mode - OpenAI WebRTC requires direct connection
+              console.log('Received SDP offer - OpenAI WebRTC requires direct browser-to-OpenAI connection');
               
               // Store the offer
               session.offers.push(data.offer);
               
-              // Extract just the SDP string
-              const offerSdp = data.offer.sdp || data.offer;
-              
-              console.log('Forwarding SDP offer to OpenAI via HTTP');
-              
-              // Send SDP offer to OpenAI using HTTP POST
-              const apiKey = process.env.OPENAI_API_KEY;
-              if (!apiKey) {
-                throw new Error('OpenAI API key not configured');
-              }
-              
-              const response = await fetch(
-                `https://api.openai.com/v1/realtime?model=${session.model || 'gpt-4o-realtime-preview-2024-12-17'}`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Authorization': `Bearer ${session.ephemeralKey}`,
-                    'Content-Type': 'application/sdp'
-                  },
-                  body: offerSdp // Send only the SDP string, not the full object
+              // For hybrid architecture, we need to establish WebSocket to OpenAI
+              // and forward the SDP through that connection
+              if (!session.openaiWs) {
+                console.log('Establishing WebSocket connection to OpenAI...');
+                
+                const apiKey = process.env.OPENAI_API_KEY;
+                if (!apiKey) {
+                  throw new Error('OpenAI API key not configured');
                 }
-              );
-              
-              if (!response.ok) {
-                const errorText = await response.text();
-                console.error('OpenAI SDP exchange error:', response.status, errorText);
-                throw new Error(`OpenAI SDP exchange failed: ${response.status} - ${errorText}`);
+                
+                // Connect to OpenAI's WebRTC endpoint
+                const openaiWs = new WebSocket('wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview', {
+                  headers: {
+                    'Authorization': 'Bearer ' + apiKey,
+                    'OpenAI-Beta': 'realtime=v1'
+                  }
+                });
+                
+                session.openaiWs = openaiWs;
+                
+                openaiWs.on('open', () => {
+                  console.log('Connected to OpenAI WebSocket');
+                  
+                  // Send the SDP offer to OpenAI
+                  openaiWs.send(JSON.stringify({
+                    type: 'response.create',
+                    response: {
+                      modalities: ['audio'],
+                      instructions: 'You are a helpful AI assistant.'
+                    }
+                  }));
+                });
+                
+                openaiWs.on('message', (message) => {
+                  const data = JSON.parse(message.toString());
+                  console.log('Received from OpenAI:', data.type);
+                  
+                  // Forward messages from OpenAI to client
+                  ws.send(JSON.stringify(data));
+                });
+                
+                openaiWs.on('error', (error) => {
+                  console.error('OpenAI WebSocket error:', error);
+                  ws.send(JSON.stringify({ 
+                    type: 'error', 
+                    message: 'OpenAI connection error: ' + error.message,
+                    headers: corsHeaders
+                  }));
+                });
+                
+                openaiWs.on('close', () => {
+                  console.log('OpenAI WebSocket closed');
+                  session.openaiWs = null;
+                });
               }
               
-              // Get SDP answer as plain text
-              const answerSdp = await response.text();
-              
-              console.log('Received SDP answer from OpenAI');
-              
-              // Store the answer
-              session.answers.push({
-                type: 'answer',
-                sdp: answerSdp
-              });
-              
-              // Send answer back to client
-              ws.send(JSON.stringify({
-                type: 'sdp_answer',
-                answer: {
-                  type: 'answer',
-                  sdp: answerSdp
-                },
-                headers: corsHeaders
-              }));
-              
-              console.log('SDP answer sent to client');
+              // For now, return a placeholder
+              // The actual SDP answer will come through the WebSocket
+              console.log('WebRTC hybrid mode - SDP exchange happens directly between browser and OpenAI');
             }
           } catch (error) {
             console.error('Error processing SDP offer:', error);
             ws.send(JSON.stringify({ 
               type: 'error', 
-              message: error.message,
-              code: 'SDP_EXCHANGE_FAILED',
+              message: 'Failed to process SDP offer: ' + error.message,
               headers: corsHeaders
             }));
           }
           break;
           
         case 'ice_candidate':
-          // ICE candidates are handled automatically by OpenAI WebRTC
-          console.log('Received ICE candidate - OpenAI handles ICE automatically');
+          // Client sent an ICE candidate that should be proxied to OpenAI
+          console.log('Received ICE candidate');
           
-          // Store for logging/debugging purposes only
-          if (data.candidate) {
-            session.iceCandidates.push(data.candidate);
+          try {
+            if (process.env.SIMULATION_MODE === 'true') {
+              // In simulation mode, just acknowledge receipt
+              ws.send(JSON.stringify({
+                type: 'iceAcknowledge',
+                headers: corsHeaders
+              }));
+            } else {
+              // Store ICE candidate
+              session.iceCandidates.push(data.candidate);
+              
+              // Proxy the ICE candidate to OpenAI
+              await proxyICECandidateToOpenAI(data.candidate, sessionId);
+              
+              ws.send(JSON.stringify({
+                type: 'iceAcknowledge',
+                headers: corsHeaders
+              }));
+            }
+          } catch (error) {
+            console.error('Error processing ICE candidate:', error);
+            ws.send(JSON.stringify({ 
+              type: 'error', 
+              message: 'Failed to process ICE candidate: ' + error.message,
+              headers: corsHeaders
+            }));
           }
-          
-          // Acknowledge receipt but no forwarding needed
-          ws.send(JSON.stringify({
-            type: 'ice_status',
-            message: 'ICE candidates are handled automatically by OpenAI',
-            headers: corsHeaders
-          }));
           break;
           
         case 'apiKeyStatus':
@@ -270,6 +278,36 @@ wss.on('connection', (ws, req) => {
           }
           break;
           
+        case 'transcript':
+          // Forward transcript data from client's WebRTC data channel
+          console.log('Received transcript data from client');
+          
+          // You can store this in a database, forward to another service, etc.
+          // For now, just acknowledge receipt
+          ws.send(JSON.stringify({
+            type: 'transcript_acknowledged',
+            timestamp: Date.now(),
+            headers: corsHeaders
+          }));
+          
+          // Store transcript in session if needed
+          if (session.transcripts) {
+            session.transcripts.push({
+              timestamp: Date.now(),
+              speaker: data.speaker || 'unknown',
+              text: data.text,
+              metadata: data.metadata
+            });
+          } else {
+            session.transcripts = [{
+              timestamp: Date.now(),
+              speaker: data.speaker || 'unknown', 
+              text: data.text,
+              metadata: data.metadata
+            }];
+          }
+          break;
+          
         case 'end_session':
           // Client wants to end the session
           console.log('Ending session:', sessionId);
@@ -285,6 +323,95 @@ wss.on('connection', (ws, req) => {
             sessionId,
             headers: corsHeaders
           }));
+          break;
+        
+        case 'ping':
+          // Handle ping messages to keep connection alive
+          ws.send(JSON.stringify({ 
+            type: 'pong',
+            headers: corsHeaders 
+          }));
+          break;
+          
+        case 'audio':
+          // Forward audio data to OpenAI
+          console.log('Received audio data');
+          
+          if (!session.openaiWs) {
+            console.log('Establishing connection to OpenAI Realtime...');
+            
+            const apiKey = process.env.OPENAI_API_KEY;
+            if (!apiKey) {
+              throw new Error('OpenAI API key not configured');
+            }
+            
+            // Connect to OpenAI's Realtime endpoint
+            const openaiWs = new WebSocket('wss://sessions.openai.com/v1/realtime', {
+              headers: {
+                'Authorization': 'Bearer ' + apiKey,
+                'OpenAI-Beta': 'realtime=v1'
+              }
+            });
+            
+            session.openaiWs = openaiWs;
+            
+            openaiWs.on('open', () => {
+              console.log('Connected to OpenAI Realtime API');
+              
+              // Configure the session
+              openaiWs.send(JSON.stringify({
+                type: 'session.update',
+                session: {
+                  modalities: ['text', 'audio'],
+                  instructions: 'You are a helpful AI assistant conducting an interview. Be professional and engaging.',
+                  voice: 'alloy',
+                  input_audio_format: 'webm-opus',
+                  output_audio_format: 'webm-opus',
+                  input_audio_transcription: {
+                    model: 'whisper-1'
+                  },
+                  turn_detection: {
+                    type: 'server_vad',
+                    threshold: 0.5,
+                    prefix_padding_ms: 300,
+                    silence_duration_ms: 500
+                  }
+                }
+              }));
+            });
+            
+            openaiWs.on('message', (message) => {
+              const data = JSON.parse(message.toString());
+              console.log('Received from OpenAI:', data.type);
+              
+              // Forward all messages from OpenAI to client
+              ws.send(JSON.stringify(data));
+            });
+            
+            openaiWs.on('error', (error) => {
+              console.error('OpenAI WebSocket error:', error);
+              ws.send(JSON.stringify({ 
+                type: 'error', 
+                message: 'OpenAI connection error: ' + error.message,
+                headers: corsHeaders
+              }));
+            });
+            
+            openaiWs.on('close', () => {
+              console.log('OpenAI WebSocket closed');
+              session.openaiWs = null;
+            });
+          }
+          
+          // Forward audio to OpenAI if connected
+          if (session.openaiWs && session.openaiWs.readyState === WebSocket.OPEN) {
+            session.openaiWs.send(JSON.stringify({
+              type: 'input_audio_buffer.append',
+              audio: data.audio // Should be base64 encoded audio
+            }));
+          } else {
+            console.log('OpenAI WebSocket not ready, buffering audio...');
+          }
           break;
       }
     } catch (error) {
@@ -315,24 +442,129 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-// Clean up expired sessions periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [sessionId, session] of sessions) {
-    // Remove sessions inactive for more than 5 minutes
-    if (now - session.connected > 300000) {
-      console.log('Cleaning up inactive session:', sessionId);
-      sessions.delete(sessionId);
+// Proxy an SDP offer to OpenAI and get an SDP answer
+async function proxySDPToOpenAI(offer) {
+  try {
+    console.log('Proxying SDP offer to OpenAI - NOT IMPLEMENTED');
+    
+    // OpenAI's WebRTC doesn't work via HTTP API calls
+    // It requires WebSocket connection to wss://api.openai.com/v1/realtime
+    // For now, return a mock answer to prevent crashes
+    
+    console.warn('OpenAI WebRTC proxy not implemented - returning mock SDP answer');
+    
+    // Return a mock SDP answer
+    const mockAnswer = `v=0\r\no=- ${Date.now()} 2 IN IP4 127.0.0.1\r\ns=-\r\nt=0 0\r\na=group:BUNDLE 0\r\na=msid-semantic: WMS\r\nm=audio 9 UDP/TLS/RTP/SAVPF 111\r\nc=IN IP4 0.0.0.0\r\na=rtcp:9 IN IP4 0.0.0.0\r\na=ice-ufrag:mock\r\na=ice-pwd:mockmockmockmockmockmock\r\na=ice-options:trickle\r\na=fingerprint:sha-256 00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00\r\na=setup:active\r\na=mid:0\r\na=recvonly\r\na=rtcp-mux\r\na=rtpmap:111 opus/48000/2\r\na=fmtp:111 minptime=10;useinbandfec=1\r\n`;
+    
+    return mockAnswer;
+    
+  } catch (error) {
+    console.error('Error proxying SDP to OpenAI:', error);
+    throw error;
+  }
+}
+
+// Proxy an ICE candidate to OpenAI
+async function proxyICECandidateToOpenAI(candidate, sessionId) {
+  try {
+    console.log('Proxying ICE candidate to OpenAI for session:', sessionId);
+    
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OpenAI API key not configured');
     }
     
-    // Log ephemeral key expiry for debugging
-    if (session.ephemeralKey && session.keyExpiry < now) {
-      console.log(`Session ${sessionId} ephemeral key expired`);
+    // We need the OpenAI session and client IDs to send ICE candidates
+    const session = sessions.get(sessionId);
+    if (!session || !session.openaiSessionId || !session.openaiClientId) {
+      throw new Error('Cannot send ICE candidate: OpenAI session not established');
     }
+    
+    const response = await fetch(`https://api.openai.com/v1/audio/realtime/session/${session.openaiSessionId}/client/${session.openaiClientId}/webrtc/ice`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'OpenAI-Beta': 'realtime'
+      },
+      body: JSON.stringify({
+        candidate: candidate
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error sending ICE candidate to OpenAI:', errorText);
+      throw new Error(`OpenAI API error (ICE candidate): ${response.status} - ${errorText}`);
+    }
+    
+    return true;
+    
+  } catch (error) {
+    console.error('Error proxying ICE candidate to OpenAI:', error);
+    throw error;
   }
-}, 60000); // Run every minute
+}
 
 // HTTP routes
+
+// Ephemeral token endpoint for OpenAI Realtime API
+app.post('/api/realtime/sessions', async (req, res) => {
+  try {
+    console.log('Creating ephemeral token for realtime session');
+    
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ 
+        error: 'OpenAI API key not configured',
+        headers: corsHeaders 
+      });
+    }
+
+    // Get configuration from request body
+    const { model = 'gpt-4o-realtime-preview', voice = 'alloy' } = req.body;
+    
+    // Call OpenAI REST API to create ephemeral token
+    const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: model,
+        voice: voice,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error creating ephemeral token:', errorText);
+      return res.status(response.status).json({ 
+        error: `OpenAI API error: ${errorText}`,
+        headers: corsHeaders 
+      });
+    }
+
+    const data = await response.json();
+    
+    // Log success (but not the token itself for security)
+    console.log('Ephemeral token created successfully');
+    
+    // Return the ephemeral token and session config
+    res.json({
+      ...data,
+      headers: corsHeaders
+    });
+    
+  } catch (error) {
+    console.error('Error in ephemeral token endpoint:', error);
+    res.status(500).json({ 
+      error: error.message || 'Failed to create ephemeral token',
+      headers: corsHeaders 
+    });
+  }
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -369,64 +601,6 @@ app.get('/api/key-status', (req, res) => {
   res.json({ status: 'available' });
 });
 
-// Generate ephemeral key endpoint for OpenAI WebRTC
-app.post('/api/generate-ephemeral-key', async (req, res) => {
-  try {
-    const { sessionId, voice = 'alloy', model = 'gpt-4o-realtime-preview-2024-12-17' } = req.body;
-    
-    console.log(`Generating ephemeral key for session ${sessionId}`);
-    console.log(`Available sessions:`, Array.from(sessions.keys()));
-    
-    // Verify session exists
-    const session = sessions.get(sessionId);
-    if (!session) {
-      console.error(`Session ${sessionId} not found. Available sessions:`, Array.from(sessions.keys()));
-      return res.status(404).json({ error: `Session ${sessionId} not found` });
-    }
-    
-    // Get OpenAI API key
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OpenAI API key not configured');
-    }
-    
-    // Call OpenAI to generate ephemeral key
-    console.log('Calling OpenAI /v1/realtime/sessions endpoint');
-    const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ model, voice })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI ephemeral key generation failed:', errorText);
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
-    }
-    
-    const data = await response.json();
-    console.log('Ephemeral key generated successfully');
-    
-    // Store ephemeral key with session
-    session.ephemeralKey = data.client_secret;
-    session.keyExpiry = Date.now() + 60000; // 60 seconds
-    session.model = model;
-    session.voice = voice;
-    
-    res.json({ 
-      success: true,
-      client_secret: data.client_secret,
-      expires_in: 60
-    });
-  } catch (error) {
-    console.error('Error generating ephemeral key:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // Get session info endpoint
 app.get('/api/sessions/:sessionId', (req, res) => {
   const sessionId = req.params.sessionId;
@@ -438,15 +612,10 @@ app.get('/api/sessions/:sessionId', (req, res) => {
   
   // Return sanitized session info (no sensitive data)
   res.json({
-    sessionId: session.sessionId,
+    sessionId,
     connected: session.connected,
-    lastActivity: session.lastActivity,
-    hasEphemeralKey: !!session.ephemeralKey,
-    keyValid: session.keyExpiry > Date.now(),
     offerCount: session.offers.length,
-    answerCount: session.answers.length,
-    model: session.model,
-    voice: session.voice
+    answerCount: session.answers.length
   });
 });
 

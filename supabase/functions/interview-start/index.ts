@@ -123,14 +123,17 @@ async function setupFlyVM(
     const secureToken = `eyJhbGciOiJIUzI1NiJ9.${base64Payload}.${crypto.randomUUID()}`;
 
     // Different URL paths for different architectures
-    const wsPath = architecture === 'hybrid' ? 'ws' : 'socket';
+    // IMPORTANT: The Fly.io server listens on the root path, not on /ws
+    const wsPath = architecture === 'hybrid' ? '' : 'socket';
 
     // TEMPORARY FIX: Use the existing interview-hybrid-template app
     // In production, we would actually provision a new VM here
     const baseUrl = 'wss://interview-hybrid-template.fly.dev';
     
     // VM URL with enhanced security parameters
-    const vmUrl = `${baseUrl}/${wsPath}?token=${secureToken}&session=${sessionId}&tenant=${tenantId}`;
+    // For hybrid, this becomes wss://interview-hybrid-template.fly.dev?token=...
+    const vmUrl = wsPath ? `${baseUrl}/${wsPath}?token=${secureToken}&session=${sessionId}&tenant=${tenantId}` 
+                        : `${baseUrl}?token=${secureToken}&session=${sessionId}&tenant=${tenantId}`;
 
     console.log(`VM URL generated for ${architecture} architecture using template app [${operationId}]`);
     console.log(`TODO: In production, provision actual VM: ${vmName}`);

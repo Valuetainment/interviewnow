@@ -78,4 +78,21 @@ If a new version has issues in production:
 2. Check out that version from version control
 3. Deploy using `supabase functions deploy <function-name>`
 4. Verify functionality is restored
-5. Update this document to reflect the rollback 
+5. Update this document to reflect the rollback
+
+## JWT Hook Configuration
+
+### auth.custom_access_token_hook
+- **Status:** ACTIVE (June 3, 2025)
+- **Purpose:** Adds tenant_id to JWT claims for RLS policies
+- **Configuration:** Set in Supabase Dashboard > Authentication > Hooks
+- **Key Implementation:**
+  ```sql
+  CREATE OR REPLACE FUNCTION auth.custom_access_token_hook(event JSONB)
+  RETURNS JSONB AS $$
+  -- Adds tenant_id from user_metadata to JWT claims
+  ```
+- **Important Notes:**
+  - Users must sign out and sign back in to receive updated JWT tokens
+  - Resolves 403 Forbidden errors when creating interview sessions
+  - Enables proper tenant isolation in RLS policies 

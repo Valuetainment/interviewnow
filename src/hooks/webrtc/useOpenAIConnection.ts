@@ -4,7 +4,8 @@ import { ConnectionState } from './useConnectionState';
 import { useTranscriptManager } from './useTranscriptManager';
 
 export interface OpenAIConnectionConfig {
-  openAIKey: string;
+  openAIKey?: string; // Now optional - only used if serverUrl is not provided
+  serverUrl?: string; // URL to fetch ephemeral token from
   openAISettings?: {
     voice?: string;
     temperature?: number;
@@ -169,8 +170,9 @@ export function useOpenAIConnection(
       return false;
     }
 
-    if (!config.openAIKey) {
-      console.error('OpenAI API key is required for direct OpenAI mode');
+    // Check if we have a server URL for ephemeral tokens or an API key
+    if (!config.serverUrl && !config.openAIKey) {
+      console.error('Either serverUrl (for ephemeral tokens) or openAIKey is required');
       return false;
     }
 
@@ -213,13 +215,56 @@ export function useOpenAIConnection(
         }
       });
 
-      console.log('ICE gathering complete, sending offer to OpenAI');
+      console.log('ICE gathering complete');
 
-      // Send offer to OpenAI Realtime API
-      const response = await fetch('https://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview', {
+      let authToken: string;
+      let model = 'gpt-4o-realtime-preview-2024-12-17';
+
+      // If we have a server URL, fetch ephemeral token
+      if (config.serverUrl) {
+        console.log('Fetching ephemeral token from server...');
+        
+        const tokenResponse = await fetch(`${config.serverUrl}/api/realtime/sessions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: model,
+            voice: settings.voice || 'alloy'
+          })
+        });
+
+        if (!tokenResponse.ok) {
+          const errorText = await tokenResponse.text();
+          throw new Error(`Failed to get ephemeral token (${tokenResponse.status}): ${errorText}`);
+        }
+
+        const tokenData = await tokenResponse.json();
+        
+        if (!tokenData.client_secret?.value) {
+          throw new Error('Invalid token response from server');
+        }
+
+        authToken = tokenData.client_secret.value;
+        
+        // Use the model from the response if provided
+        if (tokenData.model) {
+          model = tokenData.model;
+        }
+        
+        console.log('Successfully obtained ephemeral token');
+      } else {
+        // Fallback to direct API key (not recommended for production)
+        console.warn('Using API key directly - this is not recommended for production');
+        authToken = config.openAIKey!;
+      }
+
+      // Send offer to OpenAI Realtime API with appropriate auth
+      const response = await fetch(`https://api.openai.com/v1/realtime?model=${model}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${config.openAIKey}`,
+          'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/sdp'
         },
         body: pcRef.current.localDescription?.sdp
@@ -249,6 +294,8 @@ export function useOpenAIConnection(
   }, [
     config.disabled,
     config.openAIKey,
+    config.serverUrl,
+    settings.voice,
     initializeWebRTC,
     configureOpenAISession,
     handleDataChannelMessage
