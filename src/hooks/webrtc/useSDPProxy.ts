@@ -222,9 +222,61 @@ export function useSDPProxy(
               }
             }, 500);
           } else {
-            // Production mode - session message received
-            // The useEffect will handle ephemeral key generation and offer creation
-            console.log('Production mode - session established, ready for WebRTC setup');
+            // Production mode - session message received, trigger WebRTC setup immediately
+            console.log('Production mode - session established, generating ephemeral key');
+            
+            // Generate ephemeral key and create offer immediately
+            if (pcRef.current && !ephemeralKeyRef.current) {
+              const generateKeyAndOffer = async () => {
+                try {
+                  console.log('Generating ephemeral key for session:', sessionIdRef.current);
+                  
+                  const baseUrl = serverUrlRef.current
+                    ?.replace('wss://', 'https://')
+                    .replace('ws://', 'http://')
+                    .replace(/\/ws.*$/, '');
+                  
+                  if (!baseUrl) {
+                    throw new Error('Server URL not available');
+                  }
+                  
+                  const response = await fetch(`${baseUrl}/api/generate-ephemeral-key`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      sessionId: sessionIdRef.current,
+                      voice: config.openAISettings?.voice || 'alloy',
+                      model: config.openAISettings?.model || 'gpt-4o-realtime-preview-2024-12-17'
+                    })
+                  });
+                  
+                  if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Failed to generate ephemeral key');
+                  }
+                  
+                  const data = await response.json();
+                  ephemeralKeyRef.current = data.client_secret;
+                  console.log('Ephemeral key generated successfully');
+                  
+                  // Now create and send offer
+                  if (pcRef.current && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                    const offer = await createOffer();
+                    if (offer) {
+                      sendWebSocketMessage({
+                        type: 'sdp_offer',
+                        offer: offer
+                      });
+                      console.log('SDP offer sent to server');
+                    }
+                  }
+                } catch (error) {
+                  console.error('Failed to generate ephemeral key or create offer:', error);
+                }
+              };
+              
+              generateKeyAndOffer();
+            }
           }
           break;
 
@@ -303,7 +355,7 @@ export function useSDPProxy(
     } catch (error) {
       console.error('Error handling WebSocket message:', error);
     }
-  }, [config.simulationMode, onConnectionStateChange, pcRef, handleAnswer, addIceCandidate, saveTranscript, sendWebSocketMessage, handleDataChannelMessage]);
+  }, [config.simulationMode, config.openAISettings, onConnectionStateChange, pcRef, handleAnswer, addIceCandidate, saveTranscript, sendWebSocketMessage, handleDataChannelMessage, createOffer, wsRef]);
 
   // Create and send SDP offer to server
   const createAndSendOffer = useCallback(async () => {
@@ -438,66 +490,6 @@ export function useSDPProxy(
     initializeWebRTC
   ]);
 
-  // Handle ephemeral key generation and offer creation when session is established
-  useEffect(() => {
-    if (!config.disabled && !config.simulationMode && sessionIdRef.current && isWsConnected && pcRef.current) {
-      // Only proceed if we don't have an ephemeral key yet
-      if (!ephemeralKeyRef.current) {
-        console.log('Session established, generating ephemeral key and creating offer');
-        
-        // Generate ephemeral key inline to avoid dependency issues
-        const generateKey = async () => {
-          try {
-            if (!serverUrlRef.current || !sessionIdRef.current) {
-              throw new Error('Server URL and session ID are required');
-            }
-            
-            const baseUrl = serverUrlRef.current
-              .replace('wss://', 'https://')
-              .replace('ws://', 'http://')
-              .replace(/\/ws.*$/, '');
-            
-            console.log('Generating ephemeral key for session:', sessionIdRef.current);
-            
-            const response = await fetch(`${baseUrl}/api/generate-ephemeral-key`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                sessionId: sessionIdRef.current,
-                voice: config.openAISettings?.voice || 'alloy',
-                model: config.openAISettings?.model || 'gpt-4o-realtime-preview-2024-12-17'
-              })
-            });
-            
-            if (!response.ok) {
-              const error = await response.json();
-              throw new Error(error.message || 'Failed to generate ephemeral key');
-            }
-            
-            const data = await response.json();
-            ephemeralKeyRef.current = data.client_secret;
-            console.log('Ephemeral key generated successfully');
-            
-            // Now create and send offer
-            if (pcRef.current && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-              const offer = await createOffer();
-              if (offer) {
-                sendWebSocketMessage({
-                  type: 'sdp_offer',
-                  offer: offer
-                });
-                console.log('SDP offer sent to server');
-              }
-            }
-          } catch (error) {
-            console.error('Failed to generate ephemeral key or create offer:', error);
-          }
-        };
-        
-        generateKey();
-      }
-    }
-  }, [config.disabled, config.simulationMode, isWsConnected]);
 
   // Set up ICE candidate event handler for sending candidates to server
   useCallback(() => {
