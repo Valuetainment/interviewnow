@@ -41,15 +41,6 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
   // Local state for component-specific UI elements
   const [error, setError] = useState<string | null>(null);
   const [autoReconnectDisabled, setAutoReconnectDisabled] = useState<boolean>(false);
-  
-  // Refs for tracking initialization
-  const hasInitializedRef = React.useRef<boolean>(false);
-  const serverUrlRef = React.useRef<string | undefined>(serverUrl);
-  
-  // Update ref when serverUrl changes
-  React.useEffect(() => {
-    serverUrlRef.current = serverUrl;
-  }, [serverUrl]);
 
   // Configure WebRTC settings - memoize to prevent re-renders
   const webRTCConfig: WebRTCConfig = React.useMemo(() => ({
@@ -90,7 +81,7 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
       return;
     }
 
-    console.log('Component mounted - checking initialization readiness');
+    console.log('Component mounted - initializing session once');
 
     // First test WebRTC browser support
     if (!navigator.mediaDevices || !window.RTCPeerConnection) {
@@ -103,61 +94,34 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
       console.warn('Simulation mode is enabled but URL is missing simulation parameter - it may be added automatically');
     }
 
-    // Function to attempt initialization
-    const attemptInit = () => {
-      if (!hasInitializedRef.current && serverUrlRef.current) {
-        hasInitializedRef.current = true;
-        console.log('Server URL available, initializing WebRTC');
-        initialize().catch(err => {
-          console.error('Error initializing WebRTC:', err);
-          hasInitializedRef.current = false; // Reset on error so it can retry
-          let errorMessage = err instanceof Error ? err.message : 'Failed to initialize WebRTC';
+    // Add a slight delay to ensure DOM is fully mounted
+    const initTimeout = setTimeout(() => {
+      initialize().catch(err => {
+        console.error('Error initializing WebRTC:', err);
+        let errorMessage = err instanceof Error ? err.message : 'Failed to initialize WebRTC';
 
-          // Provide more helpful error messages based on error content
-          if (errorMessage.includes('Permission denied') || errorMessage.includes('NotAllowedError')) {
-            errorMessage = 'Microphone access was denied. Please allow microphone access and try again.';
-          } else if (errorMessage.includes('NotFoundError') || errorMessage.includes('no devices')) {
-            errorMessage = 'No microphone found. Please connect a microphone and try again.';
-          } else if (errorMessage.includes('WebSocket') || errorMessage.includes('ws://') || errorMessage.includes('wss://')) {
-            errorMessage = `Failed to connect to WebSocket server. Please check that the server is running.`;
-          }
+        // Provide more helpful error messages based on error content
+        if (errorMessage.includes('Permission denied') || errorMessage.includes('NotAllowedError')) {
+          errorMessage = 'Microphone access was denied. Please allow microphone access and try again.';
+        } else if (errorMessage.includes('NotFoundError') || errorMessage.includes('no devices')) {
+          errorMessage = 'No microphone found. Please connect a microphone and try again.';
+        } else if (errorMessage.includes('WebSocket') || errorMessage.includes('ws://') || errorMessage.includes('wss://')) {
+          errorMessage = `Failed to connect to WebSocket server at ${serverUrl}. Please check that the server is running.`;
+        } else if (simulationMode && !serverUrl?.includes('simulation=true')) {
+          errorMessage = 'Missing simulation parameter in URL. Add ?simulation=true to your server URL.';
+        }
 
-          setError(errorMessage);
-        });
-      }
-    };
-
-    // Try immediately if serverUrl is already available
-    attemptInit();
-
-    // If not available yet, poll for it
-    const checkInterval = setInterval(() => {
-      if (serverUrlRef.current && !hasInitializedRef.current) {
-        console.log('Server URL now available via polling');
-        attemptInit();
-        clearInterval(checkInterval);
-      }
-    }, 100);
-
-    // Clear interval after 10 seconds to prevent indefinite polling
-    const timeoutId = setTimeout(() => {
-      clearInterval(checkInterval);
-      if (!hasInitializedRef.current && !serverUrlRef.current) {
-        console.error('Timeout waiting for server URL');
-        setError('Failed to get server configuration. Please try again.');
-      }
-    }, 10000);
+        setError(errorMessage);
+      });
+    }, 500);
 
     return () => {
-      clearInterval(checkInterval);
-      clearTimeout(timeoutId);
+      clearTimeout(initTimeout);
       console.log('Component unmounting - cleaning up resources');
       cleanup();
-      hasInitializedRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
-
 
   // Render connection indicator dots based on state
   const renderConnectionDots = () => {
@@ -218,6 +182,11 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
   return (
     <div className="webrtc-manager">
       <div className="webrtc-status">
+        {/* Temporary deployment verification badge */}
+        <div className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs mb-2">
+          ✅ New Ephemeral Token Code Deployed - {new Date().toISOString().split('T')[0]}
+        </div>
+        
         {renderConnectionDots()}
 
         {error && connectionState !== 'connected' && (
