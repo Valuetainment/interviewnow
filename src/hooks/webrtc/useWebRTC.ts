@@ -141,6 +141,11 @@ export function useWebRTC(
       if (config.openAIMode && !config.openAIKey) {
         throw new Error('OpenAI API key is required for direct OpenAI mode');
       }
+      
+      // For simulation or direct OpenAI mode, architecture is already determined
+      if (config.simulationMode || config.openAIMode) {
+        setArchitectureDetermined(true);
+      }
 
       console.log(`Initializing WebRTC in ${useDirectOpenAI ? (useHybridMode ? 'Hybrid' : 'Direct OpenAI') : config.simulationMode ? 'Simulation' : 'SDP Proxy'} mode`);
 
