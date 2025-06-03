@@ -258,11 +258,16 @@ export function useOpenAIConnection(
       }
 
       // Create a data channel for OpenAI control messages
+      console.log('Creating data channel for OpenAI events...');
       const dataChannel = pcRef.current.createDataChannel('oai-events');
       dataChannelRef.current = dataChannel;
+      console.log('Data channel created, current state:', dataChannel.readyState);
 
       // Set up data channel event handlers
-      dataChannel.onopen = configureOpenAISession;
+      dataChannel.onopen = () => {
+        console.log('Data channel opened successfully');
+        configureOpenAISession();
+      };
       dataChannel.onmessage = handleDataChannelMessage;
       dataChannel.onerror = (error) => console.error('Data channel error:', error);
       dataChannel.onclose = () => {
@@ -388,19 +393,49 @@ export function useOpenAIConnection(
       }
 
       // Get SDP answer from OpenAI
+      console.log('Reading SDP answer from OpenAI response...');
       const sdpAnswer = await response.text();
       console.log('Received SDP answer from OpenAI');
+      console.log('SDP answer length:', sdpAnswer.length);
+      console.log('SDP answer preview:', sdpAnswer.substring(0, 100) + '...');
 
       // Set the remote description
-      await pcRef.current.setRemoteDescription({
-        type: 'answer',
-        sdp: sdpAnswer
-      });
+      console.log('Setting remote description with OpenAI SDP answer...');
+      try {
+        await pcRef.current.setRemoteDescription({
+          type: 'answer',
+          sdp: sdpAnswer
+        });
+        console.log('Successfully set remote description');
+      } catch (sdpError) {
+        console.error('Failed to set remote description:', sdpError);
+        throw sdpError;
+      }
+
+      // Log connection state
+      console.log('Current peer connection state:', pcRef.current.connectionState);
+      console.log('Current ICE connection state:', pcRef.current.iceConnectionState);
+      console.log('Current signaling state:', pcRef.current.signalingState);
 
       console.log('Direct OpenAI WebRTC connection established successfully');
+      
+      // Add a listener to monitor connection state changes
+      pcRef.current.onconnectionstatechange = () => {
+        console.log('Peer connection state changed to:', pcRef.current?.connectionState);
+      };
+      
+      pcRef.current.oniceconnectionstatechange = () => {
+        console.log('ICE connection state changed to:', pcRef.current?.iceConnectionState);
+      };
+      
       return true;
     } catch (error) {
       console.error('Error connecting directly to OpenAI:', error);
+      console.error('Error details:', {
+        name: (error as Error).name,
+        message: (error as Error).message,
+        stack: (error as Error).stack
+      });
       return false;
     }
   }, [
