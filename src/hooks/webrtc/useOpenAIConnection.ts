@@ -33,7 +33,10 @@ const DEFAULT_SETTINGS = {
   maximumLength: 5
 };
 
+// ⭐ GOLDEN STATE: Audio element management - CRITICAL FOR SUSTAINED CONVERSATION ⭐
 // Store audio element reference outside component to persist across renders
+// This approach was the KEY FIX that enabled our full interview conversation success.
+// Date confirmed working: June 3, 2025
 let audioElement: HTMLAudioElement | null = null;
 
 /**
@@ -76,12 +79,17 @@ export function useOpenAIConnection(
       simulationMode: false // Explicitly ensure we're not in simulation mode
     },
     onConnectionStateChange,
-    // Handle incoming tracks
+    // ⭐ GOLDEN STATE: Track handler - CRITICAL AUDIO MANAGEMENT ⭐
+    // This function is responsible for handling incoming audio tracks from OpenAI
+    // The persistent audio element approach here is what fixed the conversation interruption
     (track, streams) => {
       if (track.kind === 'audio') {
         console.log('Received audio track from OpenAI');
         
-        // Create audio element once and reuse it
+        // ⭐ CRITICAL: Create audio element once and reuse it - DO NOT MODIFY ⭐
+        // This is the KEY FIX that enables sustained conversation audio
+        // Previous broken approach: new Audio() on every track = audio interruption
+        // Working approach: persistent audioElement = sustained conversation
         if (!audioElement) {
           console.log('Creating new audio element for OpenAI playback');
           audioElement = new Audio();
@@ -102,7 +110,7 @@ export function useOpenAIConnection(
           audioElement.addEventListener('error', (e) => console.error('Audio error:', e));
         }
         
-        // Set the stream (don't recreate element)
+        // ⭐ CRITICAL: Reuse existing element - DO NOT create new Audio() here ⭐
         console.log('Setting audio stream to element');
         audioElement.srcObject = streams[0];
         
