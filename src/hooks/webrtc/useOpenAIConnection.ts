@@ -193,6 +193,21 @@ export function useOpenAIConnection(
         console.log('Started interview with OpenAI');
       }
     }, 1000);
+    
+    // Warn user before session timeout (ephemeral tokens expire after 1 minute)
+    setTimeout(() => {
+      if (dataChannelRef.current && dataChannelRef.current.readyState === 'open') {
+        console.warn('Session will expire soon - ephemeral token timeout approaching');
+        // Send a message to warn the user
+        dataChannelRef.current.send(JSON.stringify({
+          type: 'response.create',
+          response: {
+            modalities: ['text', 'audio'],
+            instructions: 'We have about 10 seconds left in this session. The connection will need to be refreshed soon. Is there anything else you\'d like to quickly discuss?'
+          }
+        }));
+      }
+    }, 50000); // Warn at 50 seconds (10 seconds before timeout)
   }, [config.jobDescription, config.resume, settings]);
 
   // Initialize direct OpenAI connection
@@ -225,7 +240,14 @@ export function useOpenAIConnection(
       dataChannel.onopen = configureOpenAISession;
       dataChannel.onmessage = handleDataChannelMessage;
       dataChannel.onerror = (error) => console.error('Data channel error:', error);
-      dataChannel.onclose = () => console.log('Data channel closed');
+      dataChannel.onclose = () => {
+        console.log('Data channel closed');
+        // If the data channel closes unexpectedly, it might be due to session timeout
+        if (pcRef.current?.connectionState === 'connected') {
+          console.error('Data channel closed while connection is still active - possible session timeout');
+          // The connection state handlers in useWebRTCConnection will handle the cleanup
+        }
+      };
 
       // Create offer
       const offer = await pcRef.current.createOffer();
@@ -233,17 +255,26 @@ export function useOpenAIConnection(
 
       console.log('Created local SDP offer');
 
-      // Wait for ICE candidates to be gathered
+      // Wait for ICE candidates to be gathered (with timeout)
       await new Promise<void>(resolve => {
+        // Set a timeout of 3 seconds for ICE gathering
+        const timeout = setTimeout(() => {
+          console.log('ICE gathering timeout - proceeding with available candidates');
+          resolve();
+        }, 3000);
+        
         if (pcRef.current?.iceGatheringState === 'complete') {
+          clearTimeout(timeout);
           resolve();
         } else if (pcRef.current) {
           pcRef.current.onicegatheringstatechange = () => {
             if (pcRef.current?.iceGatheringState === 'complete') {
+              clearTimeout(timeout);
               resolve();
             }
           };
         } else {
+          clearTimeout(timeout);
           resolve(); // Resolve anyway to prevent hanging
         }
       });

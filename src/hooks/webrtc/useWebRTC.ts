@@ -271,6 +271,10 @@ export function useWebRTC(
     setInternalConnectionState('disconnected');
     setError(null);
     setHasStartedInitialization(false);
+    // Reset architecture state so a new interview can properly initialize
+    setArchitectureDetermined(false);
+    setUseHybridMode(false);
+    setHybridServerUrl(null);
   }, [activeConnection]);
 
   // Clean up on unmount
