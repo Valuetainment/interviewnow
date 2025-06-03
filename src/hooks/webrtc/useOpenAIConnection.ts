@@ -380,6 +380,13 @@ export function useOpenAIConnection(
       const openAIUrl = `https://api.openai.com/v1/realtime?model=${model}`;
       console.log(`Sending SDP offer to: ${openAIUrl}`);
       
+      // Create AbortController for timeout
+      const abortController = new AbortController();
+      const fetchTimeout = setTimeout(() => {
+        console.log('Aborting fetch after 10 seconds...');
+        abortController.abort();
+      }, 10000); // 10 second total timeout for the entire fetch operation
+      
       const response = await fetch(openAIUrl, {
         method: 'POST',
         headers: {
@@ -388,8 +395,12 @@ export function useOpenAIConnection(
         },
         body: pcRef.current.localDescription?.sdp,
         mode: 'cors', // Explicitly set CORS mode
-        credentials: 'omit' // Don't send cookies
+        credentials: 'omit', // Don't send cookies
+        signal: abortController.signal // Add abort signal
       });
+      
+      // Clear the fetch timeout
+      clearTimeout(fetchTimeout);
 
       console.log(`OpenAI API response status: ${response.status}`);
       console.log('Response headers:', {
@@ -420,12 +431,24 @@ export function useOpenAIConnection(
       let sdpAnswer: string;
       try {
         // Add timeout for reading response
+        console.log('Creating text promise...');
         const textPromise = response.text();
-        const timeoutPromise = new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout reading OpenAI response after 5 seconds')), 5000)
-        );
+        console.log('Text promise created');
         
+        console.log('Creating timeout promise...');
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          console.log('Setting timeout for 5 seconds...');
+          const timeoutId = setTimeout(() => {
+            console.log('TIMEOUT FIRED - rejecting promise');
+            reject(new Error('Timeout reading OpenAI response after 5 seconds'));
+          }, 5000);
+          console.log('Timeout set with ID:', timeoutId);
+        });
+        console.log('Timeout promise created');
+        
+        console.log('Starting Promise.race...');
         sdpAnswer = await Promise.race([textPromise, timeoutPromise]);
+        console.log('Promise.race completed successfully');
         console.log('Successfully read response.text()');
         console.log('Received SDP answer from OpenAI');
       } catch (readError) {

@@ -45,6 +45,7 @@ interface InterviewConfig {
 }
 
 const InterviewRoomHybrid = () => {
+  // DEPLOYMENT: 2025-06-03 16:12:00 UTC - Fix response.text() hang
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [session, setSession] = useState<InterviewSessionData | null>(null);
