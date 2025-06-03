@@ -169,13 +169,13 @@ export function useSDPProxy(
     try {
       // Extract base URL from WebSocket URL
       const baseUrl = serverUrlRef.current
-        .replace('wss://', 'https://')
+        ?.replace('wss://', 'https://')
         .replace('ws://', 'http://')
-        .replace(/\/ws.*$/, ''); // Remove WebSocket path
+        .split('?')[0]; // Remove query parameters
       
       console.log('Generating ephemeral key for session:', sessionIdRef.current);
       
-      const response = await fetch(`${baseUrl}/api/generate-ephemeral-key`, {
+      const response = await fetch(`${baseUrl}/api/realtime/sessions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -234,13 +234,15 @@ export function useSDPProxy(
                   const baseUrl = serverUrlRef.current
                     ?.replace('wss://', 'https://')
                     .replace('ws://', 'http://')
-                    .replace(/\/ws.*$/, '');
+                    .split('?')[0]; // Remove query parameters
                   
                   if (!baseUrl) {
                     throw new Error('Server URL not available');
                   }
                   
-                  const response = await fetch(`${baseUrl}/api/generate-ephemeral-key`, {
+                  console.log(`Fetching token from: ${baseUrl}/api/realtime/sessions`);
+                  
+                  const response = await fetch(`${baseUrl}/api/realtime/sessions`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

@@ -37,7 +37,19 @@ app.use(cors({
   credentials: true
 }));
 
+// Parse JSON bodies first
 app.use(express.json({ limit: '1mb' }));
+
+// Middleware to log all HTTP requests
+app.use((req, res, next) => {
+  console.log(`[HTTP] ${req.method} ${req.url} from ${req.ip}`);
+  console.log(`[HTTP] Headers:`, JSON.stringify(req.headers, null, 2));
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log(`[HTTP] Body:`, JSON.stringify(req.body, null, 2));
+  }
+  next();
+});
+
 app.use(express.static('public'));
 
 // Create HTTP server

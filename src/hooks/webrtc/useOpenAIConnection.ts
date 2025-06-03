@@ -224,7 +224,18 @@ export function useOpenAIConnection(
       if (config.serverUrl) {
         console.log('Fetching ephemeral token from server...');
         
-        const tokenResponse = await fetch(`${config.serverUrl}/api/realtime/sessions`, {
+        // Extract base URL from WebSocket URL (remove protocol and query params)
+        let baseUrl = config.serverUrl;
+        if (baseUrl.startsWith('wss://') || baseUrl.startsWith('ws://')) {
+          baseUrl = baseUrl.replace(/^wss?:\/\//, 'https://');
+        }
+        // Remove query parameters
+        const urlParts = baseUrl.split('?');
+        baseUrl = urlParts[0];
+        
+        console.log(`Fetching token from: ${baseUrl}/api/realtime/sessions`);
+        
+        const tokenResponse = await fetch(`${baseUrl}/api/realtime/sessions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
