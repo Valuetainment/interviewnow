@@ -329,15 +329,18 @@ export function useOpenAIConnection(
         
         console.log(`Fetching token from: ${baseUrl}/api/realtime/sessions`);
         
+        const tokenPayload = {
+          model: model,
+          voice: settings.voice || 'alloy'
+        };
+        console.log('Token request payload:', tokenPayload);
+        
         const tokenResponse = await fetch(`${baseUrl}/api/realtime/sessions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            model: model,
-            voice: settings.voice || 'alloy'
-          })
+          body: JSON.stringify(tokenPayload)
         });
 
         if (!tokenResponse.ok) {
@@ -487,7 +490,39 @@ export function useOpenAIConnection(
             sdpAnswer = await blob.text();
           } catch (altError) {
             console.error('Alternative read also failed:', altError);
-            throw new Error('Failed to read SDP answer from OpenAI response');
+            
+            // Final fallback - try XMLHttpRequest
+            console.log('Trying XMLHttpRequest as final fallback...');
+            try {
+              sdpAnswer = await new Promise<string>((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', openAIUrl);
+                xhr.setRequestHeader('Authorization', `Bearer ${authToken}`);
+                xhr.setRequestHeader('Content-Type', 'application/sdp');
+                xhr.timeout = 5000; // 5 second timeout
+                
+                xhr.onload = () => {
+                  console.log('XHR status:', xhr.status);
+                  console.log('XHR response length:', xhr.responseText.length);
+                  if (xhr.status === 201 || xhr.status === 200) {
+                    resolve(xhr.responseText);
+                  } else {
+                    reject(new Error(`XHR failed with status ${xhr.status}`));
+                  }
+                };
+                
+                xhr.onerror = () => reject(new Error('XHR network error'));
+                xhr.ontimeout = () => reject(new Error('XHR timeout'));
+                
+                console.log('Sending XHR request...');
+                xhr.send(pcRef.current.localDescription?.sdp);
+              });
+              
+              console.log('Successfully read response via XMLHttpRequest');
+            } catch (xhrError) {
+              console.error('XMLHttpRequest also failed:', xhrError);
+              throw new Error('Failed to read SDP answer from OpenAI response');
+            }
           }
         }
       }
