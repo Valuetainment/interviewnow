@@ -933,6 +933,8 @@ We are following a front-to-back implementation strategy for production deployme
 - ✅ **Fixed 30-second startup delay** - Added 3-second timeout to ICE gathering
 - ✅ **Fixed session cleanup** - Reset all architecture state on cleanup
 - ✅ **Added session timeout warning** - Warns user 10 seconds before ephemeral token expires
+- ✅ **Fixed microphone permission** - Request permission before creating peer connection
+- ✅ **Improved audio playback** - Add audio element to DOM, use AudioContext, retry playback
 
 ## What's In Progress
 - 🔄 Improving user experience for ending/starting new interviews

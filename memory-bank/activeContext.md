@@ -845,6 +845,22 @@ WebRTC connection to OpenAI Realtime API is working in production! User successf
 - **Fix**: Added warning message at 50 seconds
 - **Result**: Users get 10-second warning before session expires
 
+### 4. Microphone Permission (FIXED)
+- **Issue**: Browser wasn't requesting microphone permission
+- **Root Cause**: Audio capture happened after peer connection creation
+- **Fix**: Request microphone permission before creating peer connection
+- **Result**: Browser properly prompts for microphone access
+
+### 5. Audio Playback (IMPROVED)
+- **Issue**: 2-minute delays before hearing AI responses
+- **Root Cause**: Browser autoplay policies causing audio buffering
+- **Fix**: 
+  - Add audio element to DOM for better autoplay compliance
+  - Use AudioContext to resume playback
+  - Retry playback automatically
+  - Listen for user interaction to force playback
+- **Result**: Audio should play immediately or on first user interaction
+
 ## Remaining Issues
 
 ### 1. Ephemeral Token Expiration
