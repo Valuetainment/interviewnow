@@ -359,6 +359,8 @@ export function useOpenAIConnection(
         }
         
         console.log('Successfully obtained ephemeral token');
+        console.log('Token preview (first 20 chars):', authToken.substring(0, 20) + '...');
+        console.log('Token length:', authToken.length);
       } else {
         // Fallback to direct API key (not recommended for production)
         console.warn('Using API key directly - this is not recommended for production');
@@ -381,7 +383,9 @@ export function useOpenAIConnection(
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/sdp'
         },
-        body: pcRef.current.localDescription?.sdp
+        body: pcRef.current.localDescription?.sdp,
+        mode: 'cors', // Explicitly set CORS mode
+        credentials: 'omit' // Don't send cookies
       });
 
       console.log(`OpenAI API response status: ${response.status}`);
@@ -389,6 +393,15 @@ export function useOpenAIConnection(
         'content-type': response.headers.get('content-type'),
         'content-length': response.headers.get('content-length'),
         'access-control-allow-origin': response.headers.get('access-control-allow-origin'),
+      });
+      
+      // Check if response is complete
+      console.log('Response object details:', {
+        bodyUsed: response.bodyUsed,
+        ok: response.ok,
+        redirected: response.redirected,
+        type: response.type,
+        url: response.url
       });
 
       if (!response.ok) {
@@ -399,19 +412,22 @@ export function useOpenAIConnection(
 
       // Get SDP answer from OpenAI with timeout
       console.log('Reading SDP answer from OpenAI response...');
+      console.log('About to call response.text() - this is where it might hang');
       
       let sdpAnswer: string;
       try {
         // Add timeout for reading response
         const textPromise = response.text();
         const timeoutPromise = new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout reading OpenAI response')), 5000)
+          setTimeout(() => reject(new Error('Timeout reading OpenAI response after 5 seconds')), 5000)
         );
         
         sdpAnswer = await Promise.race([textPromise, timeoutPromise]);
+        console.log('Successfully read response.text()');
         console.log('Received SDP answer from OpenAI');
       } catch (readError) {
         console.error('Error reading OpenAI response:', readError);
+        console.error('Full error object:', readError);
         console.error('Response headers:', response.headers);
         console.error('Response status:', response.status);
         console.error('Response statusText:', response.statusText);
