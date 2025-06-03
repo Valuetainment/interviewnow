@@ -135,9 +135,6 @@ export function useWebRTC(
       setIsReady(false);
       setError(null);
       
-      // Track if we just determined the architecture in this call
-      let justDeterminedArchitecture = false;
-      
       // Clear any existing transcript data
       clearTranscript();
 
@@ -154,7 +151,7 @@ export function useWebRTC(
       console.log(`Initializing WebRTC in ${useDirectOpenAI ? (useHybridMode ? 'Hybrid' : 'Direct OpenAI') : config.simulationMode ? 'Simulation' : 'SDP Proxy'} mode`);
 
       // Get tenant ID for the current user if not in simulation or OpenAI mode
-      if (!config.simulationMode && !useDirectOpenAI) {
+      if (!config.simulationMode && !useDirectOpenAI && !architectureDetermined) {
         try {
           const { data: tenantData, error: tenantError } = await supabase
             .from('users')
@@ -194,7 +191,6 @@ export function useWebRTC(
             setHybridServerUrl(data.webrtc_server_url);
             setUseHybridMode(true);
             setArchitectureDetermined(true);
-            justDeterminedArchitecture = true;
           } else if (data.webrtc_server_url) {
             // Original SDP proxy mode
             console.log(`Using server URL from edge function: ${data.webrtc_server_url}`);
@@ -203,7 +199,6 @@ export function useWebRTC(
             // Update the SDP proxy connection with the correct server URL
             sdpProxyConnection.setServerUrl(data.webrtc_server_url);
             setArchitectureDetermined(true);
-            justDeterminedArchitecture = true;
           } else {
             throw new Error('Missing WebRTC server URL from edge function');
           }
@@ -224,9 +219,9 @@ export function useWebRTC(
         }
       }
       
-      // Only initialize the active connection if architecture has been determined
-      // and we didn't just determine it in this call (need to wait for state update)
-      if (architectureDetermined && !justDeterminedArchitecture) {
+      // Initialize the active connection if architecture has been determined
+      if (architectureDetermined || config.simulationMode || config.openAIMode) {
+        console.log('Architecture determined, initializing connection');
         // Initialize the active connection
         const success = await activeConnection.initialize();
         
@@ -238,9 +233,8 @@ export function useWebRTC(
           return false;
         }
       } else {
-        // Architecture not yet determined, or just determined in this call
-        // The connection will be initialized once the component re-renders with the correct architecture
-        console.log('Architecture determination in progress, deferring connection initialization');
+        // Architecture will be determined by useEffect
+        console.log('Waiting for architecture to be determined');
         return true;
       }
     } catch (error) {
@@ -288,11 +282,15 @@ export function useWebRTC(
   // Initialize connection after architecture is determined
   useEffect(() => {
     if (architectureDetermined && !hasStartedInitialization && !isReady && !error) {
-      console.log('Architecture determined, initializing connection');
+      console.log('Architecture determined, initializing connection automatically');
       setHasStartedInitialization(true);
-      initialize();
+      // Create an async function to call initialize
+      const doInitialize = async () => {
+        await initialize();
+      };
+      doInitialize();
     }
-  }, [architectureDetermined, hasStartedInitialization, isReady, error, initialize]);
+  }, [architectureDetermined]); // Only depend on architectureDetermined to avoid infinite loops
 
   return {
     initialize,

@@ -360,8 +360,17 @@ export function useOpenAIConnection(
         authToken = config.openAIKey!;
       }
 
+      // Log the connection attempt details
+      console.log('Attempting to connect to OpenAI Realtime API...');
+      console.log(`Model: ${model}`);
+      console.log(`Auth token type: ${config.serverUrl ? 'ephemeral' : 'api_key'}`);
+      console.log(`Local SDP offer ready: ${!!pcRef.current.localDescription?.sdp}`);
+
       // Send offer to OpenAI Realtime API with appropriate auth
-      const response = await fetch(`https://api.openai.com/v1/realtime?model=${model}`, {
+      const openAIUrl = `https://api.openai.com/v1/realtime?model=${model}`;
+      console.log(`Sending SDP offer to: ${openAIUrl}`);
+      
+      const response = await fetch(openAIUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -370,8 +379,11 @@ export function useOpenAIConnection(
         body: pcRef.current.localDescription?.sdp
       });
 
+      console.log(`OpenAI API response status: ${response.status}`);
+
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('OpenAI API error response:', errorText);
         throw new Error(`OpenAI API error (${response.status}): ${errorText}`);
       }
 
