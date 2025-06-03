@@ -53,6 +53,7 @@ export function useWebRTC(
   const [error, setError] = useState<string | null>(null);
   const [hybridServerUrl, setHybridServerUrl] = useState<string | null>(null);
   const [useHybridMode, setUseHybridMode] = useState(false);
+  const [architectureDetermined, setArchitectureDetermined] = useState(false);
 
   // Use transcript manager
   const { clearTranscript } = useTranscriptManager({
@@ -82,7 +83,8 @@ export function useWebRTC(
       openAISettings: config.openAISettings,
       jobDescription: config.jobDescription,
       resume: config.resume,
-      disabled: !useDirectOpenAI  // Disable when not using direct OpenAI mode
+      // Disable until architecture is determined (unless explicitly in OpenAI mode)
+      disabled: config.openAIMode ? !config.openAIKey : (!architectureDetermined || !useDirectOpenAI)
     },
     handleConnectionStateChange,
     onTranscriptUpdate
@@ -98,7 +100,8 @@ export function useWebRTC(
         : (config.serverUrl || ''), // Will be populated from edge function response
       simulationMode: config.simulationMode,
       supabaseClient: supabase,
-      disabled: !!useDirectOpenAI  // Disable when using direct OpenAI mode
+      // Disable until architecture is determined AND we're not using direct OpenAI
+      disabled: !!config.openAIMode || (!architectureDetermined || useDirectOpenAI)
     },
     handleConnectionStateChange,
     onTranscriptUpdate
@@ -181,6 +184,7 @@ export function useWebRTC(
             // Switch to hybrid mode using OpenAI connection with ephemeral tokens
             setHybridServerUrl(data.webrtc_server_url);
             setUseHybridMode(true);
+            setArchitectureDetermined(true);
           } else if (data.webrtc_server_url) {
             // Original SDP proxy mode
             console.log(`Using server URL from edge function: ${data.webrtc_server_url}`);
@@ -188,6 +192,7 @@ export function useWebRTC(
             
             // Update the SDP proxy connection with the correct server URL
             sdpProxyConnection.setServerUrl(data.webrtc_server_url);
+            setArchitectureDetermined(true);
           } else {
             throw new Error('Missing WebRTC server URL from edge function');
           }
