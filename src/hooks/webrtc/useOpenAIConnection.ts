@@ -385,6 +385,11 @@ export function useOpenAIConnection(
       });
 
       console.log(`OpenAI API response status: ${response.status}`);
+      console.log('Response headers:', {
+        'content-type': response.headers.get('content-type'),
+        'content-length': response.headers.get('content-length'),
+        'access-control-allow-origin': response.headers.get('access-control-allow-origin'),
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -392,10 +397,38 @@ export function useOpenAIConnection(
         throw new Error(`OpenAI API error (${response.status}): ${errorText}`);
       }
 
-      // Get SDP answer from OpenAI
+      // Get SDP answer from OpenAI with timeout
       console.log('Reading SDP answer from OpenAI response...');
-      const sdpAnswer = await response.text();
-      console.log('Received SDP answer from OpenAI');
+      
+      let sdpAnswer: string;
+      try {
+        // Add timeout for reading response
+        const textPromise = response.text();
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout reading OpenAI response')), 5000)
+        );
+        
+        sdpAnswer = await Promise.race([textPromise, timeoutPromise]);
+        console.log('Received SDP answer from OpenAI');
+      } catch (readError) {
+        console.error('Error reading OpenAI response:', readError);
+        console.error('Response headers:', response.headers);
+        console.error('Response status:', response.status);
+        console.error('Response statusText:', response.statusText);
+        
+        // Try alternative methods
+        try {
+          console.log('Trying to clone and read response...');
+          const clonedResponse = response.clone();
+          const blob = await clonedResponse.blob();
+          console.log('Response blob size:', blob.size);
+          sdpAnswer = await blob.text();
+        } catch (altError) {
+          console.error('Alternative read also failed:', altError);
+          throw new Error('Failed to read SDP answer from OpenAI response');
+        }
+      }
+      
       console.log('SDP answer length:', sdpAnswer.length);
       console.log('SDP answer preview:', sdpAnswer.substring(0, 100) + '...');
 
