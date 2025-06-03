@@ -81,63 +81,73 @@ export function useOpenAIConnection(
       if (track.kind === 'audio') {
         console.log('Received audio track from OpenAI');
         
-        // Clean up any existing audio element
-        if (audioElement) {
-          audioElement.pause();
-          audioElement.srcObject = null;
-        }
-        
-        // Create or reuse audio element
+        // Create audio element once and reuse it
         if (!audioElement) {
+          console.log('Creating new audio element for OpenAI playback');
           audioElement = new Audio();
-          // Set properties to minimize latency
           audioElement.autoplay = true;
-          audioElement.preload = 'none';
-          // Disable any audio processing that might add latency
-          const audioWithHint = audioElement as HTMLAudioElement & { latencyHint?: string };
-          if ('latencyHint' in audioWithHint) {
-            audioWithHint.latencyHint = 'interactive';
-          }
+          audioElement.controls = false;
+          audioElement.muted = false;
           // Add to DOM to help with autoplay policies
           audioElement.style.display = 'none';
           document.body.appendChild(audioElement);
+          
+          // Add event listeners for debugging
+          audioElement.addEventListener('loadstart', () => console.log('Audio: Load started'));
+          audioElement.addEventListener('canplay', () => console.log('Audio: Can play'));
+          audioElement.addEventListener('play', () => console.log('Audio: Play event'));
+          audioElement.addEventListener('playing', () => console.log('Audio: Playing'));
+          audioElement.addEventListener('pause', () => console.log('Audio: Paused'));
+          audioElement.addEventListener('ended', () => console.log('Audio: Ended'));
+          audioElement.addEventListener('error', (e) => console.error('Audio error:', e));
         }
         
-        // Set the stream
+        // Set the stream (don't recreate element)
+        console.log('Setting audio stream to element');
         audioElement.srcObject = streams[0];
         
-        // Force immediate playback with multiple attempts
-        const playAudio = async () => {
+        // Force playback with user interaction handling
+        const ensurePlayback = async () => {
           try {
-            // Ensure audio context is resumed (for browsers that require it)
+            // Resume audio context for browsers that require it
             if ('AudioContext' in window) {
               const audioContext = new AudioContext();
               if (audioContext.state === 'suspended') {
+                console.log('Resuming suspended AudioContext');
                 await audioContext.resume();
               }
             }
             
-            await audioElement?.play();
-            console.log('Audio playback started successfully');
+            if (audioElement) {
+              console.log('Attempting to play audio...');
+              await audioElement.play();
+              console.log('Audio playback started successfully');
+            }
           } catch (error) {
             console.error('Error playing audio:', error);
-            // Retry after a short delay
-            setTimeout(playAudio, 100);
+            // If autoplay failed, wait for user interaction
+            console.log('Autoplay failed, waiting for user interaction...');
+            
+            const playOnInteraction = async () => {
+              try {
+                if (audioElement) {
+                  await audioElement.play();
+                  console.log('Audio playback started after user interaction');
+                }
+              } catch (retryError) {
+                console.error('Audio playback failed even after user interaction:', retryError);
+              }
+            };
+            
+            // Add one-time event listeners for user interaction
+            document.addEventListener('click', playOnInteraction, { once: true });
+            document.addEventListener('keydown', playOnInteraction, { once: true });
+            document.addEventListener('touchstart', playOnInteraction, { once: true });
           }
         };
         
         // Start playback immediately
-        playAudio();
-        
-        // Also ensure playback on any user interaction
-        const ensurePlayback = () => {
-          if (audioElement && audioElement.paused) {
-            playAudio();
-          }
-        };
-        
-        document.addEventListener('click', ensurePlayback, { once: true });
-        document.addEventListener('keydown', ensurePlayback, { once: true });
+        ensurePlayback();
       }
     }
   );
