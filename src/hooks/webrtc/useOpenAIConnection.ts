@@ -33,6 +33,9 @@ const DEFAULT_SETTINGS = {
   maximumLength: 5
 };
 
+// Store audio element reference outside component to persist across renders
+let audioElement: HTMLAudioElement | null = null;
+
 /**
  * Hook for managing direct OpenAI WebRTC connections
  */
@@ -59,7 +62,7 @@ export function useOpenAIConnection(
     pcRef,
     dataChannelRef,
     initialize: initializeWebRTC,
-    cleanup,
+    cleanup: cleanupWebRTC,
     connectionState,
     error,
     isConnecting,
@@ -75,9 +78,39 @@ export function useOpenAIConnection(
     (track, streams) => {
       if (track.kind === 'audio') {
         console.log('Received audio track from OpenAI');
-        const audioElement = new Audio();
+        
+        // Clean up any existing audio element
+        if (audioElement) {
+          audioElement.pause();
+          audioElement.srcObject = null;
+        }
+        
+        // Create or reuse audio element
+        if (!audioElement) {
+          audioElement = new Audio();
+          // Set properties to minimize latency
+          audioElement.autoplay = true;
+          audioElement.preload = 'none';
+          // Disable any audio processing that might add latency
+          const audioWithHint = audioElement as HTMLAudioElement & { latencyHint?: string };
+          if ('latencyHint' in audioWithHint) {
+            audioWithHint.latencyHint = 'interactive';
+          }
+        }
+        
+        // Set the stream
         audioElement.srcObject = streams[0];
-        audioElement.play().catch(error => console.error('Error playing audio:', error));
+        
+        // Ensure we have user interaction and play
+        audioElement.play().then(() => {
+          console.log('Audio playback started successfully');
+        }).catch(error => {
+          console.error('Error playing audio:', error);
+          // Try to play again on next user interaction
+          document.addEventListener('click', () => {
+            audioElement?.play().catch(e => console.error('Retry play failed:', e));
+          }, { once: true });
+        });
       }
     }
   );
@@ -315,9 +348,16 @@ export function useOpenAIConnection(
   // Wrap cleanup to check disabled
   const wrappedCleanup = useCallback(() => {
     if (!config.disabled) {
-      cleanup();
+      cleanupWebRTC();
+      
+      // Clean up audio element
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.srcObject = null;
+        audioElement = null;
+      }
     }
-  }, [config.disabled, cleanup]);
+  }, [config.disabled, cleanupWebRTC]);
 
   return {
     initialize,
