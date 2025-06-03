@@ -287,6 +287,10 @@
   - ✅ Cleaned up testing structure for hybrid architecture focus
   - ✅ Implemented Phases 1-3 of Hybrid Architecture Test Migration Plan
   - ✅ Created TEST_STRUCTURE.md documenting new test organization
+- ✅ **WebRTC connection to OpenAI Realtime API working in production!** (2025-06-03)
+  - Successfully had 15-second conversation with AI interviewer
+  - Direct browser-to-OpenAI connection established
+  - Audio working both ways
 
 ## In Progress
 - 🔄 Hybrid Architecture Test Migration Plan:
@@ -916,6 +920,45 @@ We are following a front-to-back implementation strategy for production deployme
 ### May 14, 2024
 - Fixed positions listing page: Updated the Positions component to fetch real positions from the database instead of using mock data. This completes the end-to-end position creation workflow, where users can now create positions with AI-generated descriptions, save them to the database with proper competencies, and view them in both the listing and detail pages. Fixed RLS policies for both positions and competencies tables to ensure proper data access. Also updated CreatePosition component with improved error logging for better troubleshooting.
 - Fixed position creation functionality: Identified that positions were not being saved to the database due to RLS policy issues. Discovered the root cause was a policy using a non-existent JWT claim (request.jwt.claim.tenant_id). Created migration 20250514131500_fix_positions_rls_policy.sql to implement proper RLS policies using user tenant lookup and applied granular policies for each operation type. Successfully deployed the fix to production and verified that positions can now be properly created and saved.
+
+## Recent Fixes (2025-06-03)
+- ✅ Fixed race condition where both connection types initialized simultaneously
+- ✅ Added `architectureDetermined` flag to control initialization order
+- ✅ Fixed WebSocket URL path issue (removed `/ws` suffix)
+- ✅ Fixed frontend endpoint URL for ephemeral tokens
+- ✅ Updated OpenAI API key in Fly.io secrets
+- ✅ Fixed Vercel deployment issues
+- ✅ Fixed infinite loop in WebRTC initialization (added `hasStartedInitialization` flag)
+- ✅ Fixed audio playback delays (persisted audio element with low-latency settings)
+- ✅ **Fixed 30-second startup delay** - Added 3-second timeout to ICE gathering
+- ✅ **Fixed session cleanup** - Reset all architecture state on cleanup
+- ✅ **Added session timeout warning** - Warns user 10 seconds before ephemeral token expires
+
+## What's In Progress
+- 🔄 Improving user experience for ending/starting new interviews
+- 🔄 Handling ephemeral token expiration (currently lasts 1 minute)
+
+## What's Left to Build
+- ❌ Automatic token refresh before expiration
+- ❌ Proper navigation after ending interview
+- ❌ Interview summary page showing full transcript
+- ❌ Resume analysis integration during interview
+- ❌ Advanced interview controls (pause, skip question, etc.)
+- ❌ Interview recording and playback
+- ❌ Multi-interviewer support
+- ❌ Custom interview question sets
+- ❌ Interview scoring and evaluation
+
+## Known Issues
+- **Session Timeout**: Ephemeral tokens expire after 1 minute - need automatic refresh
+- **UI Flow**: After ending interview, user must manually navigate to start a new one
+- **Browser Compatibility**: Some browsers may have audio autoplay restrictions
+
+## Architecture Notes
+- Using hybrid architecture: Browser connects directly to OpenAI with ephemeral tokens
+- Fly.io server only provides tokens, no WebRTC proxying
+- Frontend manages entire WebRTC connection lifecycle
+- Supabase edge functions coordinate session initialization
 
 # Project Progress
 
