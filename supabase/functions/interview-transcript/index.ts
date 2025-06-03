@@ -118,6 +118,7 @@ serve(async (req) => {
         session_id: interview_session_id, // Note: column is named session_id, not interview_session_id
         tenant_id: sessionData.tenant_id, // Ensure tenant_id is set for security
         text,
+        start_ms: 0,
         timestamp: timestamp || new Date().toISOString(),
         speaker: finalSpeaker || 'unknown', // Use determined speaker or default
         confidence,
