@@ -380,13 +380,6 @@ export function useOpenAIConnection(
       const openAIUrl = `https://api.openai.com/v1/realtime?model=${model}`;
       console.log(`Sending SDP offer to: ${openAIUrl}`);
       
-      // Create AbortController for timeout
-      const abortController = new AbortController();
-      const fetchTimeout = setTimeout(() => {
-        console.log('Aborting fetch after 10 seconds...');
-        abortController.abort();
-      }, 10000); // 10 second total timeout for the entire fetch operation
-      
       const response = await fetch(openAIUrl, {
         method: 'POST',
         headers: {
@@ -395,28 +388,10 @@ export function useOpenAIConnection(
         },
         body: pcRef.current.localDescription?.sdp,
         mode: 'cors', // Explicitly set CORS mode
-        credentials: 'omit', // Don't send cookies
-        signal: abortController.signal // Add abort signal
+        credentials: 'omit' // Don't send cookies
       });
-      
-      // Clear the fetch timeout
-      clearTimeout(fetchTimeout);
 
       console.log(`OpenAI API response status: ${response.status}`);
-      console.log('Response headers:', {
-        'content-type': response.headers.get('content-type'),
-        'content-length': response.headers.get('content-length'),
-        'access-control-allow-origin': response.headers.get('access-control-allow-origin'),
-      });
-      
-      // Check if response is complete
-      console.log('Response object details:', {
-        bodyUsed: response.bodyUsed,
-        ok: response.ok,
-        redirected: response.redirected,
-        type: response.type,
-        url: response.url
-      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -424,147 +399,20 @@ export function useOpenAIConnection(
         throw new Error(`OpenAI API error (${response.status}): ${errorText}`);
       }
 
-      // Get SDP answer from OpenAI with timeout
+      // Get SDP answer from OpenAI - simple approach like Lovable MVP
       console.log('Reading SDP answer from OpenAI response...');
-      console.log('About to call response.text() - this is where it might hang');
-      
-      let sdpAnswer: string;
-      try {
-        // Add timeout for reading response
-        console.log('Creating text promise...');
-        const textPromise = response.text();
-        console.log('Text promise created');
-        
-        console.log('Creating timeout promise...');
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          console.log('Setting timeout for 5 seconds...');
-          const timeoutId = setTimeout(() => {
-            console.log('TIMEOUT FIRED - rejecting promise');
-            reject(new Error('Timeout reading OpenAI response after 5 seconds'));
-          }, 5000);
-          console.log('Timeout set with ID:', timeoutId);
-        });
-        console.log('Timeout promise created');
-        
-        console.log('Starting Promise.race...');
-        sdpAnswer = await Promise.race([textPromise, timeoutPromise]);
-        console.log('Promise.race completed successfully');
-        console.log('Successfully read response.text()');
-        console.log('Received SDP answer from OpenAI');
-      } catch (readError) {
-        console.error('Error reading OpenAI response:', readError);
-        console.error('Full error object:', readError);
-        console.error('Response headers:', response.headers);
-        console.error('Response status:', response.status);
-        console.error('Response statusText:', response.statusText);
-        
-        // Try reading as stream if text() fails
-        try {
-          console.log('Trying to read response as stream...');
-          if (!response.body) {
-            throw new Error('Response body is null');
-          }
-          
-          const reader = response.body.getReader();
-          const chunks: Uint8Array[] = [];
-          let done = false;
-          
-          // Read with timeout
-          const readTimeout = setTimeout(() => {
-            reader.cancel();
-            done = true;
-          }, 3000);
-          
-          while (!done) {
-            const { value, done: streamDone } = await reader.read();
-            if (streamDone || !value) {
-              done = true;
-              clearTimeout(readTimeout);
-            } else {
-              chunks.push(value);
-              console.log(`Read chunk of size: ${value.length}`);
-            }
-          }
-          
-          clearTimeout(readTimeout);
-          
-          // Combine chunks and decode
-          const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-          console.log(`Total response size: ${totalLength} bytes`);
-          
-          const combined = new Uint8Array(totalLength);
-          let offset = 0;
-          for (const chunk of chunks) {
-            combined.set(chunk, offset);
-            offset += chunk.length;
-          }
-          
-          sdpAnswer = new TextDecoder().decode(combined);
-          console.log('Successfully read response as stream');
-        } catch (streamError) {
-          console.error('Stream reading also failed:', streamError);
-          
-          // Last resort - try cloning
-          try {
-            console.log('Trying to clone and read response...');
-            const clonedResponse = response.clone();
-            const blob = await clonedResponse.blob();
-            console.log('Response blob size:', blob.size);
-            sdpAnswer = await blob.text();
-          } catch (altError) {
-            console.error('Alternative read also failed:', altError);
-            
-            // Final fallback - try XMLHttpRequest
-            console.log('Trying XMLHttpRequest as final fallback...');
-            try {
-              sdpAnswer = await new Promise<string>((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', openAIUrl);
-                xhr.setRequestHeader('Authorization', `Bearer ${authToken}`);
-                xhr.setRequestHeader('Content-Type', 'application/sdp');
-                xhr.timeout = 5000; // 5 second timeout
-                
-                xhr.onload = () => {
-                  console.log('XHR status:', xhr.status);
-                  console.log('XHR response length:', xhr.responseText.length);
-                  if (xhr.status === 201 || xhr.status === 200) {
-                    resolve(xhr.responseText);
-                  } else {
-                    reject(new Error(`XHR failed with status ${xhr.status}`));
-                  }
-                };
-                
-                xhr.onerror = () => reject(new Error('XHR network error'));
-                xhr.ontimeout = () => reject(new Error('XHR timeout'));
-                
-                console.log('Sending XHR request...');
-                xhr.send(pcRef.current.localDescription?.sdp);
-              });
-              
-              console.log('Successfully read response via XMLHttpRequest');
-            } catch (xhrError) {
-              console.error('XMLHttpRequest also failed:', xhrError);
-              throw new Error('Failed to read SDP answer from OpenAI response');
-            }
-          }
-        }
-      }
-      
+      const sdpAnswer = await response.text();
+      console.log('Received SDP answer from OpenAI');
       console.log('SDP answer length:', sdpAnswer.length);
       console.log('SDP answer preview:', sdpAnswer.substring(0, 100) + '...');
 
       // Set the remote description
       console.log('Setting remote description with OpenAI SDP answer...');
-      try {
-        await pcRef.current.setRemoteDescription({
-          type: 'answer',
-          sdp: sdpAnswer
-        });
-        console.log('Successfully set remote description');
-      } catch (sdpError) {
-        console.error('Failed to set remote description:', sdpError);
-        throw sdpError;
-      }
+      await pcRef.current.setRemoteDescription({
+        type: 'answer',
+        sdp: sdpAnswer
+      });
+      console.log('Successfully set remote description');
 
       // Log connection state
       console.log('Current peer connection state:', pcRef.current.connectionState);
