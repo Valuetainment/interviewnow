@@ -54,6 +54,7 @@ export function useWebRTC(
   const [hybridServerUrl, setHybridServerUrl] = useState<string | null>(null);
   const [useHybridMode, setUseHybridMode] = useState(false);
   const [architectureDetermined, setArchitectureDetermined] = useState(false);
+  const [hasStartedInitialization, setHasStartedInitialization] = useState(false);
 
   // Use transcript manager
   const { clearTranscript } = useTranscriptManager({
@@ -269,6 +270,7 @@ export function useWebRTC(
     setIsReady(false);
     setInternalConnectionState('disconnected');
     setError(null);
+    setHasStartedInitialization(false);
   }, [activeConnection]);
 
   // Clean up on unmount
@@ -281,11 +283,12 @@ export function useWebRTC(
   
   // Initialize connection after architecture is determined
   useEffect(() => {
-    if (architectureDetermined && !isReady && !activeConnection.isConnected && !activeConnection.isConnecting && !error) {
+    if (architectureDetermined && !hasStartedInitialization && !isReady && !error) {
       console.log('Architecture determined, initializing connection');
+      setHasStartedInitialization(true);
       initialize();
     }
-  }, [architectureDetermined, isReady, activeConnection.isConnected, activeConnection.isConnecting, error, initialize]);
+  }, [architectureDetermined, hasStartedInitialization, isReady, error, initialize]);
 
   return {
     initialize,

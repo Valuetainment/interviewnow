@@ -810,11 +810,16 @@ Fixing WebRTC production issues where connections show as connected but no audio
 
 ## Recent Changes (2025-06-03)
 
-### Fixed Race Condition in Hybrid Mode
+### Fixed Race Condition in Hybrid Mode (Improved)
 - **Issue**: When using hybrid architecture, both `useSDPProxy` and `useOpenAIConnection` were initializing simultaneously
 - **Root Cause**: Architecture determination happened AFTER hooks were already initialized
-- **Fix**: Added `architectureDetermined` state flag to prevent connections from initializing until we know which architecture to use
-- **Result**: Only the correct connection type initializes based on the architecture returned by the edge function
+- **Initial Fix**: Added `architectureDetermined` state flag to prevent connections from initializing until we know which architecture to use
+- **Secondary Issue**: The `activeConnection` was still using old state values when trying to initialize
+- **Complete Fix**: 
+  - Added local variable `justDeterminedArchitecture` to track if architecture was determined in current call
+  - Defer initialization if architecture was just determined (wait for state update)
+  - Added `useEffect` to initialize connection after architecture determination and state updates
+- **Result**: Proper initialization sequence - architecture determined → state updated → correct connection initialized
 
 ### Server-Side Issues Resolved
 1. **Ephemeral Token Endpoint**: Successfully deployed and working at `/api/realtime/sessions`
@@ -827,15 +832,18 @@ Fixing WebRTC production issues where connections show as connected but no audio
 3. **Endpoint URLs**: Fixed frontend to use correct `/api/realtime/sessions` endpoint
 
 ## Next Steps
-1. Monitor production logs to verify the race condition fix works
+1. Monitor production logs to verify the improved race condition fix works
 2. User needs to test the interview flow again
-3. Consider removing the green deployment badge once confirmed working
+3. Verify that the correct connection type initializes after architecture determination
+4. Consider removing the green deployment badge once confirmed working
 
 ## Key Decisions
 - Using hybrid architecture where browser connects directly to OpenAI with ephemeral tokens
 - Server only provides tokens, doesn't proxy WebRTC traffic
 - Proper initialization order prevents ghost connections
+- Deferred initialization ensures correct connection type is used
 
 ## Active Considerations
-- TypeScript linter showing false positive on line 104 (disabled property) - not affecting functionality
-- Need to ensure all connection cleanup happens properly when switching architectures 
+- TypeScript linter showing error on line 104 (disabled property) - false positive, not affecting functionality
+- Need to ensure all connection cleanup happens properly when switching architectures
+- The two-phase initialization (architecture determination → connection init) provides proper sequencing 
