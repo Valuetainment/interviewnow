@@ -138,7 +138,9 @@ export function useAudioVisualization(): AudioVisualizationHandlers {
       // Create audio context with error handling
       let audioContext: AudioContext;
       try {
-        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const WebkitWindow = window as Window & { webkitAudioContext?: typeof AudioContext };
+        const AudioContextClass = window.AudioContext || WebkitWindow.webkitAudioContext;
+        audioContext = new AudioContextClass!();
       } catch (contextError) {
         console.error('Failed to create AudioContext:', contextError);
         if (isMountedRef.current) setIsRecording(false);
@@ -182,16 +184,20 @@ export function useAudioVisualization(): AudioVisualizationHandlers {
       let lastVisData: number[] = [];
 
       const updateVisualization = () => {
-        // Prevent re-entry if already processing a frame
-        if (isProcessingFrameRef.current) {
-          console.log('Already processing a frame, skipping');
-          animationFrameRef.current = requestAnimationFrame(updateVisualization);
-          return;
-        }
-
         // Check if component is still mounted and analyzer exists
         if (!isMountedRef.current || !analyserRef.current) {
           console.log('Component unmounted or analyzer missing, stopping visualization loop');
+          return;
+        }
+
+        // Prevent re-entry if already processing a frame
+        if (isProcessingFrameRef.current) {
+          // Wait longer before retrying to reduce loop frequency
+          setTimeout(() => {
+            if (isMountedRef.current) {
+              animationFrameRef.current = requestAnimationFrame(updateVisualization);
+            }
+          }, 50);
           return;
         }
 
@@ -205,7 +211,13 @@ export function useAudioVisualization(): AudioVisualizationHandlers {
           // Skip processing this frame if we updated too recently
           if (timeSinceLastUpdate < throttleIntervalRef.current) {
             isProcessingFrameRef.current = false;
-            animationFrameRef.current = requestAnimationFrame(updateVisualization);
+            // Use timeout instead of immediate requestAnimationFrame to truly throttle
+            const remainingTime = throttleIntervalRef.current - timeSinceLastUpdate;
+            setTimeout(() => {
+              if (isMountedRef.current) {
+                animationFrameRef.current = requestAnimationFrame(updateVisualization);
+              }
+            }, Math.max(remainingTime, 16)); // At least 16ms (60fps max)
             return;
           }
 
@@ -257,9 +269,14 @@ export function useAudioVisualization(): AudioVisualizationHandlers {
         } finally {
           isProcessingFrameRef.current = false;
 
-          // Schedule next frame only if component is still mounted
+          // Schedule next frame with proper throttling
           if (isMountedRef.current) {
-            animationFrameRef.current = requestAnimationFrame(updateVisualization);
+            // Use timeout to ensure we don't exceed our desired update frequency
+            setTimeout(() => {
+              if (isMountedRef.current) {
+                animationFrameRef.current = requestAnimationFrame(updateVisualization);
+              }
+            }, throttleIntervalRef.current);
           } else {
             console.log('Component unmounted during visualization, stopping loop');
           }
