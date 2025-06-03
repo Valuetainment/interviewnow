@@ -72,7 +72,9 @@ export function useOpenAIConnection(
     audioLevel,
     isRecording
   } = useWebRTCConnection(
-    {}, // Use default config
+    { 
+      simulationMode: false // Explicitly ensure we're not in simulation mode
+    },
     onConnectionStateChange,
     // Handle incoming tracks
     (track, streams) => {
@@ -251,7 +253,9 @@ export function useOpenAIConnection(
 
     try {
       // Initialize WebRTC
+      console.log('OpenAI: Starting WebRTC initialization...');
       await initializeWebRTC();
+      console.log('OpenAI: WebRTC initialization completed');
 
       if (!pcRef.current) {
         throw new Error('Failed to initialize WebRTC connection');
@@ -408,11 +412,16 @@ export function useOpenAIConnection(
 
       // Set the remote description
       console.log('Setting remote description with OpenAI SDP answer...');
-      await pcRef.current.setRemoteDescription({
-        type: 'answer',
-        sdp: sdpAnswer
-      });
-      console.log('Successfully set remote description');
+      try {
+        await pcRef.current.setRemoteDescription({
+          type: 'answer',
+          sdp: sdpAnswer
+        });
+        console.log('Successfully set remote description');
+      } catch (sdpError) {
+        console.error('Failed to set remote description:', sdpError);
+        throw sdpError;
+      }
 
       // Log connection state
       console.log('Current peer connection state:', pcRef.current.connectionState);
