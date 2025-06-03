@@ -802,3 +802,40 @@ supabase functions logs <function-name>
 - Local simulation server: ws://localhost:3001
 - Current ngrok tunnel: wss://4d5fb0d8191c.ngrok.app
 - Production test page: https://[YOUR_DOMAIN]/realtime-test.html 
+
+## Active Context
+
+## Current Focus
+Fixing WebRTC production issues where connections show as connected but no audio/functionality works.
+
+## Recent Changes (2025-06-03)
+
+### Fixed Race Condition in Hybrid Mode
+- **Issue**: When using hybrid architecture, both `useSDPProxy` and `useOpenAIConnection` were initializing simultaneously
+- **Root Cause**: Architecture determination happened AFTER hooks were already initialized
+- **Fix**: Added `architectureDetermined` state flag to prevent connections from initializing until we know which architecture to use
+- **Result**: Only the correct connection type initializes based on the architecture returned by the edge function
+
+### Server-Side Issues Resolved
+1. **Ephemeral Token Endpoint**: Successfully deployed and working at `/api/realtime/sessions`
+2. **WebSocket URL**: Fixed to use root path `/` instead of `/ws` for hybrid architecture
+3. **OpenAI API Key**: Updated to new key (sk-proj-6jLNmN...)
+
+### Frontend Deployment Issues Resolved
+1. **Vercel Deployment**: Fixed invalid `comments` field in vercel.json
+2. **Cache Invalidation**: Added visible deployment verification badge
+3. **Endpoint URLs**: Fixed frontend to use correct `/api/realtime/sessions` endpoint
+
+## Next Steps
+1. Monitor production logs to verify the race condition fix works
+2. User needs to test the interview flow again
+3. Consider removing the green deployment badge once confirmed working
+
+## Key Decisions
+- Using hybrid architecture where browser connects directly to OpenAI with ephemeral tokens
+- Server only provides tokens, doesn't proxy WebRTC traffic
+- Proper initialization order prevents ghost connections
+
+## Active Considerations
+- TypeScript linter showing false positive on line 104 (disabled property) - not affecting functionality
+- Need to ensure all connection cleanup happens properly when switching architectures 

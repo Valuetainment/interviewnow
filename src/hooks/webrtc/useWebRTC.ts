@@ -134,6 +134,9 @@ export function useWebRTC(
       setIsReady(false);
       setError(null);
       
+      // Track if we just determined the architecture in this call
+      let justDeterminedArchitecture = false;
+      
       // Clear any existing transcript data
       clearTranscript();
 
@@ -190,6 +193,7 @@ export function useWebRTC(
             setHybridServerUrl(data.webrtc_server_url);
             setUseHybridMode(true);
             setArchitectureDetermined(true);
+            justDeterminedArchitecture = true;
           } else if (data.webrtc_server_url) {
             // Original SDP proxy mode
             console.log(`Using server URL from edge function: ${data.webrtc_server_url}`);
@@ -198,6 +202,7 @@ export function useWebRTC(
             // Update the SDP proxy connection with the correct server URL
             sdpProxyConnection.setServerUrl(data.webrtc_server_url);
             setArchitectureDetermined(true);
+            justDeterminedArchitecture = true;
           } else {
             throw new Error('Missing WebRTC server URL from edge function');
           }
@@ -217,16 +222,25 @@ export function useWebRTC(
           return false;
         }
       }
-
-      // Initialize the active connection
-      const success = await activeConnection.initialize();
       
-      if (success) {
-        setIsReady(true);
-        return true;
+      // Only initialize the active connection if architecture has been determined
+      // and we didn't just determine it in this call (need to wait for state update)
+      if (architectureDetermined && !justDeterminedArchitecture) {
+        // Initialize the active connection
+        const success = await activeConnection.initialize();
+        
+        if (success) {
+          setIsReady(true);
+          return true;
+        } else {
+          setError('Failed to initialize WebRTC connection');
+          return false;
+        }
       } else {
-        setError('Failed to initialize WebRTC connection');
-        return false;
+        // Architecture not yet determined, or just determined in this call
+        // The connection will be initialized once the component re-renders with the correct architecture
+        console.log('Architecture determination in progress, deferring connection initialization');
+        return true;
       }
     } catch (error) {
       console.error('Error initializing WebRTC:', error);
@@ -244,7 +258,8 @@ export function useWebRTC(
     supabase,
     clearTranscript,
     sdpProxyConnection,
-    activeConnection
+    activeConnection,
+    architectureDetermined
   ]);
 
   // Clean up resources
@@ -263,6 +278,14 @@ export function useWebRTC(
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  
+  // Initialize connection after architecture is determined
+  useEffect(() => {
+    if (architectureDetermined && !isReady && !activeConnection.isConnected && !activeConnection.isConnecting && !error) {
+      console.log('Architecture determined, initializing connection');
+      initialize();
+    }
+  }, [architectureDetermined, isReady, activeConnection.isConnected, activeConnection.isConnecting, error, initialize]);
 
   return {
     initialize,
