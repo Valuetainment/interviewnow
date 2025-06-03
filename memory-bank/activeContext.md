@@ -210,6 +210,16 @@ We are following a front-to-back implementation strategy for our WebRTC function
 This approach allows us to ensure that each component works correctly before integrating it into the full system, reducing the risk of cascading failures and making it easier to identify and fix issues.
 
 ## Recent Changes
+- Fixed audio playback delays in WebRTC connection:
+  - **Issue**: User experienced 1-minute delays before hearing AI responses, despite logs showing immediate responses
+  - **Root Cause**: Audio element was created locally without proper management, causing browser buffering issues
+  - **Fix**: 
+    - Persist audio element across renders
+    - Set autoplay and low-latency properties
+    - Disable audio processing that adds latency  
+    - Proper cleanup on component unmount
+  - **Result**: Audio should now play with minimal delay
+
 - Fixed WebRTC SDP Proxy in production:
   - Updated to use OpenAI Realtime API endpoints (sessions.openai.com/v1/realtime)
   - Fixed authentication to use OpenAI API key directly
@@ -4180,3 +4190,266 @@ WebRTC connection to OpenAI Realtime API is now working in production! Successfu
 
 10. **Testing and Environment Infrastructure**
     - Creating interactive setup scripts for environment variables
+    - Implementing verification tools for API connectivity
+    - Developing comprehensive testing documentation
+    - Separating Edge Function testing from frontend testing
+    - Using `--no-verify-jwt` flag for local Edge Function testing to bypass authentication
+    - Created `check-env` Edge Function to verify API key access
+    - Implemented focused hybrid architecture tests
+    - Created standardized testing approach with clear status indicators
+
+11. **Production Storage Configuration**
+    - Created separate storage buckets for different file types:
+      - resumes bucket for PDF files with 10MB limit
+      - videos bucket for interview recordings with 1GB limit
+      - audio bucket for audio files with 100MB limit
+    - Configured public access for the resumes bucket to allow PDF.co processing
+    - Implemented storage RLS policies for authenticated users
+    - Added policy to allow objects to be publicly readable for processing
+    - Created migration files for consistent storage configuration
+
+12. **Database RLS Policy Approach**
+    - Fixed user self-data access with "Users can view own data" policy
+    - Simplified candidates table access with permissive policy for authenticated users
+    - Created storage policies to allow authenticated users to perform operations
+    - Used migration files for standardizing policy changes
+    - Documented policy changes in memory bank for future reference
+    - Fixed tenant_id lookup in RLS policies to use proper user table joins
+    - Created proper policies for interview_sessions with company_id validation
+    - Ensured consistent approach across all tables with foreign key relationships
+
+13. **Frontend API Call Architecture**
+    - Changed from using supabase.functions.invoke to direct fetch API calls
+    - Included apikey header for proper authentication
+    - Added better error handling and status code checking
+    - Implemented more detailed logging for debugging
+    - Used non-blocking pattern for non-critical operations (like enrichment)
+
+14. **Candidate Profile Database Architecture**
+    - Dedicated candidate_profiles table for PDL-enriched data
+    - 1:1 relationship with candidates table via candidate_id
+    - Includes tenant_id for multi-tenant isolation
+    - RLS policies for proper access control
+    - Typed interfaces for better TypeScript integration
+
+15. **Interview Processing Infrastructure**
+    - Evaluated E2B and Fly.io as potential platforms
+    - Selected Fly.io for stronger isolation capabilities
+    - Leveraging Fly.io's Apps → Machines structure for tenant isolation
+    - Taking advantage of burstable CPU for interview transcription workloads
+    - Planning API interfaces for frontend to communicate with Fly.io services
+    - Completed successful proof-of-concept with WebSocket-based communication
+    - Created isolated test environment to validate technical approach
+    - Confirmed Fly.io's suitability for our interview processing needs
+    - Documented comprehensive integration plan for main application
+
+16. **Authentication and Permissions System**
+    - Implemented role-based access control (RBAC) for tenant users
+    - Created candidate-specific authentication system with multi-tenant support
+    - Used JWT claims to store tenant_id and role information
+    - Implemented layered security with JWT validation, RLS policies, and UI permission checks
+    - Documented the complete system in verified-flows for reference
+    - Separated tenant user and candidate authentication flows for clarity
+    - Designed flows to support different use cases for each user type
+    - Fixed user metadata tenant_id to match actual tenant relationships
+    - Ensured consistent tenant_id values across JWT and database
+
+17. **WebRTC Architecture**
+    - Implemented hybrid OpenAI approach as primary architecture
+    - Created hooks-based architecture for better maintainability
+    - Established clear interface between UI components and WebRTC functionality
+    - Implemented proper resource management and cleanup
+    - Added support for different connection modes (simulation, direct OpenAI)
+    - Created comprehensive testing infrastructure with multiple test routes
+    - Enabled ngrok tunneling for local development and testing
+    - Documented architectural comparison for future decisions
+    - Removed original SDP proxy approach in favor of hybrid architecture
+    - Successfully tested WebSocket connections and SDP exchange locally
+    - Pending production deployment following front-to-back approach
+
+18. **TestInterview Page Approach**
+    - Replacing mock data with real database entities
+    - Implementing proper tenant selection for testing
+    - Avoiding workarounds by fixing underlying RLS policy issues
+    - Adding comprehensive error handling and loading states
+    - Providing fallback mechanisms for error recovery
+    - Enhanced UI with better layout and visual organization
+    - Added simplified sidebar navigation for easier testing access
+    - Added company selection with proper company_id saving
+    - Fixed tenant_id handling for more reliable authentication
+
+19. **RLS Policy Architecture**
+   - Creating separate policies for each database operation (SELECT, INSERT, UPDATE, DELETE)
+   - Creating separate policies for each role (authenticated, anon, service_role)
+   - Using proper lookup through users table rather than JWT claims
+   - Adding proper handling of foreign key relationships with tenant verification
+   - Adding comments to document policy purpose and behavior
+   - Following Supabase guidelines for RLS policy creation
+   - Using lowercase SQL for better readability and consistency
+   - Creating migration files for policy changes to ensure consistency
+
+20. **VM Isolation Security Model**
+   - Implemented per-session VM isolation (one VM per interview)
+   - Created unique VM naming convention: interview-{architecture}-{tenantId}-{sessionShortId}
+   - Modified interview-start edge function to create unique VM per session
+   - Updated WebRTC hooks to handle dynamic server URLs
+   - Successfully tested local implementation
+   - Documented model in docs/architecture/VM_ISOLATION.md
+   - Pending production deployment following front-to-back approach
+   - This provides complete separation between interviews with no data leakage
+   - Improved security and resource management for multi-tenant system
+
+## Key Technical Decisions
+
+- **WebRTC Architecture**: Implemented hybrid OpenAI approach with hooks-based architecture, removing the original SDP proxy approach
+- **SDP Exchange Approach**: SDP exchange occurs through Fly.io, but actual audio/video streams go directly between client and OpenAI
+- **API Key Security**: API keys are never exposed to the client; all sensitive operations proxied through Fly.io
+- **Session Isolation**: One VM per interview session for complete isolation and security (tested locally, pending production deployment)
+- **Authentication Method**: JWT-based authentication for API endpoints (partial implementation in interview-start edge function)
+- **Turn Detection**: Server-side VAD (Voice Activity Detection) for optimal turn-taking
+- **Candidate-Tenant Model**: Junction table for many-to-many relationships between candidates and tenants
+- **Invitation System**: Secure function for generating invitation tokens that create candidate-tenant relationships
+- **SDP Format Preservation**: Line-by-line processing to maintain exact SDP format compatibility
+- **Hooks Architecture**: Specialized hooks for different aspects of WebRTC functionality
+- **WebRTC Components Structure**: Core hooks (useConnectionState, useRetry, useAudioVisualization), connection hooks (useWebRTCConnection, useWebSocketConnection, useOpenAIConnection), and orchestration hook (useWebRTC)
+- **Test Architecture**: Test files for individual hooks, test pages for interactive testing, and simulation tools for local development
+- **RLS Policy Structure**: Separate policies for each operation and role, proper handling of foreign key relationships with tenant verification
+- **Front-to-Back Implementation**: Complete frontend components first, then deploy backend services incrementally, with security measures added progressively
+
+## Implementation Priorities
+
+1. Core infrastructure setup (Fly.io VM template, secure credential storage)
+2. Backend APIs and services (SDP exchange, transcript storage)
+3. Database implementation (schema updates, RLS policies)
+4. Client components (WebRTC connection, video recording)
+5. Authentication and security (JWT validation, tenant isolation)
+6. Testing (automated tests, stress testing)
+7. Monitoring and reliability (logging, recovery logic)
+8. Deployment and operations (automation, scaling)
+9. Documentation (technical architecture, API endpoints)
+
+## Reference Documentation
+
+- **Hybrid Architecture Specification**: docs/development/hybrid-architecture-spec.md
+- **Implementation Guide**: docs/development/hybrid-implementation-guide.md
+- **Technical Flow**: docs/development/hybrid-technical-flow.md
+- **Implementation Checklist**: memory-bank/hybrid-implementation-checklist.md
+- **OpenAI WebRTC Integration**: docs/development/openai-webrtc-integration.md
+- **WebRTC SDP Proxy Test Documentation**: fly-interview-poc/WEBRTC-SDP-PROXY-TEST.md
+- **Architecture Comparison**: docs/architecture/ARCHITECTURE_COMPARISON.md
+- **Automated Testing Guide**: docs/development/AUTOMATED_TESTING.md
+- **Authentication and Permissions Flow**: docs/verified-flows/USER_AUTH_PERMISSIONS_FLOW.md
+- **Candidate Authentication Flow**: docs/verified-flows/CANDIDATE_AUTH_FLOW.md
+- **VM Isolation Documentation**: docs/architecture/VM_ISOLATION.md
+- **Edge Function Version Tracking**: memory-bank/edge-function-versions.md
+
+## WebRTC Implementation Architecture
+
+The platform has transitioned to a hybrid architecture approach:
+
+1. **Original SDP Proxy** (fly-interview-poc) - LEGACY/REMOVED:
+   - Traditional WebRTC SDP proxy with server-side audio processing
+   - Full audio transmission over WebSockets
+   - Higher latency and more server resources required
+   - This approach has been DEPRECATED in favor of the hybrid architecture
+   - **Status: SUSPENDED in production**
+
+2. **Hybrid OpenAI Approach** (fly-interview-hybrid) - CURRENT APPROACH:
+   - Uses OpenAI's native WebRTC capabilities
+   - Fly.io only serves as a secure SDP exchange proxy
+   - Direct WebRTC connection between client and OpenAI
+   - Lower latency and more efficient resource usage
+   - **Status: Implemented and tested locally, pending production deployment**
+
+Both architectures now use a **per-session VM isolation model**, where each interview session gets its own dedicated VM for complete isolation. This ensures proper security, performance, and tenant separation in our multi-tenant SaaS platform.
+
+The current architecture uses a hooks-based implementation for better maintainability:
+
+### Core WebRTC Hooks
+- **useConnectionState**: Manages connection state transitions and reporting
+- **useRetry**: Implements retry logic with exponential backoff
+- **useAudioVisualization**: Manages audio capture and visualization
+
+### Connection Hooks
+- **useWebRTCConnection**: Handles WebRTC peer connection establishment and ICE negotiation
+- **useWebSocketConnection**: Manages WebSocket connections to SDP proxy
+- **useOpenAIConnection**: Specialized hook for direct OpenAI WebRTC connections
+- **useSDPProxy**: Specialized hook for SDP proxy architecture
+- **useTranscriptManager**: Manages transcript data and storage
+
+### Orchestration Hook
+- **useWebRTC**: Main entry point that coordinates all specialized hooks
+
+This architecture eliminates circular dependencies and creates a more maintainable system by separating concerns into focused hooks with clear responsibilities.
+
+### VM Isolation Security Model
+- **Per-Session Isolation**: Each interview session gets its own dedicated VM
+- **Complete Process Isolation**: No shared processes or memory spaces between sessions
+- **Network Isolation**: Unique IP addresses and endpoints per session
+- **Data Isolation**: No persistent storage between sessions
+- **Automatic Cleanup**: VM destruction after session completion
+- **Zero Cross-Session Access**: Prevents any potential data leakage between interviews
+- **Replaced Previous Approach**: Improved from previous per-tenant isolation model
+
+## WebRTC Implementation Status
+
+The WebRTC implementation has been fully developed and tested locally with the following status:
+
+1. **WebSocket Connection:** Successfully established WebSocket connections in local testing
+2. **SDP Exchange:** Verified SDP exchange functionality through secure proxy
+3. **Audio Transmission:** Confirmed direct audio streaming between client and OpenAI
+4. **Transcript Processing:** Implemented and tested transcript display and storage
+5. **VM Isolation:** Implemented and tested per-session VM isolation model locally
+
+The implementation follows our front-to-back approach, with all client-side components completed and tested locally. The production deployment is pending, with the following steps required:
+
+1. Deploy updated edge functions to production
+2. Create production VM templates
+3. Configure proper API keys and security settings
+4. Test with real interview sessions
+5. Implement monitoring and performance tracking
+
+## Production Infrastructure Status
+
+### WebRTC SDP Proxy
+- **Application Name:** `interview-sdp-proxy`
+- **Status: SUSPENDED** (Last deployed: May 9, 2025)
+- **Primary Region:** `mia` (Miami)
+- **Access URLs:**
+  - WebSocket: `wss://interview-sdp-proxy.fly.dev/ws`
+  - HTTP/Status: `https://interview-sdp-proxy.fly.dev`
+
+### Hybrid Architecture Template
+- **Application Name:** `interview-hybrid-template`
+- **Status: ACTIVE** (Local testing completed)
+- **Primary Region:** `mia` (Miami)
+- **Implementation Files:**
+  - Main production server: `index.js`
+  - Docker configuration: `Dockerfile`
+  - Fly.io configuration: `fly.toml`
+- **Pending Production Deployment**
+
+### Supabase Edge Functions
+- **interview-start**: v6 (ACTIVE) - Updated with VM isolation fix
+- **interview-transcript**: v4 (ACTIVE)
+- **transcript-processor**: v5 (ACTIVE)
+- **See memory-bank/edge-function-versions.md for detailed version tracking**
+
+## Production Testing Instructions
+1. Start the SDP proxy server (suspended)
+2. Use test page: `https://[YOUR_DOMAIN]/simple-webrtc-test`
+3. Set server URL to: `wss://interview-sdp-proxy.fly.dev/ws`
+4. Turn off simulation mode for real OpenAI testing
+5. Verify WebRTC connection and transcript generation 
+
+## Development Commands
+
+### Start Development Server
+```bash
+npm run dev
+```
+
+### Start Simulation Server (for local testing)
+```bash
+cd fly-interview-hybrid
+node simple-server.js
