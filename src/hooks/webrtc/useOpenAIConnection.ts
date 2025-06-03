@@ -96,21 +96,46 @@ export function useOpenAIConnection(
           if ('latencyHint' in audioWithHint) {
             audioWithHint.latencyHint = 'interactive';
           }
+          // Add to DOM to help with autoplay policies
+          audioElement.style.display = 'none';
+          document.body.appendChild(audioElement);
         }
         
         // Set the stream
         audioElement.srcObject = streams[0];
         
-        // Ensure we have user interaction and play
-        audioElement.play().then(() => {
-          console.log('Audio playback started successfully');
-        }).catch(error => {
-          console.error('Error playing audio:', error);
-          // Try to play again on next user interaction
-          document.addEventListener('click', () => {
-            audioElement?.play().catch(e => console.error('Retry play failed:', e));
-          }, { once: true });
-        });
+        // Force immediate playback with multiple attempts
+        const playAudio = async () => {
+          try {
+            // Ensure audio context is resumed (for browsers that require it)
+            if ('AudioContext' in window) {
+              const audioContext = new AudioContext();
+              if (audioContext.state === 'suspended') {
+                await audioContext.resume();
+              }
+            }
+            
+            await audioElement?.play();
+            console.log('Audio playback started successfully');
+          } catch (error) {
+            console.error('Error playing audio:', error);
+            // Retry after a short delay
+            setTimeout(playAudio, 100);
+          }
+        };
+        
+        // Start playback immediately
+        playAudio();
+        
+        // Also ensure playback on any user interaction
+        const ensurePlayback = () => {
+          if (audioElement && audioElement.paused) {
+            playAudio();
+          }
+        };
+        
+        document.addEventListener('click', ensurePlayback, { once: true });
+        document.addEventListener('keydown', ensurePlayback, { once: true });
       }
     }
   );
@@ -385,6 +410,10 @@ export function useOpenAIConnection(
       if (audioElement) {
         audioElement.pause();
         audioElement.srcObject = null;
+        // Remove from DOM if it was added
+        if (audioElement.parentNode) {
+          audioElement.parentNode.removeChild(audioElement);
+        }
         audioElement = null;
       }
     }

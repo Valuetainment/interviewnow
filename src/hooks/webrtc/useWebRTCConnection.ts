@@ -209,6 +209,20 @@ export function useWebRTCConnection(
       setError(null);
       setConnectionState('connecting');
 
+      // Set up audio capture BEFORE creating peer connection
+      // This ensures we have microphone permission before proceeding
+      if (!config.simulationMode) {
+        console.log('Requesting microphone permission...');
+        const audioSuccess = await setupAudioCapture();
+        if (!audioSuccess) {
+          console.error('Failed to get microphone permission');
+          setConnectionState('error');
+          setIsConnecting(false);
+          return false;
+        }
+        console.log('Microphone permission granted');
+      }
+
       // Create peer connection
       const pc = new RTCPeerConnection({
         iceServers: config.iceServers || DEFAULT_ICE_SERVERS
@@ -284,10 +298,7 @@ export function useWebRTCConnection(
         streamRef.current.getTracks().forEach(track => {
           pc.addTrack(track, streamRef.current!);
         });
-      } else if (!config.simulationMode) {
-        // Set up audio capture if not in simulation mode
-        await setupAudioCapture();
-      } else {
+      } else if (config.simulationMode) {
         // In simulation mode, just add a receiver for audio
         pc.addTransceiver('audio', { direction: 'recvonly' });
       }

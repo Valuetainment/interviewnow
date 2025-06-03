@@ -235,6 +235,13 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
           </div>
         )}
 
+        {connectionState === 'connecting' && (
+          <div className="success-message">
+            <span className="success-icon">🎤</span>
+            <span>Click anywhere on the page if microphone permission prompt doesn't appear</span>
+          </div>
+        )}
+
         {connectionState === 'connected' && (
           <div className="success-message">
             <span className="success-icon">✅</span>

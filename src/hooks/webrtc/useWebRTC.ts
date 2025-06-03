@@ -102,7 +102,7 @@ export function useWebRTC(
       simulationMode: config.simulationMode,
       supabaseClient: supabase,
       // Disable until architecture is determined AND we're not using direct OpenAI
-      disabled: !!config.openAIMode || (!architectureDetermined || useDirectOpenAI)
+      disabled: Boolean(config.openAIMode) || Boolean(!architectureDetermined) || Boolean(useDirectOpenAI)
     },
     handleConnectionStateChange,
     onTranscriptUpdate
