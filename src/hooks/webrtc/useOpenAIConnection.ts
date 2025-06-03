@@ -432,16 +432,63 @@ export function useOpenAIConnection(
         console.error('Response status:', response.status);
         console.error('Response statusText:', response.statusText);
         
-        // Try alternative methods
+        // Try reading as stream if text() fails
         try {
-          console.log('Trying to clone and read response...');
-          const clonedResponse = response.clone();
-          const blob = await clonedResponse.blob();
-          console.log('Response blob size:', blob.size);
-          sdpAnswer = await blob.text();
-        } catch (altError) {
-          console.error('Alternative read also failed:', altError);
-          throw new Error('Failed to read SDP answer from OpenAI response');
+          console.log('Trying to read response as stream...');
+          if (!response.body) {
+            throw new Error('Response body is null');
+          }
+          
+          const reader = response.body.getReader();
+          const chunks: Uint8Array[] = [];
+          let done = false;
+          
+          // Read with timeout
+          const readTimeout = setTimeout(() => {
+            reader.cancel();
+            done = true;
+          }, 3000);
+          
+          while (!done) {
+            const { value, done: streamDone } = await reader.read();
+            if (streamDone || !value) {
+              done = true;
+              clearTimeout(readTimeout);
+            } else {
+              chunks.push(value);
+              console.log(`Read chunk of size: ${value.length}`);
+            }
+          }
+          
+          clearTimeout(readTimeout);
+          
+          // Combine chunks and decode
+          const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+          console.log(`Total response size: ${totalLength} bytes`);
+          
+          const combined = new Uint8Array(totalLength);
+          let offset = 0;
+          for (const chunk of chunks) {
+            combined.set(chunk, offset);
+            offset += chunk.length;
+          }
+          
+          sdpAnswer = new TextDecoder().decode(combined);
+          console.log('Successfully read response as stream');
+        } catch (streamError) {
+          console.error('Stream reading also failed:', streamError);
+          
+          // Last resort - try cloning
+          try {
+            console.log('Trying to clone and read response...');
+            const clonedResponse = response.clone();
+            const blob = await clonedResponse.blob();
+            console.log('Response blob size:', blob.size);
+            sdpAnswer = await blob.text();
+          } catch (altError) {
+            console.error('Alternative read also failed:', altError);
+            throw new Error('Failed to read SDP answer from OpenAI response');
+          }
         }
       }
       
