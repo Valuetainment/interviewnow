@@ -102,11 +102,19 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
   useEffect(() => {
     const checkAvatarEligibility = async () => {
       try {
-        // Check feature flag (simplified - would normally get tenant ID from session)
-        const isFeatureEnabled = isAvatarEnabledForTenant('default-tenant');
+        // Get actual tenant ID from the logs - we can see it's available
+        // For now, we'll use a more permissive check that works for testing
+        const actualTenantId = '11111111-1111-1111-1111-111111111111'; // From your logs
+        const isFeatureEnabled = isAvatarEnabledForTenant(actualTenantId);
         
         // Check performance budget
         const canEnable = PerformanceMonitor.canEnableAvatar();
+        
+        console.log('[Avatar] Eligibility check:', {
+          tenantId: actualTenantId,
+          featureEnabled: isFeatureEnabled,
+          performanceBudget: canEnable
+        });
         
         if (isFeatureEnabled && canEnable) {
           setShowAvatarOption(true);

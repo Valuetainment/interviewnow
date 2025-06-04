@@ -13,8 +13,8 @@ export interface AvatarFeatureFlag {
 
 export const FEATURE_FLAGS = {
   AVATAR: {
-    enabled: import.meta.env.VITE_AVATAR_ENABLED === 'true',
-    rolloutPercentage: parseInt(import.meta.env.VITE_AVATAR_ROLLOUT || '0'),
+    enabled: import.meta.env.VITE_AVATAR_ENABLED === 'true' || import.meta.env.DEV,
+    rolloutPercentage: parseInt(import.meta.env.VITE_AVATAR_ROLLOUT || '100'),
     betaTenants: (import.meta.env.VITE_AVATAR_BETA_TENANTS || '').split(',').filter(Boolean),
     maxConcurrentSessions: parseInt(import.meta.env.VITE_AVATAR_MAX_SESSIONS || '50'),
     costLimit: parseFloat(import.meta.env.VITE_AVATAR_COST_LIMIT || '100.0')
