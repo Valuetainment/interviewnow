@@ -67,24 +67,42 @@ export function useAvatarConnection({
     try {
       setStatus('connecting');
       
-      // Create Akool session via our backend
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/avatar-session`, {
+      // Create Akool session via our Supabase edge function
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://gypnutyegqxelvsqjedu.supabase.co';
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      console.log('[Avatar] Creating session via edge function:', `${supabaseUrl}/functions/v1/avatar-session`);
+      console.log('[Avatar] Session ID:', sessionId, 'Avatar ID:', avatarId);
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/avatar-session`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          'Authorization': `Bearer ${anonKey}`
         },
         body: JSON.stringify({ sessionId, avatarId })
       });
       
       if (!response.ok) {
+        let errorDetail = '';
+        try {
+          const errorData = await response.json();
+          errorDetail = errorData.error || errorData.message || '';
+          console.error('[Avatar] Edge function error:', errorData);
+        } catch {
+          errorDetail = await response.text();
+        }
+        
+        if (response.status === 405) {
+          throw new Error(`Method not allowed - check edge function deployment. Details: ${errorDetail}`);
+        }
         if (response.status === 429) {
           throw new Error('Avatar limit reached');
         }
         if (response.status === 402) {
           throw new Error('Avatar quota exceeded');
         }
-        throw new Error(`Avatar session creation failed: ${response.status}`);
+        throw new Error(`Avatar session creation failed (${response.status}): ${errorDetail}`);
       }
       
       const { credentials } = await response.json();
