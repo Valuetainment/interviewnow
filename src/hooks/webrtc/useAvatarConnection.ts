@@ -72,17 +72,25 @@ export function useAvatarConnection({
       
       // Create Akool session via our Supabase edge function
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://gypnutyegqxelvsqjedu.supabase.co';
-      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      // Get the user's session token for proper authentication
+      const { supabase } = await import('../../integrations/supabase/client');
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No authenticated session found');
+      }
       
       console.log('[Avatar] Creating session via edge function:', `${supabaseUrl}/functions/v1/avatar-session`);
       console.log('[Avatar] Session ID:', sessionId, 'Avatar ID:', avatarId);
       console.log('[Avatar] Request body:', JSON.stringify({ sessionId, avatarId }));
+      console.log('[Avatar] Using user access token for authentication');
       
       const response = await fetch(`${supabaseUrl}/functions/v1/avatar-session`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${anonKey}`
+          'Authorization': `Bearer ${session.access_token}` // Use the user's actual JWT token
         },
         body: JSON.stringify({ sessionId, avatarId })
       });
