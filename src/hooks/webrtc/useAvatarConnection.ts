@@ -67,8 +67,8 @@ export function useAvatarConnection({
     try {
       setStatus('connecting');
       
-      // Create session via edge function
-      const response = await fetch('/functions/v1/avatar-session', {
+      // Create Akool session via our backend
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/avatar-session`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
