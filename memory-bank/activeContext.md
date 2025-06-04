@@ -825,12 +825,18 @@ supabase functions logs <function-name>
 - ✅ **CONFIRMED**: Sustained audio playback throughout entire session
 - ✅ **CONFIRMED**: Performance optimizations effective
 
+### 🔧 LATEST FIX (DEPLOYED BUT UNTESTED)
+- **Transcript Storage Issue**: Fixed 500 error in interview-transcript edge function
+- **Problem**: Missing required `start_ms` field was causing database insert failures
+- **Solution**: Added `start_ms: 0` field to transcript entry insertion
+- **Status**: Edge function deployed, **awaiting test validation**
+
 ### Successful Implementation Status
 - ✅ **WebRTC Connection**: Perfect (ephemeral tokens, SDP negotiation, data channels)
 - ✅ **Microphone**: Captures user voice flawlessly
 - ✅ **Transcription**: Both directions working perfectly (user ↔ AI)
 - ✅ **Audio Playback**: **CONFIRMED WORKING** - Sustained throughout full interview
-- ✅ **Performance**: **CONFIRMED OPTIMIZED** - No more visualization loop issues
+- ❓ **Transcript Storage**: **FIXED BUT NEEDS TESTING** - 500 error should be resolved
 
 ### Fixes That Resolved the Issues ✅
 

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useWebRTCConnection } from './useWebRTCConnection';
 import { ConnectionState } from './useConnectionState';
 import { useTranscriptManager } from './useTranscriptManager';
@@ -16,6 +16,18 @@ export interface OpenAIConnectionConfig {
   disabled?: boolean;
 }
 
+// NEW: Avatar connection interface for integration
+interface AvatarConnection {
+  status: string;
+  setStatus: (status: string) => void;
+  messageQueue: {
+    add: (message: { text: string; isPartial: boolean; timestamp: number }) => Promise<void>;
+    detectCompletion: (callback: () => void) => void;
+    clearBuffer: () => void;
+  };
+  sendToAvatar: (text: string, isFinal?: boolean) => Promise<void>;
+}
+
 export interface OpenAIConnectionHandlers {
   initialize: () => Promise<boolean>;
   cleanup: () => void;
@@ -25,6 +37,7 @@ export interface OpenAIConnectionHandlers {
   isConnected: boolean;
   audioLevel: number;
   isRecording: boolean;
+  setAvatarConnection: (connection: AvatarConnection | null) => void; // NEW: Avatar integration
 }
 
 const DEFAULT_SETTINGS = {
@@ -53,6 +66,11 @@ export function useOpenAIConnection(
     ...DEFAULT_SETTINGS,
     ...(config.openAISettings || {})
   };
+
+  // NEW: Avatar integration state
+  const avatarConnectionRef = useRef<AvatarConnection | null>(null);
+  const lastDeltaTimestampRef = useRef<number>(0);
+  const aiResponseTextRef = useRef<string>('');
 
   // Use the transcript manager
   const { saveTranscript } = useTranscriptManager({
@@ -180,8 +198,50 @@ export function useOpenAIConnection(
           // Process AI speech transcript
           if (message.text && message.text.trim()) {
             console.log('AI transcript delta:', message.text);
-            saveTranscript(message.text, 'ai');
+            
+            // Add to AI response buffer
+            aiResponseTextRef.current += message.text;
+            saveTranscript(aiResponseTextRef.current, 'ai');
+            
+            // NEW: Send to avatar if enabled
+            if (avatarConnectionRef.current?.status === 'ready' || avatarConnectionRef.current?.status === 'active') {
+              lastDeltaTimestampRef.current = Date.now();
+              
+              // Show thinking state on first delta
+              if (aiResponseTextRef.current.length === message.text.length) {
+                avatarConnectionRef.current.setStatus('thinking');
+              }
+              
+              // Send to avatar message queue
+              avatarConnectionRef.current.messageQueue.add({
+                text: aiResponseTextRef.current,
+                isPartial: true,
+                timestamp: Date.now()
+              });
+              
+              // Detect completion with 500ms timeout
+              avatarConnectionRef.current.messageQueue.detectCompletion(() => {
+                if (avatarConnectionRef.current) {
+                  avatarConnectionRef.current.sendToAvatar(
+                    aiResponseTextRef.current,
+                    true // isFinal
+                  );
+                  avatarConnectionRef.current.setStatus('active');
+                }
+              });
+            }
           }
+          break;
+
+        case 'response.audio_transcript.done':
+          // AI response completed - finalize avatar
+          console.log('AI response completed');
+          if (avatarConnectionRef.current) {
+            avatarConnectionRef.current.sendToAvatar(aiResponseTextRef.current, true);
+            avatarConnectionRef.current.setStatus('active');
+          }
+          // Reset for next response
+          aiResponseTextRef.current = '';
           break;
 
         case 'response.function_call_arguments.done':
@@ -477,10 +537,26 @@ export function useOpenAIConnection(
     handleDataChannelMessage
   ]);
 
+  // NEW: Add method to set avatar connection
+  const setAvatarConnection = useCallback((connection: AvatarConnection | null) => {
+    avatarConnectionRef.current = connection;
+    console.log('[OpenAI] Avatar connection set:', connection ? 'connected' : 'disconnected');
+  }, []);
+
   // Wrap cleanup to check disabled
   const wrappedCleanup = useCallback(() => {
     if (!config.disabled) {
       cleanupWebRTC();
+      
+      // NEW: Clean up avatar connection
+      if (avatarConnectionRef.current) {
+        avatarConnectionRef.current.messageQueue.clearBuffer();
+        avatarConnectionRef.current = null;
+      }
+      
+      // Reset AI response tracking
+      aiResponseTextRef.current = '';
+      lastDeltaTimestampRef.current = 0;
       
       // Clean up audio element
       if (audioElement) {
@@ -503,6 +579,7 @@ export function useOpenAIConnection(
     isConnecting: config.disabled ? false : isConnecting,
     isConnected: config.disabled ? false : isConnected,
     audioLevel: config.disabled ? 0 : audioLevel,
-    isRecording: config.disabled ? false : isRecording
+    isRecording: config.disabled ? false : isRecording,
+    setAvatarConnection // NEW: Return avatar connection setter
   };
 }
