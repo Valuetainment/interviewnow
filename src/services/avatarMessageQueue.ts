@@ -15,9 +15,9 @@ interface ChunkedMessage {
   pld: { text: string };
 }
 
-interface RTCClient {
-  send?: (data: string) => void;
-  sendMessage?: (data: string) => void;
+// Extend the Agora RTC client interface to include the hidden sendStreamMessage method
+interface ExtendedRTCClient {
+  sendStreamMessage(message: Uint8Array, reliable: boolean): Promise<void>;
   // Add other RTC client methods as needed
 }
 
@@ -63,11 +63,11 @@ export class AvatarMessageQueue {
   /**
    * Send message to avatar with proper chunking and rate limiting
    */
-  async sendMessage(client: RTCClient, text: string, isFinal: boolean = false): Promise<void> {
+  async sendMessage(client: ExtendedRTCClient, text: string, isFinal: boolean = false): Promise<void> {
     if (!client || !text.trim()) return;
     
     try {
-      await this.sendChunkedMessage(text, isFinal);
+      await this.sendChunkedMessage(client, text, isFinal);
     } catch (error) {
       console.error('[Avatar Queue] Failed to send message:', error);
       throw error;
@@ -116,7 +116,7 @@ export class AvatarMessageQueue {
   /**
    * Send message in chunks respecting Akool's size and rate limits
    */
-  private async sendChunkedMessage(text: string, isFinal: boolean): Promise<void> {
+  private async sendChunkedMessage(client: ExtendedRTCClient, text: string, isFinal: boolean): Promise<void> {
     if (!text.trim()) return;
     
     const chunks = this.chunkText(text, this.MAX_CHUNK_SIZE);
@@ -138,8 +138,17 @@ export class AvatarMessageQueue {
       // Apply rate limiting
       await this.rateLimitDelay(encoded.length);
       
-      // Send the chunk (implementation depends on the RTC client)
+      // Send the chunk using Agora's sendStreamMessage
       console.log('[Avatar Queue] Sending chunk:', message);
+      
+      try {
+        // Use the sendStreamMessage method as shown in Akool docs
+        await client.sendStreamMessage(encoded, false); // false = unreliable for faster delivery
+        console.log('[Avatar Queue] Chunk sent successfully');
+      } catch (error) {
+        console.error('[Avatar Queue] Failed to send chunk:', error);
+        throw error;
+      }
       
       // Store for potential retry or cleanup
       if (!this.pendingChunks.has(messageId)) {

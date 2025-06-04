@@ -40,6 +40,8 @@ export function useAvatarConnection({
 }: UseAvatarConnectionProps): UseAvatarConnectionReturn {
   
   const [status, setStatusState] = useState<AvatarState>('idle');
+  const [connectionAttempts, setConnectionAttempts] = useState(0);
+  const MAX_CONNECTION_ATTEMPTS = 3;
   
   // Refs for persistent state across re-renders
   const clientRef = useRef<IAgoraRTCClient | null>(null);
@@ -47,6 +49,7 @@ export function useAvatarConnection({
   const messageQueueRef = useRef(new AvatarMessageQueue());
   const retryCountRef = useRef(0);
   const isConnectingRef = useRef(false);
+  const hasFailedRef = useRef(false);
 
   /**
    * Set status with external callback notification
@@ -73,6 +76,7 @@ export function useAvatarConnection({
       
       console.log('[Avatar] Creating session via edge function:', `${supabaseUrl}/functions/v1/avatar-session`);
       console.log('[Avatar] Session ID:', sessionId, 'Avatar ID:', avatarId);
+      console.log('[Avatar] Request body:', JSON.stringify({ sessionId, avatarId }));
       
       const response = await fetch(`${supabaseUrl}/functions/v1/avatar-session`, {
         method: 'POST',
@@ -83,14 +87,22 @@ export function useAvatarConnection({
         body: JSON.stringify({ sessionId, avatarId })
       });
       
+      console.log('[Avatar] Edge function response status:', response.status);
+      console.log('[Avatar] Edge function response headers:', response.headers);
+      
+      // Get response text first for debugging
+      const responseText = await response.text();
+      console.log('[Avatar] Edge function raw response:', responseText);
+      
       if (!response.ok) {
         let errorDetail = '';
         try {
-          const errorData = await response.json();
-          errorDetail = errorData.error || errorData.message || '';
-          console.error('[Avatar] Edge function error:', errorData);
+          const errorData = JSON.parse(responseText);
+          errorDetail = errorData.error || errorData.message || responseText;
+          console.error('[Avatar] Edge function error parsed:', errorData);
         } catch {
-          errorDetail = await response.text();
+          errorDetail = responseText;
+          console.error('[Avatar] Could not parse error response:', responseText);
         }
         
         if (response.status === 405) {
@@ -105,8 +117,17 @@ export function useAvatarConnection({
         throw new Error(`Avatar session creation failed (${response.status}): ${errorDetail}`);
       }
       
-      const { credentials } = await response.json();
-      credentialsRef.current = credentials;
+      // Parse successful response
+      let credentials;
+      try {
+        const data = JSON.parse(responseText);
+        console.log('[Avatar] Edge function success data:', data);
+        credentials = data.credentials;
+        credentialsRef.current = credentials;
+      } catch (error) {
+        console.error('[Avatar] Failed to parse success response:', error);
+        throw new Error(`Invalid response format: ${responseText}`);
+      }
       
       // Initialize Agora client
       const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
@@ -149,6 +170,32 @@ export function useAvatarConnection({
    * Setup Agora event handlers for avatar video/audio streams
    */
   const setupAgoraHandlers = useCallback((client: IAgoraRTCClient) => {
+    // CRITICAL: Add stream-message handler for Akool avatar responses
+    client.on('stream-message', (uid: any, message: any) => {
+      console.log('[Avatar] Received stream message from uid:', uid);
+      try {
+        // Decode message if it's binary
+        let decodedMessage = message;
+        if (message instanceof Uint8Array) {
+          decodedMessage = new TextDecoder().decode(message);
+        }
+        console.log('[Avatar] Stream message content:', decodedMessage);
+        
+        // Parse if it's JSON
+        if (typeof decodedMessage === 'string' && decodedMessage.startsWith('{')) {
+          const parsedMessage = JSON.parse(decodedMessage);
+          console.log('[Avatar] Parsed message:', parsedMessage);
+          
+          // Handle avatar status messages
+          if (parsedMessage.type === 'status' || parsedMessage.status) {
+            console.log('[Avatar] Avatar status update:', parsedMessage);
+          }
+        }
+      } catch (error) {
+        console.error('[Avatar] Error handling stream message:', error);
+      }
+    });
+    
     client.on('user-published', async (user, mediaType) => {
       console.log(`[Avatar] User published ${mediaType}:`, user.uid);
       
@@ -230,7 +277,9 @@ export function useAvatarConnection({
     }
 
     try {
-      await messageQueueRef.current.sendMessage(clientRef.current, text, isFinal);
+      // Cast to ExtendedRTCClient to access sendStreamMessage
+      const extendedClient = clientRef.current as any; // Type assertion needed for hidden Agora method
+      await messageQueueRef.current.sendMessage(extendedClient, text, isFinal);
     } catch (error) {
       console.error('[Avatar] Failed to send message:', error);
       throw error;
@@ -276,14 +325,33 @@ export function useAvatarConnection({
 
   // Effect to handle connection lifecycle
   useEffect(() => {
-    if (enabled && status === 'idle') {
+    console.log('[Avatar] Effect triggered:', { 
+      enabled, 
+      status, 
+      connectionAttempts, 
+      hasFailedRef: hasFailedRef.current 
+    });
+    
+    // Only try to connect if:
+    // 1. Avatar is enabled
+    // 2. Status is idle (not already connecting)
+    // 3. We haven't exceeded max attempts
+    // 4. We haven't already marked this as failed
+    if (enabled && status === 'idle' && connectionAttempts < MAX_CONNECTION_ATTEMPTS && !hasFailedRef.current) {
+      console.log('[Avatar] Starting connection attempt', connectionAttempts + 1);
+      setConnectionAttempts(prev => prev + 1);
+      
       connectAvatar().catch(error => {
         console.error('[Avatar] Initial connection failed:', error);
+        hasFailedRef.current = true; // Mark as failed to prevent infinite retries
       });
     } else if (!enabled && status !== 'idle') {
+      // Reset when disabled
       cleanup();
+      setConnectionAttempts(0);
+      hasFailedRef.current = false;
     }
-  }, [enabled, status, connectAvatar, cleanup]);
+  }, [enabled, status, connectionAttempts, connectAvatar, cleanup]);
 
   // Cleanup on unmount
   useEffect(() => {
