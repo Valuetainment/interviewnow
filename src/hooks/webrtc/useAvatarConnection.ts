@@ -52,7 +52,7 @@ export function useAvatarConnection({
   const hasFailedRef = useRef(false);
 
   // TEMPORARY: Direct API test mode
-  const USE_DIRECT_API = true; // Toggle this for testing
+  const USE_DIRECT_API = false; // Set to false - we don't have valid AKOOL credentials for direct API
 
   /**
    * Set status with external callback notification
