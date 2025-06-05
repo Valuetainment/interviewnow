@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AKOOL Direct Connection Test</title>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
+</head>
+<body>
+    <h1>AKOOL Avatar Direct Test</h1>
+    <div id="status">Ready to test...</div>
+    <button onclick="testConnection()">Test AKOOL Connection</button>
+    <div id="avatar-video-container" style="width: 640px; height: 480px; background: #000; margin-top: 20px;"></div>
+    
+    <script>
+        async function testConnection() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = 'Testing connection...';
+            
+            try {
+                // Step 1: Get auth token
+                console.log('Getting auth token...');
+                const tokenResponse = await fetch('https://openapi.akool.com/api/open/v3/getToken', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        clientId: 'YOUR_CLIENT_ID', // Replace with your client ID
+                        clientSecret: 'YOUR_CLIENT_SECRET' // Replace with your client secret
+                    })
+                });
+                
+                const tokenData = await tokenResponse.json();
+                console.log('Token response:', tokenData);
+                
+                if (tokenData.code !== 1000) {
+                    throw new Error(`Failed to get token: ${tokenData.msg || tokenData.message}`);
+                }
+                
+                // Step 2: Get available avatars
+                console.log('Getting available avatars...');
+                const avatarListResponse = await fetch('https://openapi.akool.com/api/open/v4/liveAvatar/avatar/list?page=1&size=100', {
+                    headers: {
+                        'Authorization': `Bearer ${tokenData.token}`
+                    }
+                });
+                
+                const avatarListData = await avatarListResponse.json();
+                console.log('Avatar list:', avatarListData);
+                
+                if (avatarListData.code === 1000 && avatarListData.data?.result?.length > 0) {
+                    const availableAvatars = avatarListData.data.result.filter(a => a.available === true);
+                    statusDiv.innerHTML = `Found ${availableAvatars.length} available avatars: ${availableAvatars.map(a => a.name).join(', ')}`;
+                    
+                    if (availableAvatars.length > 0) {
+                        // Try to create a session with the first available avatar
+                        const avatar = availableAvatars[0];
+                        console.log('Creating session with avatar:', avatar.name);
+                        
+                        const sessionResponse = await fetch('https://openapi.akool.com/api/open/v4/liveAvatar/session/create', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${tokenData.token}`
+                            },
+                            body: JSON.stringify({
+                                avatar_id: avatar.avatar_id,
+                                duration: 600 // 10 minutes
+                            })
+                        });
+                        
+                        const sessionData = await sessionResponse.json();
+                        console.log('Session response:', sessionData);
+                        
+                        if (sessionData.code === 1000) {
+                            statusDiv.innerHTML = `Session created! Waiting for it to be ready...`;
+                            
+                            // Poll for ready state
+                            let attempts = 0;
+                            while (attempts < 30) {
+                                const pollResponse = await fetch(`https://openapi.akool.com/api/open/v4/liveAvatar/session/${sessionData.data._id}`, {
+                                    headers: {
+                                        'Authorization': `Bearer ${tokenData.token}`
+                                    }
+                                });
+                                
+                                const pollData = await pollResponse.json();
+                                if (pollData.data.stream_status === 2) {
+                                    statusDiv.innerHTML = `Session ready! Connecting to Agora...`;
+                                    
+                                    // Connect to Agora
+                                    const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+                                    
+                                    client.on('user-published', async (user, mediaType) => {
+                                        console.log('User published:', user.uid, mediaType);
+                                        await client.subscribe(user, mediaType);
+                                        
+                                        if (mediaType === 'video') {
+                                            const container = document.getElementById('avatar-video-container');
+                                            user.videoTrack.play(container);
+                                            statusDiv.innerHTML = `Avatar connected and playing!`;
+                                        }
+                                    });
+                                    
+                                    await client.join(
+                                        pollData.data.credentials.agora_app_id,
+                                        pollData.data.credentials.agora_channel,
+                                        pollData.data.credentials.agora_token,
+                                        pollData.data.credentials.agora_uid
+                                    );
+                                    
+                                    break;
+                                }
+                                
+                                attempts++;
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                            }
+                        } else {
+                            statusDiv.innerHTML = `Failed to create session: ${sessionData.msg}`;
+                        }
+                    }
+                } else {
+                    statusDiv.innerHTML = 'No avatars found or all are busy';
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                statusDiv.innerHTML = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html> 
