@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './WebRTCManager.css';
 import { useWebRTC, WebRTCConfig } from '../../hooks/webrtc';
-import { useAvatarConnection } from '../../hooks/webrtc/useAvatarConnection';
-import { AvatarVideoDisplay } from './AvatarVideoDisplay';
-import { PerformanceMonitor } from '../../services/performanceMonitor';
-import { isAvatarEnabledForTenant } from '../../config/featureFlags';
 
 // Default settings moved outside component to prevent recreation
 const DEFAULT_OPENAI_SETTINGS = {
@@ -46,11 +42,6 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [autoReconnectDisabled, setAutoReconnectDisabled] = useState<boolean>(false);
 
-  // NEW: Avatar state management
-  const [avatarEnabled, setAvatarEnabled] = useState(false);
-  const [showAvatarOption, setShowAvatarOption] = useState(true);
-  const [tenantId, setTenantId] = useState<string | null>(null);
-
   // Configure WebRTC settings - memoize to prevent re-renders
   const webRTCConfig: WebRTCConfig = React.useMemo(() => ({
     serverUrl: serverUrl || (simulationMode ? 'wss://interview-simulation-proxy.fly.dev/ws' : undefined),
@@ -74,23 +65,6 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
     onTranscriptUpdate
   );
 
-  // NEW: Use avatar connection hook
-  const avatarConnection = useAvatarConnection({
-    enabled: avatarEnabled && status.isReady,
-    sessionId,
-    avatarId: 'dvp_Tristan_cloth2_1080P', // Default avatar
-    onStatusChange: (status) => {
-      console.log('[Avatar] Status changed to:', status);
-      if (status === 'error') {
-        setAvatarEnabled(false);
-        // Don't hide the toggle, just show it's unavailable
-        setError('Avatar service is currently unavailable. All avatars are busy. The interview will continue with audio only.');
-        // Clear the error after 5 seconds
-        setTimeout(() => setError(null), 5000);
-      }
-    }
-  });
-
   // Extract status values for easier access
   const { 
     connectionState, 
@@ -99,97 +73,6 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
     audioLevel,
     isRecording 
   } = status;
-
-  // NEW: Check avatar feature flag and performance budget
-  useEffect(() => {
-    const checkAvatarEligibility = async () => {
-      try {
-        // Get actual tenant ID from the logs - we can see it's available
-        // For now, we'll use a more permissive check that works for testing
-        const actualTenantId = '11111111-1111-1111-1111-111111111111'; // From your logs
-        const isFeatureEnabled = isAvatarEnabledForTenant(actualTenantId);
-        
-        // Check performance budget
-        const canEnable = PerformanceMonitor.canEnableAvatar();
-        
-        console.log('[Avatar] Eligibility check:', {
-          tenantId: actualTenantId,
-          featureEnabled: isFeatureEnabled,
-          performanceBudget: canEnable
-        });
-        
-        if (isFeatureEnabled && canEnable) {
-          setShowAvatarOption(true);
-          console.log('[Avatar] Feature enabled and performance budget met');
-        } else {
-          setShowAvatarOption(false);
-          console.log('[Avatar] Feature disabled or performance budget exceeded', {
-            featureEnabled: isFeatureEnabled,
-            performanceBudget: canEnable
-          });
-        }
-      } catch (error) {
-        console.error('[Avatar] Error checking eligibility:', error);
-        setShowAvatarOption(false);
-      }
-    };
-
-    checkAvatarEligibility();
-  }, []);
-
-  // NEW: Connect avatar to OpenAI connection
-  useEffect(() => {
-    // Access the OpenAI connection from the WebRTC hook
-    // The useWebRTC hook internally uses useOpenAIConnection which has setAvatarConnection
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const webrtcInstance = status as any; // TODO: Type this properly once WebRTC hook types are updated
-    
-    // Try to access the OpenAI connection methods
-    if (webrtcInstance.openAIConnection?.setAvatarConnection && avatarConnection) {
-      console.log('[Avatar] Connecting avatar to OpenAI connection');
-      webrtcInstance.openAIConnection.setAvatarConnection(avatarConnection);
-    }
-    
-    return () => {
-      if (webrtcInstance.openAIConnection?.setAvatarConnection) {
-        webrtcInstance.openAIConnection.setAvatarConnection(null);
-      }
-    };
-  }, [status, avatarConnection]);
-
-  // NEW: Audio muting strategy - separate OpenAI audio from avatar audio
-  useEffect(() => {
-    const openAIAudio = document.getElementById('openai-audio') as HTMLAudioElement;
-    const avatarAudio = document.getElementById('avatar-audio') as HTMLAudioElement;
-    
-    if (!openAIAudio || !avatarAudio) return;
-    
-    // Audio strategy based on avatar state
-    switch (avatarConnection.status) {
-      case 'active':
-        // Avatar is speaking - mute OpenAI audio
-        openAIAudio.muted = true;
-        avatarAudio.muted = false;
-        console.log('[Audio] Avatar active - using avatar audio');
-        break;
-      case 'error':
-      case 'disconnected':
-        // Avatar failed - use OpenAI audio
-        openAIAudio.muted = false;
-        avatarAudio.muted = true;
-        console.log('[Audio] Avatar failed - using OpenAI audio');
-        break;
-      case 'thinking':
-        // Keep current state during thinking
-        console.log('[Audio] Avatar thinking - maintaining current audio state');
-        break;
-      default:
-        // During connecting/ready, keep OpenAI active
-        openAIAudio.muted = false;
-        avatarAudio.muted = true;
-        console.log('[Audio] Avatar not active - using OpenAI audio');
-    }
-  }, [avatarConnection.status]);
 
   // Initialize WebRTC connection on component mount
   useEffect(() => {
@@ -304,16 +187,6 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
           ✅ New Ephemeral Token Code Deployed - {new Date().toISOString().split('T')[0]}
         </div>
         
-        {/* NEW: Avatar video display */}
-        {avatarEnabled && (
-          <div className="avatar-section mb-4">
-            <AvatarVideoDisplay 
-              status={avatarConnection.status}
-              className="avatar-video-display max-w-md mx-auto"
-            />
-          </div>
-        )}
-        
         {renderConnectionDots()}
 
         {error && connectionState !== 'connected' && (
@@ -397,46 +270,6 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
 
         {/* Audio level visualization */}
         {isReady && renderAudioLevelVisualization()}
-
-        {/* NEW: Avatar toggle button */}
-        {showAvatarOption && isReady && (
-          <div className="avatar-controls mt-4">
-            <button
-              onClick={() => {
-                if (avatarConnection.status === 'error') {
-                  setError('Avatar service is currently unavailable. All avatars are busy.');
-                  setTimeout(() => setError(null), 3000);
-                  return;
-                }
-                setAvatarEnabled(!avatarEnabled);
-              }}
-              disabled={isConnecting || avatarConnection.status === 'connecting'}
-              className={`avatar-toggle-button px-4 py-2 rounded-md transition-colors font-medium ${
-                avatarEnabled 
-                  ? 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400' 
-                  : avatarConnection.status === 'error'
-                    ? 'bg-red-100 text-red-700 hover:bg-red-200 disabled:bg-red-50'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:bg-gray-100'
-              }`}
-            >
-              {avatarEnabled 
-                ? '📹 Disable Avatar' 
-                : avatarConnection.status === 'error'
-                  ? '⚠️ Avatar Unavailable'
-                  : '📹 Enable Avatar'}
-            </button>
-            {avatarConnection.status === 'connecting' && (
-              <div className="avatar-status-text text-sm text-gray-600 mt-2">
-                Connecting to avatar service...
-              </div>
-            )}
-            {avatarConnection.status === 'error' && (
-              <div className="avatar-status-text text-sm text-amber-600 mt-2">
-                All avatars are currently busy. Audio-only mode active.
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Interview controls */}
         <div className="controls-section">
