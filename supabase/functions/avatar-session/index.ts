@@ -28,7 +28,7 @@ serve(async (req) => {
     }
 
     // 2. Parse request body
-    const { sessionId, avatarId = 'dvp_Tristan_cloth2_1080P' } = await req.json()
+    const { sessionId, avatarId = 'dvp_josh_1080P' } = await req.json()
     
     if (!sessionId) {
       return new Response(JSON.stringify({ 
@@ -112,7 +112,7 @@ serve(async (req) => {
 /**
  * Check tenant avatar usage limits
  */
-async function checkTenantAvatarLimit(tenantId: string, supabase: any) {
+async function checkTenantAvatarLimit(tenantId: string, supabase: ReturnType<typeof createClient>) {
   const { data: prefs } = await supabase
     .from('tenant_preferences')
     .select('avatar_monthly_limit, avatar_usage_count')
@@ -150,50 +150,235 @@ async function checkTenantAvatarLimit(tenantId: string, supabase: any) {
 /**
  * Create Akool avatar session
  */
-async function createAkoolSession(avatarId: string) {
-  const akoolApiKey = Deno.env.get('AKOOL_API_KEY')
+async function createAkoolSession(avatarId?: string) {
+  const akoolClientId = Deno.env.get('AKOOL_CLIENT_ID') || 'A7mt90cBGUmh2tOO+eruMg=='
+  const akoolClientSecret = Deno.env.get('AKOOL_CLIENT_SECRET') || Deno.env.get('AKOOL_API_KEY')
   
-  if (!akoolApiKey) {
-    throw new Error('AKOOL_API_KEY not configured')
+  if (!akoolClientSecret) {
+    throw new Error('AKOOL_CLIENT_SECRET or AKOOL_API_KEY not configured')
   }
 
-  const response = await fetch('https://openapi.akool.com/api/open/v4/liveAvatar/session/create', {
+  console.log('[Avatar Session] Creating Akool session with:', {
+    requestedAvatarId: avatarId,
+    hasClientId: !!akoolClientId,
+    hasClientSecret: !!akoolClientSecret,
+    clientIdLength: akoolClientId.length,
+    clientSecretLength: akoolClientSecret.length
+  })
+
+  // Step 1: Get authentication token using clientId and clientSecret
+  console.log('[Avatar Session] Step 1: Getting authentication token from Akool')
+  
+  const tokenResponse = await fetch('https://openapi.akool.com/api/open/v3/getToken', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${akoolApiKey}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      avatar_id: avatarId,
-      duration: 600 // 10 minutes max session
+      clientId: akoolClientId,
+      clientSecret: akoolClientSecret
     })
   })
   
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Akool API error (${response.status}): ${errorText}`)
+  if (!tokenResponse.ok) {
+    const errorText = await tokenResponse.text()
+    console.error('[Avatar Session] Token request failed:', {
+      status: tokenResponse.status,
+      statusText: tokenResponse.statusText,
+      body: errorText
+    })
+    throw new Error(`Failed to get Akool token (${tokenResponse.status}): ${errorText}`)
   }
   
-  const data = await response.json()
+  const tokenData = await tokenResponse.json()
+  console.log('[Avatar Session] Token response:', {
+    code: tokenData.code,
+    hasToken: !!tokenData.token,
+    tokenLength: tokenData.token?.length
+  })
   
-  if (!data.success || !data.data) {
-    throw new Error(`Akool session creation failed: ${data.message || 'Unknown error'}`)
+  if (tokenData.code !== 1000 || !tokenData.token) {
+    console.error('[Avatar Session] Invalid token response:', tokenData)
+    
+    // Handle specific error codes from Akool documentation
+    if (tokenData.code === 1101) {
+      throw new Error('Invalid authorization or token expired. Check clientId and clientSecret.')
+    } else if (tokenData.code === 1102) {
+      throw new Error('Authorization cannot be empty. Check AKOOL_CLIENT_ID and AKOOL_CLIENT_SECRET.')
+    } else if (tokenData.code === 1200) {
+      throw new Error('The Akool account has been banned.')
+    }
+    
+    throw new Error(`Failed to get Akool token: ${tokenData.message || 'Unknown error'}`)
   }
   
-  return data
+  const authToken = tokenData.token
+  
+  // Step 2: Get list of available avatars if no specific avatar requested
+  let finalAvatarId = avatarId
+  
+  if (!finalAvatarId) {
+    console.log('[Avatar Session] Step 2a: Getting list of available avatars')
+    
+    const avatarListResponse = await fetch('https://openapi.akool.com/api/open/v4/liveAvatar/avatar/list?page=1&size=100', {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    })
+    
+    if (!avatarListResponse.ok) {
+      const errorText = await avatarListResponse.text()
+      console.error('[Avatar Session] Failed to get avatar list:', {
+        status: avatarListResponse.status,
+        body: errorText
+      })
+      // Fallback to a default avatar ID if list fails
+      finalAvatarId = 'dvp_josh_1080P'
+      console.log('[Avatar Session] Using fallback avatar ID:', finalAvatarId)
+    } else {
+      const avatarListData = await avatarListResponse.json()
+      console.log('[Avatar Session] Avatar list response:', {
+        code: avatarListData.code,
+        count: avatarListData.data?.count,
+        resultCount: avatarListData.data?.result?.length
+      })
+      
+      if (avatarListData.code === 1000 && avatarListData.data?.result?.length > 0) {
+        // Find first available avatar
+        const availableAvatar = avatarListData.data.result.find((avatar: any) => avatar.available === true)
+        
+        if (availableAvatar) {
+          finalAvatarId = availableAvatar.avatar_id
+          console.log('[Avatar Session] Found available avatar:', {
+            avatarId: finalAvatarId,
+            name: availableAvatar.name,
+            gender: availableAvatar.gender
+          })
+        } else {
+          // If no available avatars, use the first one anyway
+          finalAvatarId = avatarListData.data.result[0].avatar_id
+          console.log('[Avatar Session] No available avatars, using first one:', {
+            avatarId: finalAvatarId,
+            name: avatarListData.data.result[0].name,
+            available: avatarListData.data.result[0].available
+          })
+        }
+      } else {
+        // Fallback if API response is invalid
+        finalAvatarId = 'dvp_josh_1080P'
+        console.log('[Avatar Session] Invalid avatar list response, using fallback:', finalAvatarId)
+      }
+    }
+  }
+  
+  // Step 3: Create avatar session using the selected avatar
+  console.log('[Avatar Session] Step 3: Creating avatar session with avatar:', finalAvatarId)
+  
+  const requestBody = {
+    avatar_id: finalAvatarId,
+    duration: 600 // 10 minutes max session
+  }
+
+  const sessionResponse = await fetch('https://openapi.akool.com/api/open/v4/liveAvatar/session/create', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authToken}`
+    },
+    body: JSON.stringify(requestBody)
+  })
+  
+  if (!sessionResponse.ok) {
+    const errorText = await sessionResponse.text()
+    console.error('[Avatar Session] Akool session creation failed:', {
+      status: sessionResponse.status,
+      statusText: sessionResponse.statusText,
+      body: errorText,
+      headers: Object.fromEntries(sessionResponse.headers.entries()),
+      usedAvatarId: finalAvatarId
+    })
+    
+    throw new Error(`Akool session creation failed (${sessionResponse.status}): ${errorText}`)
+  }
+  
+  const sessionData = await sessionResponse.json()
+  console.log('[Avatar Session] Session creation response:', {
+    success: sessionData.success,
+    hasData: !!sessionData.data,
+    sessionId: sessionData.data?._id,
+    usedAvatarId: finalAvatarId
+  })
+  
+  if (!sessionData.success || !sessionData.data) {
+    console.error('[Avatar Session] Invalid session response:', sessionData)
+    
+    // Check if it's a busy avatar error
+    if (sessionData.code === 1215 || sessionData.msg?.includes('busy')) {
+      // Try to get list of available avatars to suggest alternatives
+      try {
+        const avatarListResponse = await fetch('https://openapi.akool.com/api/open/v4/liveAvatar/avatar/list?page=1&size=100', {
+          headers: {
+            'Authorization': `Bearer ${authToken}`
+          }
+        })
+        
+        if (avatarListResponse.ok) {
+          const avatarListData = await avatarListResponse.json()
+          if (avatarListData.code === 1000 && avatarListData.data?.result?.length > 0) {
+            const availableAvatars = avatarListData.data.result
+              .filter((avatar: any) => avatar.available === true)
+              .map((avatar: any) => avatar.avatar_id)
+              .slice(0, 5) // Limit to 5 suggestions
+            
+            throw new Error(`Avatar ${finalAvatarId} is busy. Available avatars: ${availableAvatars.join(', ')}`)
+          }
+        }
+      } catch (listError) {
+        console.error('[Avatar Session] Failed to get alternative avatars:', listError)
+      }
+      
+      throw new Error(`Avatar ${finalAvatarId} is busy. Please try again with a different avatar.`)
+    }
+    
+    throw new Error(`Akool session creation failed: ${sessionData.message || sessionData.error || 'Unknown error - check logs'}`)
+  }
+  
+  console.log('[Avatar Session] Akool session created successfully:', sessionData.data._id)
+  return sessionData
 }
 
 /**
  * Poll Akool session until ready (stream_status = 2)
  */
 async function pollForReady(sessionId: string, maxAttempts = 30) {
-  const akoolApiKey = Deno.env.get('AKOOL_API_KEY')!
+  // We need to get a fresh token for polling as well
+  const akoolClientId = Deno.env.get('AKOOL_CLIENT_ID') || 'A7mt90cBGUmh2tOO+eruMg=='
+  const akoolClientSecret = Deno.env.get('AKOOL_CLIENT_SECRET') || Deno.env.get('AKOOL_API_KEY')
+  
+  // Get auth token for polling
+  const tokenResponse = await fetch('https://openapi.akool.com/api/open/v3/getToken', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      clientId: akoolClientId,
+      clientSecret: akoolClientSecret
+    })
+  })
+  
+  const tokenData = await tokenResponse.json()
+  if (tokenData.code !== 1000 || !tokenData.token) {
+    throw new Error('Failed to get auth token for polling')
+  }
+  
+  const authToken = tokenData.token
   
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const response = await fetch(`https://openapi.akool.com/api/open/v4/liveAvatar/session/${sessionId}`, {
         headers: {
-          'Authorization': `Bearer ${akoolApiKey}`
+          'Authorization': `Bearer ${authToken}`
         }
       })
       
