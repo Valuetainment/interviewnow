@@ -432,6 +432,15 @@ export function useAvatarConnection({
     } catch (error) {
       console.error('[Avatar] Connection failed:', error);
       
+      // Check if all avatars are busy
+      const errorMessage = (error as Error).message;
+      if (errorMessage.includes('All avatars are busy')) {
+        console.warn('[Avatar] All avatars are busy - disabling avatar feature');
+        setStatus('error');
+        // Don't retry if all avatars are busy
+        throw error;
+      }
+      
       if (retries > 0) {
         const backoffDelay = 1000 * (4 - retries); // Exponential backoff: 1s, 2s, 3s
         console.log(`[Avatar] Retrying in ${backoffDelay}ms (${retries} attempts left)`);
@@ -500,9 +509,11 @@ export function useAvatarConnection({
   const retryConnection = useCallback(async () => {
     await cleanup();
     if (enabled) {
-      await connectAvatar();
+      // Use direct API if flag is set
+      const connectionMethod = USE_DIRECT_API ? connectAvatarDirect : connectAvatar;
+      await connectionMethod();
     }
-  }, [enabled, connectAvatar, cleanup]);
+  }, [enabled, connectAvatar, connectAvatarDirect, cleanup]);
 
   // Effect to handle connection lifecycle
   useEffect(() => {
@@ -522,7 +533,9 @@ export function useAvatarConnection({
       console.log('[Avatar] Starting connection attempt', connectionAttempts + 1);
       setConnectionAttempts(prev => prev + 1);
       
-      connectAvatar().catch(error => {
+      // Use direct API if flag is set
+      const connectionMethod = USE_DIRECT_API ? connectAvatarDirect : connectAvatar;
+      connectionMethod().catch(error => {
         console.error('[Avatar] Initial connection failed:', error);
         hasFailedRef.current = true; // Mark as failed to prevent infinite retries
       });
