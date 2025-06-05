@@ -322,13 +322,14 @@ export function useAvatarConnection({
           console.log('[Avatar] Creating session via edge function:', `${supabaseUrl}/functions/v1/avatar-session`);
           console.log('[Avatar] Session ID:', sessionId, 'Avatar ID:', currentAvatarId);
           
-          const response = await fetch(`${supabaseUrl}/functions/v1/avatar-session`, {
+          // Temporarily use the simple endpoint for testing
+          const response = await fetch(`${supabaseUrl}/functions/v1/avatar-session-simple`, {
             method: 'POST',
             headers: { 
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${session.access_token}` // Use the user's actual JWT token
             },
-            body: JSON.stringify({ sessionId, avatarId: currentAvatarId })
+            body: JSON.stringify({ avatarId: currentAvatarId })
           });
           
           console.log('[Avatar] Edge function response status:', response.status);
