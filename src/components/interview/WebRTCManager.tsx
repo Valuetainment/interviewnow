@@ -83,8 +83,10 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
       console.log('[Avatar] Status changed to:', status);
       if (status === 'error') {
         setAvatarEnabled(false);
-        setShowAvatarOption(false); // Hide toggle if failed
-        setError('Avatar unavailable, continuing with audio only');
+        // Don't hide the toggle, just show it's unavailable
+        setError('Avatar service is currently unavailable. All avatars are busy. The interview will continue with audio only.');
+        // Clear the error after 5 seconds
+        setTimeout(() => setError(null), 5000);
       }
     }
   });
@@ -400,24 +402,37 @@ export const WebRTCManager: React.FC<WebRTCManagerProps> = ({
         {showAvatarOption && isReady && (
           <div className="avatar-controls mt-4">
             <button
-              onClick={() => setAvatarEnabled(!avatarEnabled)}
-              disabled={isConnecting}
+              onClick={() => {
+                if (avatarConnection.status === 'error') {
+                  setError('Avatar service is currently unavailable. All avatars are busy.');
+                  setTimeout(() => setError(null), 3000);
+                  return;
+                }
+                setAvatarEnabled(!avatarEnabled);
+              }}
+              disabled={isConnecting || avatarConnection.status === 'connecting'}
               className={`avatar-toggle-button px-4 py-2 rounded-md transition-colors font-medium ${
                 avatarEnabled 
                   ? 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:bg-gray-100'
+                  : avatarConnection.status === 'error'
+                    ? 'bg-red-100 text-red-700 hover:bg-red-200 disabled:bg-red-50'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:bg-gray-100'
               }`}
             >
-              {avatarEnabled ? '📹 Disable Avatar' : '📹 Enable Avatar'}
+              {avatarEnabled 
+                ? '📹 Disable Avatar' 
+                : avatarConnection.status === 'error'
+                  ? '⚠️ Avatar Unavailable'
+                  : '📹 Enable Avatar'}
             </button>
             {avatarConnection.status === 'connecting' && (
               <div className="avatar-status-text text-sm text-gray-600 mt-2">
-                Connecting avatar...
+                Connecting to avatar service...
               </div>
             )}
             {avatarConnection.status === 'error' && (
-              <div className="avatar-status-text text-sm text-red-600 mt-2">
-                Avatar connection failed
+              <div className="avatar-status-text text-sm text-amber-600 mt-2">
+                All avatars are currently busy. Audio-only mode active.
               </div>
             )}
           </div>

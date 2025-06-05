@@ -408,7 +408,20 @@ export function useAvatarConnection({
       }
 
       if (!credentials) {
-        throw lastError || new Error('All avatars are busy. Please try again later.');
+        // If all avatars are busy, set a special error state
+        const errorMessage = lastError?.message || 'All avatars are busy';
+        if (errorMessage.includes('busy')) {
+          console.warn('[Avatar] All avatars are busy - avatar feature will be disabled');
+          setStatus('error');
+          // Set a flag to prevent further connection attempts
+          hasFailedRef.current = true;
+          // Notify the parent component via onStatusChange
+          if (onStatusChange) {
+            onStatusChange('error');
+          }
+          throw new Error('Avatar service unavailable: All avatars are currently busy. The interview will continue with audio only.');
+        }
+        throw lastError || new Error('Failed to connect to avatar service');
       }
       
       // Initialize Agora client
