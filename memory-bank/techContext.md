@@ -36,6 +36,12 @@ The AI Interview Insights Platform is built using the following technology stack
 - **SDP Proxy**: For secure WebRTC connection establishment
 - **ICE Framework**: For NAT traversal and connection establishment
 
+### Avatar Integration (Attempted and Removed)
+- **AKOOL Avatar API**: Attempted integration for visual avatars (January 2025)
+- **Agora SDK**: Used for avatar video streaming
+- **Decision**: Backed out due to shared avatar availability limitations
+- **Future**: May revisit when dedicated avatars become available
+
 ### Testing & Development
 - **Vitest**: Unit testing framework
 - **Playwright**: End-to-end testing
