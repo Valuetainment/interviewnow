@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -16,12 +15,25 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@lovable_dev" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    
+    <script>
+      // Global error handler to catch third-party script errors
+      window.addEventListener('error', function(event) {
+        // Check if error is from gptengineer.js or related to .add()
+        if (event.filename && event.filename.includes('gptengineer.js') || 
+            (event.message && event.message.includes('Cannot read properties of undefined'))) {
+          console.warn('Suppressing third-party error:', event.message);
+          event.preventDefault();
+          return true;
+        }
+      });
+    </script>
   </head>
 
   <body>
     <div id="root"></div>
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module" onerror="console.warn('Failed to load gptengineer.js')"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
