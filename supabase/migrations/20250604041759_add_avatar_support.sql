@@ -35,11 +35,3 @@ BEGIN
     ALTER TABLE public.interview_sessions ADD COLUMN avatar_provider VARCHAR(50) DEFAULT 'akool';
   END IF;
 END $$;
-
--- Verify columns were added (for manual verification)
--- Run this query to confirm:
--- SELECT column_name, data_type, column_default 
--- FROM information_schema.columns 
--- WHERE table_schema = 'public' 
--- AND table_name = 'interview_sessions' 
--- AND column_name IN ('avatar_enabled', 'avatar_session_id', 'avatar_provider'); 
