@@ -162,6 +162,14 @@ const InterviewRoomHybrid = () => {
     try {
       setIsEnding(true);
       
+      // Check if we're still authenticated
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated, redirecting to login');
+        navigate('/login');
+        return;
+      }
+      
       // Update session status
       await supabase
         .from('interview_sessions')
