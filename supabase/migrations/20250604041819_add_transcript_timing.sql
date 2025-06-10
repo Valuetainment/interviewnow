@@ -29,11 +29,3 @@ END $$;
 -- Add comments to document the purpose of these columns
 COMMENT ON COLUMN public.transcript_entries.actual_start_ms IS 'Actual timestamp when the transcript segment started (in milliseconds from session start)';
 COMMENT ON COLUMN public.transcript_entries.duration_ms IS 'Duration of the transcript segment in milliseconds';
-
--- Verify columns were added (for manual verification)
--- Run this query to confirm:
--- SELECT column_name, data_type, column_default 
--- FROM information_schema.columns 
--- WHERE table_schema = 'public'
--- AND table_name = 'transcript_entries' 
--- AND column_name IN ('actual_start_ms', 'duration_ms'); 

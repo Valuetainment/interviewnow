@@ -54,11 +54,3 @@ CREATE TRIGGER tenant_preferences_updated_at
   BEFORE UPDATE ON public.tenant_preferences
   FOR EACH ROW
   EXECUTE FUNCTION public.update_tenant_preferences_updated_at();
-
--- Verify table was created (for manual verification)
--- Run this query to confirm:
--- SELECT table_name, column_name, data_type 
--- FROM information_schema.columns 
--- WHERE table_schema = 'public' 
--- AND table_name = 'tenant_preferences'
--- ORDER BY ordinal_position; 
