@@ -5,6 +5,7 @@ import SessionList from '@/components/interview/SessionList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, ClipboardList, Video } from 'lucide-react';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import SafeRender from '@/components/SafeRender';
 
 const Sessions: React.FC = () => {
   return (
@@ -39,7 +40,9 @@ const Sessions: React.FC = () => {
               </TabsList>
               
               <TabsContent value="upcoming" className="mt-6">
-                <SessionList />
+                <SafeRender>
+                  <SessionList />
+                </SafeRender>
               </TabsContent>
               
               <TabsContent value="completed" className="mt-6">

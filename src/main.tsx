@@ -7,9 +7,20 @@ window.addEventListener('error', (event) => {
   console.error('Global error caught:', event.error);
   
   // Check if it's the specific .add() error we're seeing
-  if (event.error?.message?.includes('Cannot read properties of undefined')) {
+  if (event.error?.message?.includes('Cannot read properties of undefined') && 
+      event.error?.message?.includes("'add'")) {
     console.warn('Suppressing known third-party error:', event.error.message);
     event.preventDefault(); // Prevent the error from breaking the app
+    event.stopPropagation();
+    return false;
+  }
+});
+
+// Also catch unhandled promise rejections
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection:', event.reason);
+  if (event.reason?.message?.includes('Cannot read properties of undefined')) {
+    event.preventDefault();
   }
 });
 
