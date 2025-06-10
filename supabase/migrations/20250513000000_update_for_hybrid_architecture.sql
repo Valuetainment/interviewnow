@@ -26,16 +26,6 @@ ON transcript_entries(speaker);
 -- Enhance RLS policies for transcript entries to ensure proper tenant isolation
 ALTER TABLE transcript_entries ENABLE ROW LEVEL SECURITY;
 
--- Only allow users to see transcript entries from their own tenant
-CREATE POLICY IF NOT EXISTS transcript_entries_tenant_isolation ON transcript_entries
-FOR ALL
-USING (
-  tenant_id IN (
-    SELECT tenant_id FROM tenant_users 
-    WHERE user_id = auth.uid()
-  )
-);
-
 -- Add comments for documentation
 COMMENT ON COLUMN interview_sessions.webrtc_architecture IS 'Architecture used for WebRTC: "hybrid" or "sdp_proxy"';
 COMMENT ON COLUMN interview_sessions.openai_configuration IS 'JSON configuration for OpenAI API when using hybrid architecture';
