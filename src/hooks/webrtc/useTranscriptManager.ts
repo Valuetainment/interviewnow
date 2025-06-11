@@ -68,22 +68,37 @@ export function useTranscriptManager({
     if (!text.trim() || !sessionId) return;
 
     try {
-      // Create transcript entry in local state
+      // Create transcript entry in local state first
       addTranscriptEntry({ text, speaker });
 
+      // Log the attempt
+      console.log('Saving transcript:', { sessionId, speaker, textLength: text.length });
+
       // Call transcript Edge Function to save the entry
-      await supabase.functions.invoke('interview-transcript', {
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('interview-transcript', {
+        body: {
           interview_session_id: sessionId,
           text,
           speaker,
           timestamp: new Date().toISOString(),
           source: 'hybrid' // Indicate this is from the hybrid architecture
-        })
+        }
       });
+
+      if (error) {
+        console.error('Edge function invocation error:', error);
+        // Don't throw - we don't want to break the interview
+        // The transcript is already saved locally, so the user can still see it
+      } else if (data && !data.success) {
+        console.error('Transcript save failed:', data.error);
+        // Again, don't throw - local state is already updated
+      } else if (data && data.success) {
+        console.log('Transcript saved successfully:', data.entry_id);
+      }
     } catch (error) {
-      console.error('Error saving transcript:', error);
+      console.error('Unexpected error saving transcript:', error);
       // We don't retry here as this shouldn't block the interview
+      // The transcript is still visible locally
     }
   }, [sessionId, supabase, addTranscriptEntry]);
 

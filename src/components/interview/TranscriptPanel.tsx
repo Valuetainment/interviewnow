@@ -132,6 +132,13 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
   // Create a reference to track the last seen transcript for test sessions
   const lastTranscriptRef = useRef<string>('');
   const processedTranscripts = useRef<Set<string>>(new Set());
+  
+  // Ensure refs are always initialized
+  useEffect(() => {
+    if (!processedTranscripts.current) {
+      processedTranscripts.current = new Set();
+    }
+  }, []);
 
   // For test sessions, handle transcript updates differently with stronger deduplication
   useEffect(() => {
@@ -140,13 +147,15 @@ export const TranscriptPanel: React.FC<TranscriptPanelProps> = ({
       lastTranscriptRef.current = transcript;
 
       // Don't process exact duplicates
-      if (processedTranscripts.current.has(transcript)) {
+      if (processedTranscripts.current && processedTranscripts.current.has(transcript)) {
         console.log('Skipping duplicate transcript');
         return;
       }
 
       // Add to processed set
-      processedTranscripts.current.add(transcript);
+      if (processedTranscripts.current) {
+        processedTranscripts.current.add(transcript);
+      }
 
       // Clear existing entries if it's a welcome message (common phrase in all welcome messages)
       if (transcript.includes('Hello from the ngrok WebSocket test server')) {

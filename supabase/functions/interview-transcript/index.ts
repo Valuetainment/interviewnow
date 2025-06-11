@@ -1,4 +1,3 @@
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.1';
 import { corsHeaders } from '../_shared/cors.ts';
 
@@ -17,18 +16,24 @@ interface TranscriptResponse {
   error?: string;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
   
   try {
+    // Log the request for debugging
+    console.log('Received transcript request');
+    
     // Get request data
     const requestData: TranscriptRequest = await req.json();
     const { interview_session_id, text, timestamp, speaker, confidence, source = 'sdp_proxy' } = requestData;
     
+    console.log('Request data:', { interview_session_id, speaker, source, textLength: text?.length });
+    
     if (!interview_session_id || !text) {
+      console.error('Missing required parameters');
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -41,20 +46,36 @@ serve(async (req) => {
       );
     }
     
-    // Create Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') || '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
-    );
+    // Create Supabase client with proper error handling
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing Supabase environment variables');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Server configuration error' 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500 
+        }
+      );
+    }
+    
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
     
     // Check if interview session exists and is active
+    console.log('Checking interview session:', interview_session_id);
     const { data: sessionData, error: sessionError } = await supabaseClient
       .from('interview_sessions')
       .select('id, status, tenant_id')
       .eq('id', interview_session_id)
       .single();
     
-    if (sessionError || !sessionData) {
+    if (sessionError) {
+      console.error('Session lookup error:', sessionError);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -67,50 +88,32 @@ serve(async (req) => {
       );
     }
     
-    // Check if session is active
-    if (sessionData.status !== 'in_progress') {
+    if (!sessionData) {
+      console.error('No session data found');
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Interview session is not active' 
+          error: 'Interview session not found' 
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
+          status: 404 
         }
       );
     }
     
-    // Check if we need to determine the architecture
-    let architecture = null;
-
-    if (!speaker && source === 'hybrid') {
-      // For hybrid architecture, try to determine the speaker from session information
-      // In a real implementation, this would use more advanced logic
-      // This is a simplified example
-      const { data: sessionArchData } = await supabaseClient
-        .from('interview_sessions')
-        .select('webrtc_architecture')
-        .eq('id', interview_session_id)
-        .single();
-
-      architecture = sessionArchData?.webrtc_architecture || 'sdp_proxy';
+    console.log('Session data:', { id: sessionData.id, status: sessionData.status, tenant_id: sessionData.tenant_id });
+    
+    // Check if session is active - make this check optional for now
+    if (sessionData.status !== 'in_progress' && sessionData.status !== 'scheduled') {
+      console.warn('Session is not in progress, but allowing transcript storage. Status:', sessionData.status);
     }
-
-    // Determine speaker based on architecture and provided speaker value
-    let finalSpeaker = speaker;
-    if (!finalSpeaker && source === 'hybrid') {
-      // If we don't have a speaker but are using hybrid architecture,
-      // we can make a reasonable guess based on pattern matching
-      if (text && text.trim().startsWith('User:')) {
-        finalSpeaker = 'candidate';
-      } else if (text && text.trim().startsWith('AI:')) {
-        finalSpeaker = 'ai';
-      } else {
-        finalSpeaker = 'unknown';
-      }
-    }
-
+    
+    // Determine speaker based on source and provided value
+    let finalSpeaker = speaker || 'unknown';
+    
+    console.log('Storing transcript entry with speaker:', finalSpeaker);
+    
     // Store transcript entry
     const { data: transcriptData, error: transcriptError } = await supabaseClient
       .from('transcript_entries')
@@ -120,7 +123,7 @@ serve(async (req) => {
         text,
         start_ms: 0,
         timestamp: timestamp || new Date().toISOString(),
-        speaker: finalSpeaker || 'unknown', // Use determined speaker or default
+        speaker: finalSpeaker,
         confidence,
         source_architecture: source // Track which architecture sent this
       })
@@ -128,6 +131,7 @@ serve(async (req) => {
       .single();
     
     if (transcriptError) {
+      console.error('Transcript storage error:', transcriptError);
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -140,10 +144,12 @@ serve(async (req) => {
       );
     }
     
+    console.log('Transcript stored successfully:', transcriptData?.id);
+    
     // Return success with entry ID
     const response: TranscriptResponse = {
       success: true,
-      entry_id: transcriptData.id
+      entry_id: transcriptData?.id
     };
     
     return new Response(

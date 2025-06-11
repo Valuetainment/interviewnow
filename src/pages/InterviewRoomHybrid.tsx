@@ -55,6 +55,7 @@ const InterviewRoomHybrid = () => {
   const [transcript, setTranscript] = useState<string>('');
   const [connectionState, setConnectionState] = useState<string>('disconnected');
   const [isStarting, setIsStarting] = useState(false);
+  const [isEnding, setIsEnding] = useState(false);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -156,7 +157,19 @@ const InterviewRoomHybrid = () => {
   }, []);
 
   const endInterview = async () => {
+    if (isEnding) return; // Prevent multiple calls
+    
     try {
+      setIsEnding(true);
+      
+      // Check if we're still authenticated
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated, redirecting to login');
+        navigate('/login');
+        return;
+      }
+      
       // Update session status
       await supabase
         .from('interview_sessions')
@@ -167,10 +180,16 @@ const InterviewRoomHybrid = () => {
         .eq('id', session?.id);
 
       toast.success('Interview ended');
-      navigate('/sessions');
+      
+      // Add a small delay to ensure WebRTC cleanup completes before navigation
+      // This prevents the "Cannot read properties of undefined" error
+      setTimeout(() => {
+        navigate('/sessions');
+      }, 100);
     } catch (err) {
       console.error('Error ending interview:', err);
       toast.error('Failed to end interview properly');
+      setIsEnding(false);
     }
   };
 
@@ -224,8 +243,19 @@ const InterviewRoomHybrid = () => {
                 Status: <span className="font-medium">{connectionState}</span>
               </span>
               {interviewConfig && (
-                <Button onClick={endInterview} variant="destructive">
-                  End Interview
+                <Button 
+                  onClick={endInterview} 
+                  variant="destructive"
+                  disabled={isEnding}
+                >
+                  {isEnding ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Ending...
+                    </>
+                  ) : (
+                    'End Interview'
+                  )}
                 </Button>
               )}
             </div>

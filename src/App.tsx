@@ -43,82 +43,84 @@ import DashboardLayout from './components/layouts/DashboardLayout';
 const queryClient = new QueryClient();
 
 const App = () => (
-  <AuthProvider>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Public routes with MainLayout */}
-            <Route element={<MainLayout />}>
-              <Route path="/" element={<Index />} />
-            </Route>
-            
-            {/* Auth routes with AuthLayout */}
-            <Route element={<AuthLayout />}>
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-            </Route>
-            
-            {/* Protected routes with DashboardLayout */}
-            <Route element={<DashboardLayout />}>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/create-position" element={<CreatePosition />} />
-              <Route path="/create-session" element={<CreateSession />} />
-              <Route path="/sessions" element={<Sessions />} />
-              <Route path="/sessions/:id" element={<SessionDetail />} />
-              <Route path="/candidate" element={<Candidate />} />
-              <Route path="/candidates" element={<Candidate />} />
-              <Route path="/candidates/:id" element={<CandidateProfile />} />
-              <Route path="/settings" element={<CompanySettings />} />
-              <Route path="/test-interview" element={<TestInterview />} />
-              <Route path="/interview-test-production" element={<InterviewTestProduction />} />
-              <Route path="/transcripts" element={<Transcripts />} />
-              <Route path="/positions" element={<Positions2 />} />
-              <Route path="/positions/:id" element={<PositionDetail2 />} />
-              <Route path="/companies" element={<Companies />} />
-              <Route path="/companies/new" element={<NewCompany />} />
-              <Route path="/companies/:id/edit" element={<EditCompany />} />
-            </Route>
-            
-            {/* Full-screen interview room (no dashboard layout) */}
-            <Route path="/interview-room/:id" element={<InterviewRoom />} />
-            
-            {/* Hybrid WebRTC interview room for admin flow */}
-            <Route path="/interview/:id" element={<InterviewRoomHybrid />} />
+  <ErrorBoundary>
+    <AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Public routes with MainLayout */}
+              <Route element={<MainLayout />}>
+                <Route path="/" element={<Index />} />
+              </Route>
+              
+              {/* Auth routes with AuthLayout */}
+              <Route element={<AuthLayout />}>
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+              </Route>
+              
+              {/* Protected routes with DashboardLayout */}
+              <Route element={<DashboardLayout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/create-position" element={<CreatePosition />} />
+                <Route path="/create-session" element={<CreateSession />} />
+                <Route path="/sessions" element={<Sessions />} />
+                <Route path="/sessions/:id" element={<SessionDetail />} />
+                <Route path="/candidate" element={<Candidate />} />
+                <Route path="/candidates" element={<Candidate />} />
+                <Route path="/candidates/:id" element={<CandidateProfile />} />
+                <Route path="/settings" element={<CompanySettings />} />
+                <Route path="/test-interview" element={<TestInterview />} />
+                <Route path="/interview-test-production" element={<InterviewTestProduction />} />
+                <Route path="/transcripts" element={<Transcripts />} />
+                <Route path="/positions" element={<Positions2 />} />
+                <Route path="/positions/:id" element={<PositionDetail2 />} />
+                <Route path="/companies" element={<Companies />} />
+                <Route path="/companies/new" element={<NewCompany />} />
+                <Route path="/companies/:id/edit" element={<EditCompany />} />
+              </Route>
+              
+              {/* Full-screen interview room (no dashboard layout) */}
+              <Route path="/interview-room/:id" element={<InterviewRoom />} />
+              
+              {/* Hybrid WebRTC interview room for admin flow */}
+              <Route path="/interview/:id" element={<InterviewRoomHybrid />} />
 
-            {/* WebRTC test pages - all grouped under /test/ path for organization */}
-            <Route path="/test/ngrok" element={<InterviewTestSimple />} />
-            <Route path="/test/webrtc-hooks" element={<InterviewTestSimple />} />
-            <Route path="/test/openai" element={<InterviewTestSimple />} />
-            <Route path="/test/full" element={
-              <ErrorBoundary>
-                <InterviewTestSimple />
-              </ErrorBoundary>
-            } />
-            <Route path="/test/simple" element={<SimpleWebRTCTest />} />
+              {/* WebRTC test pages - all grouped under /test/ path for organization */}
+              <Route path="/test/ngrok" element={<InterviewTestSimple />} />
+              <Route path="/test/webrtc-hooks" element={<InterviewTestSimple />} />
+              <Route path="/test/openai" element={<InterviewTestSimple />} />
+              <Route path="/test/full" element={
+                <ErrorBoundary>
+                  <InterviewTestSimple />
+                </ErrorBoundary>
+              } />
+              <Route path="/test/simple" element={<SimpleWebRTCTest />} />
 
-            {/* Dedicated path for simplest test page access */}
-            <Route path="/interview-test-simple" element={<InterviewTestSimple />} />
-            <Route path="/simple-webrtc-test" element={<SimpleWebRTCTest />} />
-            <Route path="/basic-webrtc-test" element={<BasicWebRTCTest />} />
-            
-            {/* Diagnostic route */}
-            <Route path="/diagnostic" element={<DiagnosticTest />} />
-            
-            {/* WebRTC implementation test page */}
-            <Route path="/test-webrtc" element={<WebRTCTestPage />} />
+              {/* Dedicated path for simplest test page access */}
+              <Route path="/interview-test-simple" element={<InterviewTestSimple />} />
+              <Route path="/simple-webrtc-test" element={<SimpleWebRTCTest />} />
+              <Route path="/basic-webrtc-test" element={<BasicWebRTCTest />} />
+              
+              {/* Diagnostic route */}
+              <Route path="/diagnostic" element={<DiagnosticTest />} />
+              
+              {/* WebRTC implementation test page */}
+              <Route path="/test-webrtc" element={<WebRTCTestPage />} />
 
-            {/* Catch-all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  </AuthProvider>
+              {/* Catch-all route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </AuthProvider>
+  </ErrorBoundary>
 );
 
 export default App;
