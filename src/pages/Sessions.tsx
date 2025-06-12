@@ -1,5 +1,5 @@
 import React from 'react';
-import { Helmet } from 'react-helmet-async';
+import { Helmet, HelmetProvider } from 'react-helmet-async';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
 import SessionList from '@/components/interview/SessionList';
 import SafeRender from '@/components/SafeRender';
@@ -9,9 +9,11 @@ import { Calendar, ClipboardList, Video } from 'lucide-react';
 const Sessions: React.FC = () => {
   return (
     <>
+    <HelmetProvider>
       <Helmet>
         <title>Interview Sessions | AI Interview Insights Platform</title>
       </Helmet>
+      </HelmetProvider>
       <DashboardLayout>
         <div className="flex flex-col space-y-6">
           <div>
