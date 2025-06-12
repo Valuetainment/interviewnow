@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/avatar";
 
 import { Button } from "@/components/ui/button";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+// import { SidebarTrigger } from "@/components/ui/sidebar"; -- Temporarily disabled for debugging
 import { Input } from "@/components/ui/input";
 import { useAuth } from '@/hooks/useAuth';
 
@@ -56,7 +56,7 @@ const DashboardHeader: React.FC = () => {
     <header className="h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-full items-center justify-between">
         <div className="flex items-center gap-4">
-          <SidebarTrigger className="md:hidden" />
+          {/* <SidebarTrigger className="md:hidden" /> -- Temporarily disabled for debugging */}
           
           <div className="flex items-center gap-2">
             <div className="relative w-80 max-w-full">
