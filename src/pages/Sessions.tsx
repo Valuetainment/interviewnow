@@ -1,11 +1,6 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
-import SessionList from '@/components/interview/SessionList';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, ClipboardList, Video } from 'lucide-react';
-import ErrorBoundary from '@/components/ErrorBoundary';
-import SafeRender from '@/components/SafeRender';
 
 const Sessions: React.FC = () => {
   return (
