@@ -20,23 +20,10 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   public static getDerivedStateFromError(error: Error): State {
-    // Check if it's the gptengineer.js error
-    if (error.message?.includes('Cannot read properties of undefined') && 
-        error.message?.includes("reading 'add'")) {
-      console.warn('ErrorBoundary: Ignoring known third-party error:', error.message);
-      return { hasError: false, errorInfo: null };
-    }
     return { hasError: true, error, errorInfo: null };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Check if it's the gptengineer.js error and skip it
-    if (error.message?.includes('Cannot read properties of undefined') && 
-        error.message?.includes("reading 'add'")) {
-      console.warn('ErrorBoundary: Skipping known third-party error in componentDidCatch');
-      return;
-    }
-    
     console.error('Uncaught error:', error, errorInfo);
     this.setState({ errorInfo });
     
