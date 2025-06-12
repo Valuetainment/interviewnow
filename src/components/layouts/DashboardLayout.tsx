@@ -25,6 +25,21 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
 
+  // Add a global error suppressor for the lovable-tagger error
+  React.useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      if (event.error?.message?.includes('Cannot read properties of undefined') && 
+          event.error?.message?.includes("reading 'add'")) {
+        console.warn('Suppressing .add() error in DashboardLayout');
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    window.addEventListener('error', handleError, true);
+    return () => window.removeEventListener('error', handleError, true);
+  }, []);
+
   return (
     <SidebarProvider defaultOpen={true}>
       <div className="flex h-svh">

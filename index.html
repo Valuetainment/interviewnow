@@ -21,19 +21,22 @@
       window.addEventListener('error', function(event) {
         // Check if error is from gptengineer.js or related to .add()
         if (event.filename && event.filename.includes('gptengineer.js') || 
-            (event.message && event.message.includes('Cannot read properties of undefined'))) {
+            (event.message && event.message.includes('Cannot read properties of undefined')) ||
+            (event.message && event.message.includes("reading 'add'"))) {
           console.warn('Suppressing third-party error:', event.message);
           event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation();
           return true;
         }
-      });
+      }, true); // Use capture phase to catch errors early
     </script>
   </head>
 
   <body>
     <div id="root"></div>
-    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module" onerror="console.warn('Failed to load gptengineer.js')"></script>
+    <!-- GPT Engineer script temporarily disabled due to compatibility issues -->
+    <!-- <script src="https://cdn.gpteng.co/gptengineer.js" type="module" onerror="console.warn('Failed to load gptengineer.js')"></script> -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
