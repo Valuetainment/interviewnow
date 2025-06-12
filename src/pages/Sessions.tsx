@@ -2,6 +2,7 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
 import SessionList from '@/components/interview/SessionList';
+import SafeRender from '@/components/SafeRender';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, ClipboardList, Video } from 'lucide-react';
 
@@ -37,7 +38,9 @@ const Sessions: React.FC = () => {
             </TabsList>
             
             <TabsContent value="upcoming" className="mt-6">
-              <SessionList />
+              <SafeRender>
+                <SessionList />
+              </SafeRender>
             </TabsContent>
             
             <TabsContent value="completed" className="mt-6">
