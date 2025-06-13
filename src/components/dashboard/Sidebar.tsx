@@ -139,21 +139,6 @@ const DashboardSidebar: React.FC = () => {
           </SidebarMenuItem>
 
           <SidebarMenuItem>
-            <Link to="/reports">
-              <SidebarMenuButton 
-                asChild
-                isActive={isActive('/reports')}
-                tooltip="Reports"
-              >
-                <div className="flex items-center gap-2">
-                  <BarChart />
-                  <span>Reports</span>
-                </div>
-              </SidebarMenuButton>
-            </Link>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem>
             <Link to="/settings">
               <SidebarMenuButton 
                 asChild

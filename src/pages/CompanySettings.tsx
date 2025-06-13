@@ -7,8 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import { Building, Users, Settings } from "lucide-react";
 
 const CompanySettings = () => {
@@ -57,11 +55,9 @@ const CompanySettings = () => {
   };
   
   return (
-    <div className="flex flex-col min-h-screen">
-      <Navbar />
-      <div className="flex-grow container mx-auto px-4 py-24 md:py-32">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl md:text-4xl font-bold mb-8">Company Settings</h1>
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl md:text-4xl font-bold mb-8">Company Settings</h1>
           
           <Tabs defaultValue="profile" className="space-y-6">
             <TabsList className="grid w-full grid-cols-3">
@@ -262,8 +258,6 @@ const CompanySettings = () => {
           </Tabs>
         </div>
       </div>
-      <Footer />
-    </div>
   );
 };
 
