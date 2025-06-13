@@ -178,6 +178,64 @@ async function updateInterviewSession(
   }
 }
 
+// Build enhanced instructions with competency weights
+function buildEnhancedInstructions(sessionData: any): string {
+  const position = sessionData.positions;
+  const candidate = sessionData.candidates;
+  const company = sessionData.companies;
+  
+  // Extract competencies with weights
+  const competencies = position?.position_competencies || [];
+  const hasCompetencies = competencies.length > 0;
+  
+  // Build competency evaluation section
+  let competencySection = '';
+  if (hasCompetencies) {
+    // Sort by weight descending
+    const sortedCompetencies = [...competencies].sort((a: any, b: any) => b.weight - a.weight);
+    
+    competencySection = `
+
+IMPORTANT - COMPETENCY EVALUATION FRAMEWORK:
+You must evaluate the candidate on these specific competencies, weighted by importance:
+
+${sortedCompetencies.map((pc: any) => 
+  `- ${pc.competencies.name} (${pc.weight}% of evaluation): ${pc.competencies.description}`
+).join('\n')}
+
+INTERVIEW STRATEGY:
+1. Allocate your questions proportionally to the weights above
+2. For competencies with higher weights (>25%), ask 2-3 in-depth questions
+3. For medium weights (15-25%), ask 1-2 solid questions  
+4. For lower weights (<15%), ask 1 quick question
+5. Focus most of your time on the highest-weighted competencies`;
+  }
+
+  // Extract candidate info
+  const candidateName = candidate ? 
+    `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim() || 'the candidate' :
+    'the candidate';
+  
+  const candidateSkills = candidate?.skills?.join(', ') || '';
+  
+  // Build the complete instructions
+  return `You are an interviewer for ${company?.name || 'our company'}, conducting an interview for the position of ${position?.title || 'Software Developer'}.
+
+You are interviewing ${candidateName}.${candidateSkills ? ` Their listed skills include: ${candidateSkills}.` : ''}
+
+${position?.description || ''}${competencySection}
+
+GENERAL GUIDELINES:
+- Start with a warm introduction and ask about their background
+- Be conversational but professional
+- Listen carefully to responses and ask follow-up questions
+- Provide constructive feedback when appropriate
+- If they struggle with a question, offer hints or rephrase
+- End by asking if they have questions about ${company?.name || 'the company'} or the role
+
+Remember: ${hasCompetencies ? 'Focus your evaluation on the competencies listed above, especially those with higher weights.' : 'Conduct a thorough technical interview appropriate for this role.'}`;
+}
+
 // Main handler with enhanced error handling and logging
 serve(async (req) => {
   // Start performance timer
@@ -262,10 +320,41 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
     );
 
-    // Check if interview session exists and is valid
+    // ENHANCED: Fetch comprehensive session data including competencies
     const { data: sessionData, error: sessionError } = await supabaseClient
       .from('interview_sessions')
-      .select('id, status, tenant_id, positions(id, title, description)')
+      .select(`
+        id,
+        status,
+        tenant_id,
+        candidate_id,
+        position_id,
+        company_id,
+        positions(
+          id,
+          title,
+          description,
+          position_competencies(
+            weight,
+            competencies(
+              id,
+              name,
+              description
+            )
+          )
+        ),
+        candidates(
+          id,
+          first_name,
+          last_name,
+          email,
+          skills
+        ),
+        companies(
+          id,
+          name
+        )
+      `)
       .eq('id', interview_session_id)
       .single();
 
@@ -357,22 +446,7 @@ serve(async (req) => {
     let openaiConfig = undefined;
 
     if (usedArchitecture === 'hybrid') {
-      // Extract position details from the session data
-      const positionTitle = sessionData.positions?.title || 'Software Developer';
-      const positionDescription = sessionData.positions?.description || 'General software development position';
-
-      // Get candidate details if available
-      const { data: candidateData } = await supabaseClient
-        .from('interview_sessions')
-        .select('candidates(id, first_name, last_name)')
-        .eq('id', interview_session_id)
-        .single();
-
-      const candidateName = candidateData?.candidates
-        ? `${candidateData.candidates.first_name} ${candidateData.candidates.last_name}`
-        : 'the candidate';
-
-      // Create customized OpenAI configuration with enhanced settings
+      // ENHANCED: Use the new instruction builder
       openaiConfig = {
         voice: openai_settings.voice || 'alloy',
         model: openai_settings.model || 'gpt-4o',
@@ -381,15 +455,16 @@ serve(async (req) => {
           silence_duration_ms: openai_settings.turn_detection?.silence_duration_ms || 800,
           threshold: openai_settings.turn_detection?.threshold || 0.5
         },
-        instructions: `You are an interviewer for the position of ${positionTitle}.
-                      You are interviewing ${candidateName}.
-                      ${positionDescription}
-
-                      Ask challenging but relevant technical questions to evaluate the candidate's skills.
-                      Be conversational but professional. Listen carefully to the candidate's responses.
-                      Provide constructive feedback and ask follow-up questions when appropriate.
-                      Start by introducing yourself and asking the candidate to tell you about their background.`
+        instructions: buildEnhancedInstructions(sessionData)
       };
+      
+      // Log the competency weights for debugging
+      const competencies = sessionData.positions?.position_competencies || [];
+      if (competencies.length > 0) {
+        console.log(`Interview configured with ${competencies.length} competencies:`, 
+          competencies.map((pc: any) => `${pc.competencies.name}: ${pc.weight}%`).join(', ')
+        );
+      }
     }
 
     // Calculate performance metrics
