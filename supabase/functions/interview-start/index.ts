@@ -54,7 +54,7 @@ interface InterviewResponse {
 }
 
 // JWT token validation for enhanced security
-async function validateJwtToken(token: string, tenant_id: string): Promise<{valid: boolean, error?: string, userId?: string}> {
+async function validateJwtToken(token: string, tenant_id: string): Promise<{ valid: boolean, error?: string, userId?: string }> {
   try {
     if (!token) {
       return { valid: false, error: 'Missing JWT token' };
@@ -129,11 +129,11 @@ async function setupFlyVM(
     // TEMPORARY FIX: Use the existing interview-hybrid-template app
     // In production, we would actually provision a new VM here
     const baseUrl = 'wss://interview-hybrid-template.fly.dev';
-    
+
     // VM URL with enhanced security parameters
     // For hybrid, this becomes wss://interview-hybrid-template.fly.dev?token=...
-    const vmUrl = wsPath ? `${baseUrl}/${wsPath}?token=${secureToken}&session=${sessionId}&tenant=${tenantId}` 
-                        : `${baseUrl}?token=${secureToken}&session=${sessionId}&tenant=${tenantId}`;
+    const vmUrl = wsPath ? `${baseUrl}/${wsPath}?token=${secureToken}&session=${sessionId}&tenant=${tenantId}`
+      : `${baseUrl}?token=${secureToken}&session=${sessionId}&tenant=${tenantId}`;
 
     console.log(`VM URL generated for ${architecture} architecture using template app [${operationId}]`);
     console.log(`TODO: In production, provision actual VM: ${vmName}`);
@@ -374,21 +374,29 @@ serve(async (req) => {
 
       // Create customized OpenAI configuration with enhanced settings
       openaiConfig = {
-        voice: openai_settings.voice || 'alloy',
+        voice: openai_settings.voice || 'shimmer',
         model: openai_settings.model || 'gpt-4o',
         temperature: openai_settings.temperature || 0.7,
         turn_detection: {
-          silence_duration_ms: openai_settings.turn_detection?.silence_duration_ms || 800,
+          silence_duration_ms: openai_settings.turn_detection?.silence_duration_ms || 5000,
           threshold: openai_settings.turn_detection?.threshold || 0.5
         },
-        instructions: `You are an interviewer for the position of ${positionTitle}.
-                      You are interviewing ${candidateName}.
-                      ${positionDescription}
+        // instructions: `You are an interviewer for the position of ${positionTitle}.
+        //               You are interviewing ${candidateName}.
+        //               ${positionDescription}
 
-                      Ask challenging but relevant technical questions to evaluate the candidate's skills.
-                      Be conversational but professional. Listen carefully to the candidate's responses.
+        //               Ask challenging but relevant technical questions to evaluate the candidate's skills.
+        //               Be conversational but professional. Listen carefully to the candidate's responses.
+        //               Provide constructive feedback and ask follow-up questions when appropriate.
+        //               Start by introducing yourself and asking the candidate to tell you about their background.`
+        instructions: `
+                      You are an interviewer for the position of ${positionTitle}. 
+                      You are interviewing someone named ${candidateName} for ${positionDescription} position.
+                      Ask challenging but relevant questions to evaluate the candidate's skills and overall communication.
+                      Be conversational but professional. Listen carefully to the candidate's responses and allow them to think.
                       Provide constructive feedback and ask follow-up questions when appropriate.
-                      Start by introducing yourself and asking the candidate to tell you about their background.`
+                      Start by introducing yourself and asking the candidate to tell you about their background.
+                      `
       };
     }
 
