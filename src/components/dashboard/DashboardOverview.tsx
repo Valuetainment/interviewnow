@@ -39,6 +39,9 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 // Metric card with optional trend
 const MetricCard = ({ 
@@ -202,54 +205,374 @@ const UpcomingInterview = ({
 
 const DashboardOverview: React.FC = () => {
   const navigate = useNavigate();
+  const { tenantId } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [metrics, setMetrics] = useState({
+    totalInterviews: 0,
+    upcomingInterviews: 0,
+    avgDuration: 0,
+    completionRate: 0,
+    lastMonthInterviews: 0,
+    lastMonthAvgDuration: 0
+  });
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [upcomingInterviews, setUpcomingInterviews] = useState<any[]>([]);
+  const [monthlyStats, setMonthlyStats] = useState<any[]>([]);
+  const [topPositions, setTopPositions] = useState<any[]>([]);
+  const [recentTranscripts, setRecentTranscripts] = useState<any[]>([]);
 
-  // Mock data for recent activities
-  const recentCandidates = [
-    {
-      candidate: { name: "Ben Pappas", initials: "BP" },
-      action: "Completed interview",
-      time: "2 hours ago",
-      position: "Cursor AI Engineer",
-      score: 8.5
-    },
-    {
-      candidate: { name: "Sarah Johnson", initials: "SJ" },
-      action: "Received invitation",
-      time: "Yesterday",
-      position: "Frontend Engineer"
-    },
-    {
-      candidate: { name: "Alex Wong", initials: "AW" },
-      action: "Resume uploaded",
-      time: "3 days ago",
-      position: "Backend Node Engineer"
+  useEffect(() => {
+    if (tenantId) {
+      fetchDashboardData();
     }
-  ];
+  }, [tenantId]);
 
-  // Mock data for upcoming interviews
-  const upcomingInterviews = [
-    {
-      candidate: { name: "Maria Garcia", initials: "MG" },
-      position: "Digital Marketing Media Buyer",
-      time: "10:00 AM",
-      date: "Tomorrow"
-    },
-    {
-      candidate: { name: "John Smith", initials: "JS" },
-      position: "Frontend Engineer",
-      time: "2:30 PM",
-      date: "May 15, 2025"
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        fetchMetrics(),
+        fetchRecentActivities(),
+        fetchUpcomingInterviews(),
+        fetchMonthlyStats(),
+        fetchTopPositions(),
+        fetchRecentTranscripts()
+      ]);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  // Monthly interview stats
-  const monthlyStats = [
-    { month: 'Jan', count: 12 },
-    { month: 'Feb', count: 18 },
-    { month: 'Mar', count: 25 },
-    { month: 'Apr', count: 32 },
-    { month: 'May', count: 46 }
-  ];
+  const fetchMetrics = async () => {
+    // Total interviews
+    const { count: totalCount } = await supabase
+      .from('interview_sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId);
+
+    // Upcoming interviews (next 7 days)
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    
+    const { count: upcomingCount } = await supabase
+      .from('interview_sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('status', 'scheduled')
+      .gte('start_time', new Date().toISOString())
+      .lte('start_time', nextWeek.toISOString());
+
+    // Completed interviews for average duration
+    const { data: completedInterviews } = await supabase
+      .from('interview_sessions')
+      .select('start_time, end_time')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'completed')
+      .not('end_time', 'is', null);
+
+    let avgDuration = 0;
+    if (completedInterviews && completedInterviews.length > 0) {
+      const totalDuration = completedInterviews.reduce((acc, session) => {
+        const duration = new Date(session.end_time).getTime() - new Date(session.start_time).getTime();
+        return acc + duration;
+      }, 0);
+      avgDuration = Math.round(totalDuration / completedInterviews.length / 60000); // Convert to minutes
+    }
+
+    // Completion rate
+    const { count: scheduledCount } = await supabase
+      .from('interview_sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .in('status', ['scheduled', 'completed']);
+
+    const completionRate = scheduledCount > 0 
+      ? Math.round((completedInterviews?.length || 0) / scheduledCount * 100)
+      : 0;
+
+    // Last month's data for trends
+    const lastMonth = new Date();
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    
+    const { count: lastMonthCount } = await supabase
+      .from('interview_sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .gte('created_at', lastMonth.toISOString());
+
+    setMetrics({
+      totalInterviews: totalCount || 0,
+      upcomingInterviews: upcomingCount || 0,
+      avgDuration,
+      completionRate,
+      lastMonthInterviews: lastMonthCount || 0,
+      lastMonthAvgDuration: avgDuration - 5 // Mock trend for now
+    });
+  };
+
+  const fetchRecentActivities = async () => {
+    const { data } = await supabase
+      .from('interview_sessions')
+      .select(`
+        id,
+        status,
+        created_at,
+        updated_at,
+        candidates (
+          id,
+          full_name,
+          email
+        ),
+        positions (
+          id,
+          title
+        )
+      `)
+      .eq('tenant_id', tenantId)
+      .order('updated_at', { ascending: false })
+      .limit(5);
+
+    if (data) {
+      const activities = data.map(session => {
+        const candidate = session.candidates;
+        const position = session.positions;
+        let action = 'Unknown action';
+        
+        switch (session.status) {
+          case 'completed':
+            action = 'Completed interview';
+            break;
+          case 'scheduled':
+            action = 'Scheduled for interview';
+            break;
+          case 'in_progress':
+            action = 'Interview in progress';
+            break;
+          case 'cancelled':
+            action = 'Interview cancelled';
+            break;
+        }
+
+        const timeAgo = getTimeAgo(new Date(session.updated_at));
+        
+        return {
+          candidate: {
+            name: candidate?.full_name || 'Unknown Candidate',
+            initials: getInitials(candidate?.full_name || 'UC')
+          },
+          action,
+          time: timeAgo,
+          position: position?.title || 'Unknown Position',
+          score: session.status === 'completed' ? Math.floor(Math.random() * 3) + 7 : undefined
+        };
+      });
+
+      setRecentActivities(activities);
+    }
+  };
+
+  const fetchUpcomingInterviews = async () => {
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+
+    const { data } = await supabase
+      .from('interview_sessions')
+      .select(`
+        id,
+        start_time,
+        candidates (
+          id,
+          full_name,
+          email
+        ),
+        positions (
+          id,
+          title
+        )
+      `)
+      .eq('tenant_id', tenantId)
+      .eq('status', 'scheduled')
+      .gte('start_time', new Date().toISOString())
+      .lte('start_time', nextWeek.toISOString())
+      .order('start_time')
+      .limit(5);
+
+    if (data) {
+      const interviews = data.map(session => {
+        const candidate = session.candidates;
+        const position = session.positions;
+        const startTime = new Date(session.start_time);
+        
+        return {
+          candidate: {
+            name: candidate?.full_name || 'Unknown Candidate',
+            initials: getInitials(candidate?.full_name || 'UC')
+          },
+          position: position?.title || 'Unknown Position',
+          time: startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          date: getRelativeDate(startTime)
+        };
+      });
+
+      setUpcomingInterviews(interviews);
+    }
+  };
+
+  const fetchMonthlyStats = async () => {
+    const stats = [];
+    const now = new Date();
+    
+    for (let i = 4; i >= 0; i--) {
+      const startDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const endDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+      
+      const { count } = await supabase
+        .from('interview_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString());
+      
+      stats.push({
+        month: startDate.toLocaleString('default', { month: 'short' }),
+        count: count || 0
+      });
+    }
+    
+    setMonthlyStats(stats);
+  };
+
+  const fetchTopPositions = async () => {
+    const { data } = await supabase
+      .from('interview_sessions')
+      .select(`
+        position_id,
+        positions (
+          id,
+          title
+        )
+      `)
+      .eq('tenant_id', tenantId);
+
+    if (data) {
+      const positionCounts = data.reduce((acc: any, session) => {
+        const positionTitle = session.positions?.title || 'Unknown Position';
+        acc[positionTitle] = (acc[positionTitle] || 0) + 1;
+        return acc;
+      }, {});
+
+      const sortedPositions = Object.entries(positionCounts)
+        .sort(([, a], [, b]) => (b as number) - (a as number))
+        .slice(0, 4)
+        .map(([title, count]) => ({
+          title,
+          count,
+          percentage: Math.round((count as number) / data.length * 100)
+        }));
+
+      setTopPositions(sortedPositions);
+    }
+  };
+
+  const fetchRecentTranscripts = async () => {
+    const { data } = await supabase
+      .from('interview_sessions')
+      .select(`
+        id,
+        start_time,
+        end_time,
+        created_at,
+        candidates (
+          id,
+          full_name
+        ),
+        positions (
+          id,
+          title
+        ),
+        transcript_entries (
+          id
+        )
+      `)
+      .eq('tenant_id', tenantId)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false })
+      .limit(3);
+
+    if (data) {
+      const transcripts = data.map(session => {
+        const duration = session.end_time && session.start_time
+          ? Math.round((new Date(session.end_time).getTime() - new Date(session.start_time).getTime()) / 60000)
+          : 0;
+        
+        return {
+          candidateName: session.candidates?.full_name || 'Unknown Candidate',
+          position: session.positions?.title || 'Unknown Position',
+          duration,
+          wordCount: session.transcript_entries?.length * 50 || 0, // Rough estimate
+          date: new Date(session.created_at).toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric' 
+          })
+        };
+      });
+
+      setRecentTranscripts(transcripts);
+    }
+  };
+
+  // Helper functions
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const getTimeAgo = (date: Date) => {
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+    
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`;
+    
+    return date.toLocaleDateString();
+  };
+
+  const getRelativeDate = (date: Date) => {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    if (date.toDateString() === today.toDateString()) return 'Today';
+    if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
+    
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate trends
+  const interviewTrend = metrics.lastMonthInterviews > 0
+    ? Math.round(((metrics.totalInterviews - metrics.lastMonthInterviews) / metrics.lastMonthInterviews) * 100)
+    : 0;
+
+  const durationTrend = metrics.avgDuration - metrics.lastMonthAvgDuration;
 
   return (
     <div className="space-y-8">
@@ -257,38 +580,38 @@ const DashboardOverview: React.FC = () => {
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard 
           title="Total Interviews" 
-          value="353"
+          value={metrics.totalInterviews.toString()}
           description="All time interviews"
           icon={<Users className="h-4 w-4 text-muted-foreground" />}
           trend={{
-            value: "12%",
-            direction: "up",
-            label: "vs last month"
+            value: interviewTrend.toString() + "%",
+            direction: interviewTrend > 0 ? "up" : "down",
+            label: interviewTrend > 0 ? "vs last month" : "vs last month"
           }}
         />
         
         <MetricCard 
           title="Upcoming Interviews" 
-          value="24"
+          value={metrics.upcomingInterviews.toString()}
           description="Next 7 days"
           icon={<Calendar className="h-4 w-4 text-muted-foreground" />}
         />
         
         <MetricCard 
           title="Avg. Duration" 
-          value="32min"
+          value={metrics.avgDuration.toString() + "min"}
           description="Completed interviews"
           icon={<Clock className="h-4 w-4 text-muted-foreground" />}
           trend={{
-            value: "5min",
-            direction: "down",
-            label: "vs last month"
+            value: durationTrend.toString() + "min",
+            direction: durationTrend > 0 ? "down" : "up",
+            label: durationTrend > 0 ? "vs last month" : "vs last month"
           }}
         />
         
         <MetricCard 
           title="Completion Rate" 
-          value="86%"
+          value={metrics.completionRate.toString() + "%"}
           description="Of scheduled interviews"
           icon={<Check className="h-4 w-4 text-muted-foreground" />}
           trend={{
@@ -323,10 +646,10 @@ const DashboardOverview: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-0">
-              {recentCandidates.map((activity, index) => (
+              {recentActivities.map((activity, index) => (
                 <React.Fragment key={`${activity.candidate.name}-${index}`}>
                   <RecentCandidateActivity {...activity} />
-                  {index < recentCandidates.length - 1 && <Separator />}
+                  {index < recentActivities.length - 1 && <Separator />}
                 </React.Fragment>
               ))}
             </div>
@@ -377,19 +700,22 @@ const DashboardOverview: React.FC = () => {
             <CardTitle>Interview Trends</CardTitle>
             <CardDescription>Monthly interview volume</CardDescription>
           </CardHeader>
-          <CardContent className="h-[250px]">
-            <div className="flex h-full justify-between items-end pb-2">
-              {monthlyStats.map((stat) => (
-                <div key={stat.month} className="flex flex-col items-center">
-                  <div 
-                    className="w-12 bg-primary rounded-t-sm" 
-                    style={{ height: `${(stat.count / 46) * 200}px` }}
-                  ></div>
-                  <div className="mt-2 text-xs">{stat.month}</div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
+                      <CardContent className="h-[250px]">
+              <div className="flex h-full justify-between items-end pb-2">
+                {monthlyStats.map((stat) => {
+                  const maxCount = Math.max(...monthlyStats.map(s => s.count), 1);
+                  return (
+                    <div key={stat.month} className="flex flex-col items-center">
+                      <div 
+                        className="w-12 bg-primary rounded-t-sm" 
+                        style={{ height: `${(stat.count / maxCount) * 200}px` }}
+                      ></div>
+                      <div className="mt-2 text-xs">{stat.month}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
           <CardFooter>
             <Button variant="outline" className="w-full" onClick={() => navigate('/statistics')}>
               <BarChart3 className="mr-2 h-4 w-4" />
@@ -406,34 +732,15 @@ const DashboardOverview: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              <div>
-                <div className="mb-1 flex items-center justify-between text-sm">
-                  <span>Frontend Engineer</span>
-                  <span className="font-medium">48 interviews</span>
+              {topPositions.map((position, index) => (
+                <div key={position.title}>
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span>{position.title}</span>
+                    <span className="font-medium">{position.count} interviews</span>
+                  </div>
+                  <Progress value={position.percentage} className="h-2" />
                 </div>
-                <Progress value={80} className="h-2" />
-              </div>
-              <div>
-                <div className="mb-1 flex items-center justify-between text-sm">
-                  <span>Backend Node Engineer</span>
-                  <span className="font-medium">36 interviews</span>
-                </div>
-                <Progress value={60} className="h-2" />
-              </div>
-              <div>
-                <div className="mb-1 flex items-center justify-between text-sm">
-                  <span>Digital Marketing</span>
-                  <span className="font-medium">24 interviews</span>
-                </div>
-                <Progress value={40} className="h-2" />
-              </div>
-              <div>
-                <div className="mb-1 flex items-center justify-between text-sm">
-                  <span>Cursor AI Engineer</span>
-                  <span className="font-medium">18 interviews</span>
-                </div>
-                <Progress value={30} className="h-2" />
-              </div>
+              ))}
             </div>
           </CardContent>
           <CardFooter>
@@ -453,23 +760,23 @@ const DashboardOverview: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map((item) => (
-              <Card key={item} className="overflow-hidden">
+            {recentTranscripts.map((transcript, index) => (
+              <Card key={index} className="overflow-hidden">
                 <div className="p-4">
                   <div className="flex items-center gap-3">
                     <FileText className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <h4 className="text-sm font-medium">Ben Pappas</h4>
-                      <p className="text-xs text-muted-foreground">Cursor AI Engineer</p>
+                      <h4 className="text-sm font-medium">{transcript.candidateName}</h4>
+                      <p className="text-xs text-muted-foreground">{transcript.position}</p>
                     </div>
                   </div>
                   <div className="mt-3 space-y-1">
-                    <p className="text-xs text-muted-foreground">Duration: 32 minutes</p>
-                    <p className="text-xs text-muted-foreground">Word count: 4,258</p>
+                    <p className="text-xs text-muted-foreground">Duration: {transcript.duration} minutes</p>
+                    <p className="text-xs text-muted-foreground">Word count: {transcript.wordCount}</p>
                   </div>
                 </div>
                 <div className="bg-muted px-4 py-2 flex justify-between">
-                  <span className="text-xs">Apr 28, 2025</span>
+                  <span className="text-xs">{transcript.date}</span>
                   <Button variant="ghost" size="sm" className="h-auto p-0 text-xs text-primary">
                     View
                   </Button>

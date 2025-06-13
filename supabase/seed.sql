@@ -63,7 +63,66 @@ VALUES
   ('55555555-5555-5555-5555-555555555555', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'Leadership', 'Ability to lead projects and mentor team members', NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
--- Create test positions
+-- Create additional test positions for variety
+INSERT INTO public.positions (id, tenant_id, title, description, role_overview, key_responsibilities, required_qualifications, preferred_qualifications, benefits, key_competencies_section, company_id, experience_level, created_at, updated_at)
+VALUES 
+  (
+    '33333333-3333-3333-3333-333333333333',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    'Frontend Engineer',
+    'We are looking for a talented Frontend Engineer to create amazing user experiences.',
+    'As a Frontend Engineer, you will be responsible for building responsive and performant web applications that delight our users.',
+    '• Build responsive web applications using React and TypeScript
+• Collaborate with designers to implement pixel-perfect UIs
+• Optimize application performance and loading times
+• Write unit and integration tests
+• Participate in code reviews',
+    '• 3+ years of frontend development experience
+• Expert knowledge of React and TypeScript
+• Strong CSS/SASS skills
+• Experience with state management (Redux, MobX)
+• Understanding of web accessibility standards',
+    '• Experience with Next.js or similar frameworks
+• Knowledge of design systems
+• Experience with animation libraries
+• Contributions to open source projects',
+    'Competitive salary, health benefits, remote work options, learning budget',
+    'Technical skills, UI/UX sensibility, attention to detail, collaboration',
+    'c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1',
+    'Mid-level',
+    NOW() - INTERVAL '10 days',
+    NOW() - INTERVAL '10 days'
+  ),
+  (
+    '44444444-4444-4444-4444-444444444444',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    'DevOps Engineer',
+    'Join our team to build and maintain our cloud infrastructure.',
+    'We need a DevOps Engineer to help us scale our infrastructure and improve our deployment processes.',
+    '• Design and maintain CI/CD pipelines
+• Manage cloud infrastructure on AWS
+• Implement monitoring and alerting systems
+• Automate deployment processes
+• Ensure system security and compliance',
+    '• 4+ years of DevOps experience
+• Strong knowledge of AWS services
+• Experience with Docker and Kubernetes
+• Proficiency in scripting (Python, Bash)
+• Understanding of infrastructure as code',
+    '• AWS certifications
+• Experience with Terraform
+• Knowledge of GitOps practices
+• Experience with service mesh technologies',
+    'Full benefits package, equity options, flexible hours, professional development',
+    'Infrastructure expertise, automation mindset, security awareness, problem-solving',
+    'c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1',
+    'Senior',
+    NOW() - INTERVAL '15 days',
+    NOW() - INTERVAL '15 days'
+  )
+ON CONFLICT (id) DO NOTHING;
+
+-- Create test positions (continuing with original ones)
 INSERT INTO public.positions (id, tenant_id, title, description, role_overview, key_responsibilities, required_qualifications, preferred_qualifications, benefits, key_competencies_section, company_id, experience_level, created_at, updated_at)
 VALUES 
   (
@@ -334,29 +393,212 @@ VALUES
   )
 ON CONFLICT (id) DO NOTHING;
 
--- Create test interview sessions
+-- Create test interview sessions with varied dates for dashboard metrics
 INSERT INTO public.interview_sessions (id, tenant_id, position_id, candidate_id, start_time, end_time, status, created_at, updated_at)
 VALUES 
+  -- Upcoming interviews (next 7 days)
   (
     '11111111-1111-1111-1111-111111111115',
     'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
     '11111111-1111-1111-1111-111111111111',
     '11111111-1111-1111-1111-111111111112',
-    NOW() + INTERVAL '2 days',
+    NOW() + INTERVAL '2 days' + TIME '10:00:00',
     NULL,
     'scheduled',
     NOW(),
     NOW()
   ),
   (
+    '11111111-1111-1111-1111-111111111116',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '22222222-2222-2222-2222-222222222222',
+    '22222222-2222-2222-2222-222222222223',
+    NOW() + INTERVAL '3 days' + TIME '14:30:00',
+    NULL,
+    'scheduled',
+    NOW() - INTERVAL '1 day',
+    NOW() - INTERVAL '1 day'
+  ),
+  (
+    '11111111-1111-1111-1111-111111111117',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '11111111-1111-1111-1111-111111111111',
+    '33333333-3333-3333-3333-333333333334',
+    NOW() + INTERVAL '5 days' + TIME '09:00:00',
+    NULL,
+    'scheduled',
+    NOW() - INTERVAL '2 days',
+    NOW() - INTERVAL '2 days'
+  ),
+  -- Recently completed interviews
+  (
     '22222222-2222-2222-2222-222222222226',
     'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
     '22222222-2222-2222-2222-222222222222',
     '22222222-2222-2222-2222-222222222223',
-    NOW() - INTERVAL '1 day',
-    NOW() - INTERVAL '1 day' + INTERVAL '45 minutes',
+    NOW() - INTERVAL '1 day' + TIME '14:00:00',
+    NOW() - INTERVAL '1 day' + TIME '14:45:00',
     'completed',
-    NOW() - INTERVAL '2 days',
+    NOW() - INTERVAL '3 days',
+    NOW() - INTERVAL '1 day'
+  ),
+  (
+    '22222222-2222-2222-2222-222222222227',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '11111111-1111-1111-1111-111111111111',
+    '11111111-1111-1111-1111-111111111112',
+    NOW() - INTERVAL '2 days' + TIME '10:00:00',
+    NOW() - INTERVAL '2 days' + TIME '10:32:00',
+    'completed',
+    NOW() - INTERVAL '4 days',
+    NOW() - INTERVAL '2 days'
+  ),
+  (
+    '22222222-2222-2222-2222-222222222228',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '11111111-1111-1111-1111-111111111111',
+    '33333333-3333-3333-3333-333333333334',
+    NOW() - INTERVAL '3 days' + TIME '15:00:00',
+    NOW() - INTERVAL '3 days' + TIME '15:28:00',
+    'completed',
+    NOW() - INTERVAL '5 days',
+    NOW() - INTERVAL '3 days'
+  ),
+  -- Historical data for trends (past months)
+  (
+    '33333333-3333-3333-3333-333333333331',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '11111111-1111-1111-1111-111111111111',
+    '11111111-1111-1111-1111-111111111112',
+    NOW() - INTERVAL '30 days' + TIME '10:00:00',
+    NOW() - INTERVAL '30 days' + TIME '10:35:00',
+    'completed',
+    NOW() - INTERVAL '30 days',
+    NOW() - INTERVAL '30 days'
+  ),
+  (
+    '33333333-3333-3333-3333-333333333332',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '22222222-2222-2222-2222-222222222222',
+    '22222222-2222-2222-2222-222222222223',
+    NOW() - INTERVAL '45 days' + TIME '14:00:00',
+    NOW() - INTERVAL '45 days' + TIME '14:40:00',
+    'completed',
+    NOW() - INTERVAL '45 days',
+    NOW() - INTERVAL '45 days'
+  ),
+  (
+    '33333333-3333-3333-3333-333333333333',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '11111111-1111-1111-1111-111111111111',
+    '33333333-3333-3333-3333-333333333334',
+    NOW() - INTERVAL '60 days' + TIME '11:00:00',
+    NOW() - INTERVAL '60 days' + TIME '11:30:00',
+    'completed',
+    NOW() - INTERVAL '60 days',
+    NOW() - INTERVAL '60 days'
+  ),
+  (
+    '33333333-3333-3333-3333-333333333334',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '22222222-2222-2222-2222-222222222222',
+    '11111111-1111-1111-1111-111111111112',
+    NOW() - INTERVAL '75 days' + TIME '09:00:00',
+    NOW() - INTERVAL '75 days' + TIME '09:45:00',
+    'completed',
+    NOW() - INTERVAL '75 days',
+    NOW() - INTERVAL '75 days'
+  ),
+  (
+    '33333333-3333-3333-3333-333333333335',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '11111111-1111-1111-1111-111111111111',
+    '22222222-2222-2222-2222-222222222223',
+    NOW() - INTERVAL '90 days' + TIME '16:00:00',
+    NOW() - INTERVAL '90 days' + TIME '16:25:00',
+    'completed',
+    NOW() - INTERVAL '90 days',
+    NOW() - INTERVAL '90 days'
+  ),
+  -- Some cancelled interviews
+  (
+    '44444444-4444-4444-4444-444444444441',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '11111111-1111-1111-1111-111111111111',
+    '33333333-3333-3333-3333-333333333334',
+    NOW() - INTERVAL '7 days' + TIME '13:00:00',
+    NULL,
+    'cancelled',
+    NOW() - INTERVAL '10 days',
+    NOW() - INTERVAL '7 days'
+  ),
+  -- In progress interview
+  (
+    '55555555-5555-5555-5555-555555555551',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '22222222-2222-2222-2222-222222222222',
+    '11111111-1111-1111-1111-111111111112',
+    NOW() - TIME '00:30:00',
+    NULL,
+    'in_progress',
+    NOW() - INTERVAL '1 hour',
+    NOW()
+  ),
+  -- Additional interviews for Frontend Engineer position
+  (
+    '66666666-6666-6666-6666-666666666661',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '33333333-3333-3333-3333-333333333333',
+    '11111111-1111-1111-1111-111111111112',
+    NOW() - INTERVAL '10 days' + TIME '10:00:00',
+    NOW() - INTERVAL '10 days' + TIME '10:45:00',
+    'completed',
+    NOW() - INTERVAL '12 days',
+    NOW() - INTERVAL '10 days'
+  ),
+  (
+    '66666666-6666-6666-6666-666666666662',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '33333333-3333-3333-3333-333333333333',
+    '22222222-2222-2222-2222-222222222223',
+    NOW() - INTERVAL '20 days' + TIME '14:00:00',
+    NOW() - INTERVAL '20 days' + TIME '14:30:00',
+    'completed',
+    NOW() - INTERVAL '22 days',
+    NOW() - INTERVAL '20 days'
+  ),
+  (
+    '66666666-6666-6666-6666-666666666663',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '33333333-3333-3333-3333-333333333333',
+    '33333333-3333-3333-3333-333333333334',
+    NOW() - INTERVAL '35 days' + TIME '11:00:00',
+    NOW() - INTERVAL '35 days' + TIME '11:40:00',
+    'completed',
+    NOW() - INTERVAL '37 days',
+    NOW() - INTERVAL '35 days'
+  ),
+  -- Additional interviews for DevOps Engineer position
+  (
+    '77777777-7777-7777-7777-777777777771',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '44444444-4444-4444-4444-444444444444',
+    '33333333-3333-3333-3333-333333333334',
+    NOW() - INTERVAL '15 days' + TIME '09:00:00',
+    NOW() - INTERVAL '15 days' + TIME '09:50:00',
+    'completed',
+    NOW() - INTERVAL '17 days',
+    NOW() - INTERVAL '15 days'
+  ),
+  (
+    '77777777-7777-7777-7777-777777777772',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '44444444-4444-4444-4444-444444444444',
+    '11111111-1111-1111-1111-111111111112',
+    NOW() + INTERVAL '4 days' + TIME '15:00:00',
+    NULL,
+    'scheduled',
+    NOW() - INTERVAL '1 day',
     NOW() - INTERVAL '1 day'
   )
 ON CONFLICT (id) DO NOTHING;
@@ -376,9 +618,10 @@ VALUES
   )
 ON CONFLICT (token) DO NOTHING;
 
--- Add some test transcript entries for completed interview
+-- Add transcript entries for completed interviews
 INSERT INTO public.transcript_entries (id, tenant_id, session_id, speaker, text, start_ms, confidence, created_at)
 VALUES 
+  -- Interview session 22222222-2222-2222-2222-222222222226 (Sarah Johnson - Product Manager)
   (
     '11111111-1111-1111-1111-111111111118',
     'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
@@ -394,10 +637,62 @@ VALUES
     'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
     '22222222-2222-2222-2222-222222222226',
     'candidate',
-    'Thank you for having me. I have been working as a Product Manager for the past 3 years at a B2B SaaS company...',
+    'Thank you for having me. I have been working as a Product Manager for the past 3 years at a B2B SaaS company where I led the development of our core analytics platform.',
     15000,
     0.92,
     NOW() - INTERVAL '1 day' + INTERVAL '15 seconds'
+  ),
+  (
+    '33333333-3333-3333-3333-333333333339',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '22222222-2222-2222-2222-222222222226',
+    'interviewer',
+    'That sounds interesting. What were some of the key challenges you faced in that role?',
+    45000,
+    0.94,
+    NOW() - INTERVAL '1 day' + INTERVAL '45 seconds'
+  ),
+  -- Interview session 22222222-2222-2222-2222-222222222227 (John Smith - Senior Software Engineer)
+  (
+    '44444444-4444-4444-4444-444444444448',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '22222222-2222-2222-2222-222222222227',
+    'interviewer',
+    'Good morning John. Let us start with your experience in full-stack development.',
+    0,
+    0.96,
+    NOW() - INTERVAL '2 days'
+  ),
+  (
+    '55555555-5555-5555-5555-555555555559',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '22222222-2222-2222-2222-222222222227',
+    'candidate',
+    'I have been developing web applications for over 5 years, primarily using React for frontend and Node.js for backend services.',
+    12000,
+    0.93,
+    NOW() - INTERVAL '2 days' + INTERVAL '12 seconds'
+  ),
+  -- Interview session 22222222-2222-2222-2222-222222222228 (Michael Chen - Senior Software Engineer)
+  (
+    '66666666-6666-6666-6666-666666666660',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '22222222-2222-2222-2222-222222222228',
+    'interviewer',
+    'Michael, I see you have experience with machine learning. Can you tell us about a project where you applied ML?',
+    0,
+    0.97,
+    NOW() - INTERVAL '3 days'
+  ),
+  (
+    '77777777-7777-7777-7777-777777777771',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '22222222-2222-2222-2222-222222222228',
+    'candidate',
+    'Certainly. At my previous company, I built a real-time transcription system using deep learning models for speech recognition.',
+    18000,
+    0.91,
+    NOW() - INTERVAL '3 days' + INTERVAL '18 seconds'
   )
 ON CONFLICT (id) DO NOTHING;
 
