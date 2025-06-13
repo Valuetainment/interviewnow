@@ -152,141 +152,67 @@ const DashboardSidebar: React.FC = () => {
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
+
+          <SidebarMenuItem>
+            <Link to="/settings">
+              <SidebarMenuButton 
+                asChild
+                isActive={isActive('/settings')}
+                tooltip="Settings"
+              >
+                <div className="flex items-center gap-2">
+                  <Settings />
+                  <span>Settings</span>
+                </div>
+              </SidebarMenuButton>
+            </Link>
+            
+            {isActive('/settings') && (
+              <SidebarMenuSub>
+                <SidebarMenuSubItem>
+                  <Link to="/settings/profile">
+                    <SidebarMenuSubButton 
+                      asChild
+                      isActive={isActive('/settings/profile')}
+                    >
+                      <div>Profile</div>
+                    </SidebarMenuSubButton>
+                  </Link>
+                </SidebarMenuSubItem>
+                <SidebarMenuSubItem>
+                  <Link to="/settings/organization">
+                    <SidebarMenuSubButton 
+                      asChild
+                      isActive={isActive('/settings/organization')}
+                    >
+                      <div>Organization</div>
+                    </SidebarMenuSubButton>
+                  </Link>
+                </SidebarMenuSubItem>
+                <SidebarMenuSubItem>
+                  <Link to="/settings/users">
+                    <SidebarMenuSubButton 
+                      asChild
+                      isActive={isActive('/settings/users')}
+                    >
+                      <div>Users</div>
+                    </SidebarMenuSubButton>
+                  </Link>
+                </SidebarMenuSubItem>
+                <SidebarMenuSubItem>
+                  <Link to="/settings/billing">
+                    <SidebarMenuSubButton 
+                      asChild
+                      isActive={isActive('/settings/billing')}
+                    >
+                      <div>Billing</div>
+                    </SidebarMenuSubButton>
+                  </Link>
+                </SidebarMenuSubItem>
+              </SidebarMenuSub>
+            )}
+          </SidebarMenuItem>
         </SidebarMenu>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Testing Tools</SidebarGroupLabel>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <Link to="/create-session">
-                <SidebarMenuButton 
-                  asChild
-                  isActive={isActive('/create-session')}
-                  tooltip="Create Test Session"
-                >
-                  <div className="flex items-center gap-2">
-                    <Beaker />
-                    <span>Create Test Session</span>
-                  </div>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-            
-            <SidebarMenuItem>
-              <Link to="/test-interview">
-                <SidebarMenuButton 
-                  asChild
-                  isActive={isActive('/test-interview')}
-                  tooltip="Test Interview"
-                >
-                  <div className="flex items-center gap-2">
-                    <TestTube />
-                    <span>Test Interview</span>
-                  </div>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-            
-            <SidebarMenuItem>
-              <Link to="/test/full">
-                <SidebarMenuButton 
-                  asChild
-                  isActive={isActive('/test/full')}
-                  tooltip="Full WebRTC Test"
-                >
-                  <div className="flex items-center gap-2">
-                    <Video />
-                    <span>Full WebRTC Test</span>
-                  </div>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Admin</SidebarGroupLabel>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <Link to="/interview-test-production">
-                <SidebarMenuButton 
-                  asChild
-                  isActive={isActive('/interview-test-production')}
-                  tooltip="Test Production Interview"
-                >
-                  <div className="flex items-center gap-2">
-                    <Mic />
-                    <span>Test Production Interview</span>
-                  </div>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-            
-            <SidebarMenuItem>
-              <Link to="/settings">
-                <SidebarMenuButton 
-                  asChild
-                  isActive={isActive('/settings')}
-                  tooltip="Settings"
-                >
-                  <div className="flex items-center gap-2">
-                    <Settings />
-                    <span>Settings</span>
-                  </div>
-                </SidebarMenuButton>
-              </Link>
-              
-              {isActive('/settings') && (
-                <SidebarMenuSub>
-                  <SidebarMenuSubItem>
-                    <Link to="/settings/profile">
-                      <SidebarMenuSubButton 
-                        asChild
-                        isActive={isActive('/settings/profile')}
-                      >
-                        <div>Profile</div>
-                      </SidebarMenuSubButton>
-                    </Link>
-                  </SidebarMenuSubItem>
-                  <SidebarMenuSubItem>
-                    <Link to="/settings/organization">
-                      <SidebarMenuSubButton 
-                        asChild
-                        isActive={isActive('/settings/organization')}
-                      >
-                        <div>Organization</div>
-                      </SidebarMenuSubButton>
-                    </Link>
-                  </SidebarMenuSubItem>
-                  <SidebarMenuSubItem>
-                    <Link to="/settings/users">
-                      <SidebarMenuSubButton 
-                        asChild
-                        isActive={isActive('/settings/users')}
-                      >
-                        <div>Users</div>
-                      </SidebarMenuSubButton>
-                    </Link>
-                  </SidebarMenuSubItem>
-                  <SidebarMenuSubItem>
-                    <Link to="/settings/billing">
-                      <SidebarMenuSubButton 
-                        asChild
-                        isActive={isActive('/settings/billing')}
-                      >
-                        <div>Billing</div>
-                      </SidebarMenuSubButton>
-                    </Link>
-                  </SidebarMenuSubItem>
-                </SidebarMenuSub>
-              )}
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter>
