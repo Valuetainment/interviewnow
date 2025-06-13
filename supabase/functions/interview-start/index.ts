@@ -178,7 +178,7 @@ async function updateInterviewSession(
   }
 }
 
-// Build enhanced instructions with competency weights
+// Build enhanced instructions with competency weights and full candidate context
 function buildEnhancedInstructions(sessionData: any): string {
   const position = sessionData.positions;
   const candidate = sessionData.candidates;
@@ -188,29 +188,6 @@ function buildEnhancedInstructions(sessionData: any): string {
   const competencies = position?.position_competencies || [];
   const hasCompetencies = competencies.length > 0;
   
-  // Build competency evaluation section
-  let competencySection = '';
-  if (hasCompetencies) {
-    // Sort by weight descending
-    const sortedCompetencies = [...competencies].sort((a: any, b: any) => b.weight - a.weight);
-    
-    competencySection = `
-
-IMPORTANT - COMPETENCY EVALUATION FRAMEWORK:
-You must evaluate the candidate on these specific competencies, weighted by importance:
-
-${sortedCompetencies.map((pc: any) => 
-  `- ${pc.competencies.name} (${pc.weight}% of evaluation): ${pc.competencies.description}`
-).join('\n')}
-
-INTERVIEW STRATEGY:
-1. Allocate your questions proportionally to the weights above
-2. For competencies with higher weights (>25%), ask 2-3 in-depth questions
-3. For medium weights (15-25%), ask 1-2 solid questions  
-4. For lower weights (<15%), ask 1 quick question
-5. Focus most of your time on the highest-weighted competencies`;
-  }
-
   // Extract candidate info - handle both full_name and first/last name
   let candidateName = 'the candidate';
   let candidateFirstName = '';
@@ -226,29 +203,182 @@ INTERVIEW STRATEGY:
     }
   }
   
-  const candidateSkills = candidate?.skills?.join(', ') || '';
+  // Parse work experience
+  let experienceSection = '';
+  let careerProgression = '';
+  let yearsOfExperience = 0;
+  let relevantCompanies = [];
+  let leadershipExperience = false;
   
+  if (candidate?.experience && Array.isArray(candidate.experience)) {
+    // Sort experience by date (most recent first)
+    const sortedExperience = [...candidate.experience].sort((a, b) => {
+      const dateA = new Date(a.end_date || a.start_date || 0);
+      const dateB = new Date(b.end_date || b.start_date || 0);
+      return dateB.getTime() - dateA.getTime();
+    });
+    
+    // Calculate total years of experience
+    const earliestStart = sortedExperience.reduce((earliest, exp) => {
+      const startDate = new Date(exp.start_date || Date.now());
+      return startDate < earliest ? startDate : earliest;
+    }, new Date());
+    yearsOfExperience = Math.floor((Date.now() - earliestStart.getTime()) / (1000 * 60 * 60 * 24 * 365));
+    
+    // Build experience summary
+    experienceSection = `
+CANDIDATE BACKGROUND:
+Work Experience (${yearsOfExperience} years):`;
+    
+    sortedExperience.slice(0, 5).forEach(exp => {
+      const duration = exp.start_date && exp.end_date 
+        ? `${new Date(exp.start_date).getFullYear()}-${new Date(exp.end_date).getFullYear()}`
+        : exp.start_date 
+          ? `${new Date(exp.start_date).getFullYear()}-Present`
+          : '';
+      
+      experienceSection += `
+- ${exp.title || 'Role'} at ${exp.company || 'Company'} ${duration ? `(${duration})` : ''}`;
+      
+      if (exp.description) {
+        experienceSection += `
+  • ${exp.description}`;
+      }
+      
+      relevantCompanies.push(exp.company);
+      
+      // Check for leadership indicators
+      if (exp.title && /lead|manager|director|head|chief|vp|president|founder/i.test(exp.title)) {
+        leadershipExperience = true;
+      }
+    });
+    
+    // Analyze career progression
+    if (sortedExperience.length > 1) {
+      const currentRole = sortedExperience[0]?.title || '';
+      const previousRole = sortedExperience[1]?.title || '';
+      if (currentRole && previousRole) {
+        careerProgression = `Career progression shows movement from ${previousRole} to ${currentRole}.`;
+      }
+    }
+  }
+  
+  // Parse education
+  let educationSection = '';
+  if (candidate?.education) {
+    educationSection = `
+
+Education:
+${candidate.education}`;
+  }
+  
+  // Skills analysis
+  const candidateSkills = candidate?.skills || [];
+  const skillsText = candidateSkills.join(', ');
+  
+  // Build competency evaluation section with pre-scoring and WEIGHTS
+  let competencySection = '';
+  let competencyIntelligence = '';
+  
+  if (hasCompetencies) {
+    // Sort by weight descending
+    const sortedCompetencies = [...competencies].sort((a: any, b: any) => b.weight - a.weight);
+    
+    // Pre-score competencies based on resume
+    const competencyAnalysis = sortedCompetencies.map((pc: any) => {
+      const competency = pc.competencies;
+      let evidence = 'limited';
+      let focusArea = true;
+      
+      // Analyze resume for competency evidence
+      if (competency.name.toLowerCase().includes('leadership') && leadershipExperience) {
+        evidence = 'strong';
+        focusArea = false;
+      } else if (competency.name.toLowerCase().includes('technical') && candidateSkills.length > 10) {
+        evidence = 'moderate';
+      } else if (competency.name.toLowerCase().includes('communication') && candidate?.resume_text?.length > 2000) {
+        evidence = 'moderate';
+      }
+      
+      return {
+        name: competency.name,
+        weight: pc.weight,
+        description: competency.description,
+        evidence,
+        focusArea
+      };
+    });
+    
+    competencySection = `
+
+IMPORTANT - COMPETENCY EVALUATION FRAMEWORK:
+You must evaluate the candidate on these specific competencies, weighted by importance:
+
+${competencyAnalysis.map((comp: any) => 
+  `- ${comp.name} (${comp.weight}% of evaluation): ${comp.description}
+  Resume Evidence: ${comp.evidence} | ${comp.focusArea ? 'FOCUS AREA - probe deeply' : 'Some evidence found - validate with examples'}`
+).join('\n')}
+
+INTERVIEW STRATEGY:
+1. Allocate your questions proportionally to the weights above
+2. For competencies with higher weights (>25%), ask 2-3 in-depth questions
+3. For medium weights (15-25%), ask 1-2 solid questions  
+4. For lower weights (<15%), ask 1 quick question
+5. Focus most of your time on the highest-weighted competencies
+6. For "FOCUS AREA" competencies, dig deeper as resume shows limited evidence`;
+
+    competencyIntelligence = `
+
+INTERVIEW INTELLIGENCE:
+- This candidate has ${yearsOfExperience} years of experience${leadershipExperience ? ' with leadership roles' : ''}
+- ${careerProgression || 'Review their career trajectory during the interview'}
+- Key companies to reference: ${relevantCompanies.slice(0, 3).join(', ') || 'Ask about their experience'}
+- Competencies needing validation: ${competencyAnalysis.filter(c => c.focusArea).map(c => c.name).join(', ')}`;
+  }
+  
+  // Build dynamic interview approach
+  const dynamicApproach = `
+
+DYNAMIC INTERVIEW APPROACH:
+1. Start with: "${candidateFirstName}, I see you're currently${candidate?.experience?.[0] ? ` a ${candidate.experience[0].title} at ${candidate.experience[0].company}` : ' working'}. What sparked your interest in this ${position?.title} opportunity?"
+2. For technical questions: Reference their experience with ${candidateSkills.slice(0, 3).join(', ') || 'relevant technologies'}
+3. For leadership questions: ${leadershipExperience ? `Ask about team size and challenges at ${relevantCompanies[0] || 'their current role'}` : 'Explore their experience working in teams and any informal leadership'}
+4. Bridge questions using their background: "I noticed you worked with ${candidateSkills[0] || 'various technologies'}. How would you apply that here?"
+5. Time allocation: ${hasCompetencies ? 'Follow the competency weights strictly' : 'Balance technical and behavioral questions'}`;
+
+  // Build behavioral question bank based on their experience
+  const behavioralQuestions = `
+
+PERSONALIZED BEHAVIORAL QUESTIONS:
+${candidate?.experience?.[0] ? `- "Tell me about a challenging technical decision you had to make at ${candidate.experience[0].company}"` : '- "Tell me about a challenging technical decision from your recent experience"'}
+${leadershipExperience ? '- "How did you scale your team while maintaining quality and culture?"' : '- "Describe a time when you had to influence teammates without formal authority"'}
+${yearsOfExperience > 5 ? '- "How has your approach to software development evolved over your career?"' : '- "What key lessons have you learned in your career so far?"'}
+- "Given your background in ${candidateSkills.slice(0, 2).join(' and ') || 'technology'}, how would you approach our technical challenges?"`;
+
   // Build the complete instructions
   return `You are an interviewer for ${company?.name || 'our company'}, conducting an interview for the position of ${position?.title || 'Software Developer'}.
 
-You are interviewing ${candidateName}.${candidateSkills ? ` Their listed skills include: ${candidateSkills}.` : ''}
+You are interviewing ${candidateName}.
+${experienceSection}${educationSection}
 
-${position?.description || ''}${competencySection}
+Skills: ${skillsText}
+
+${position?.description || ''}${competencySection}${competencyIntelligence}${dynamicApproach}${behavioralQuestions}
 
 GREETING AND INTERACTION:
 - Start the interview by greeting the candidate warmly: "Hello ${candidateFirstName || candidateName}, I'm an AI interviewer with ${company?.name || 'our company'}. Today we'll be discussing your interest in the ${position?.title || 'Software Developer'} role."
-- Use ${candidateFirstName ? `${candidateFirstName}'s first name` : 'the candidate\'s name'} periodically throughout the interview to maintain a personal connection
-- Be warm and welcoming while maintaining professionalism
+- Use ${candidateFirstName}'s first name periodically throughout the interview
+- Reference specific experiences from their background to make questions more relevant
 
 GENERAL GUIDELINES:
-- After your greeting, ask about their background and what interests them about this opportunity
-- Be conversational but professional
-- Listen carefully to responses and ask follow-up questions
-- Provide constructive feedback when appropriate
-- If they struggle with a question, offer hints or rephrase
-- End by asking if they have questions about ${company?.name || 'the company'} or the role
+- After your greeting, transition naturally to their current role and interests
+- Ask follow-up questions based on their specific experiences
+- When they mention a project or achievement, dig deeper with "Tell me more about..."
+- If they struggle, reference easier wins from their resume to rebuild confidence
+- For senior candidates (${yearsOfExperience}+ years), ask about mentoring and architecture decisions
+- End by asking if they have questions about ${company?.name || 'the company'} or the specific team they'd join
 
-Remember: ${hasCompetencies ? 'Focus your evaluation on the competencies listed above, especially those with higher weights.' : 'Conduct a thorough technical interview appropriate for this role.'}`;
+Remember: This is ${candidateFirstName} with ${yearsOfExperience} years at companies like ${relevantCompanies.slice(0, 2).join(', ') || 'various organizations'}. Make the interview conversational and relevant to their actual experience.`;
 }
 
 // Main handler with enhanced error handling and logging
@@ -364,7 +494,11 @@ serve(async (req) => {
           last_name,
           full_name,
           email,
-          skills
+          skills,
+          experience,
+          education,
+          resume_text,
+          phone
         ),
         companies(
           id,
