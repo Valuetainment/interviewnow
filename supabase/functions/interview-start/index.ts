@@ -211,10 +211,16 @@ INTERVIEW STRATEGY:
 5. Focus most of your time on the highest-weighted competencies`;
   }
 
-  // Extract candidate info
-  const candidateName = candidate ? 
-    `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim() || 'the candidate' :
-    'the candidate';
+  // Extract candidate info - handle both full_name and first/last name
+  let candidateName = 'the candidate';
+  if (candidate) {
+    // Try full_name first, then fall back to first_name + last_name
+    if (candidate.full_name) {
+      candidateName = candidate.full_name;
+    } else if (candidate.first_name || candidate.last_name) {
+      candidateName = `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim();
+    }
+  }
   
   const candidateSkills = candidate?.skills?.join(', ') || '';
   
@@ -347,6 +353,7 @@ serve(async (req) => {
           id,
           first_name,
           last_name,
+          full_name,
           email,
           skills
         ),
@@ -372,6 +379,26 @@ serve(async (req) => {
         }
       );
     }
+
+    // DEBUG: Log the fetched session data
+    console.log(`[DEBUG ${operationId}] Session data fetched:`, JSON.stringify({
+      id: sessionData.id,
+      candidate_id: sessionData.candidate_id,
+      position_id: sessionData.position_id,
+      company_id: sessionData.company_id,
+      candidate: sessionData.candidates ? {
+        name: `${sessionData.candidates.first_name} ${sessionData.candidates.last_name}`,
+        skills: sessionData.candidates.skills,
+        hasSkills: Array.isArray(sessionData.candidates.skills) && sessionData.candidates.skills.length > 0
+      } : 'NO CANDIDATE DATA',
+      position: sessionData.positions ? {
+        title: sessionData.positions.title,
+        competencyCount: sessionData.positions.position_competencies?.length || 0
+      } : 'NO POSITION DATA',
+      company: sessionData.companies ? {
+        name: sessionData.companies.name
+      } : 'NO COMPANY DATA'
+    }, null, 2));
 
     // Verify tenant ID matches (extra security check)
     if (sessionData.tenant_id !== tenant_id) {
@@ -457,6 +484,9 @@ serve(async (req) => {
         },
         instructions: buildEnhancedInstructions(sessionData)
       };
+      
+      // DEBUG: Log the generated instructions
+      console.log(`[DEBUG ${operationId}] Generated AI instructions:`, openaiConfig.instructions);
       
       // Log the competency weights for debugging
       const competencies = sessionData.positions?.position_competencies || [];

@@ -60,9 +60,11 @@
 | Completed (June 4, 2025) | **🎉 BREAKTHROUGH: Complete Avatar Integration (Phases 0-3)** |
 | Completed (January 3, 2025) | **Avatar Integration Attempted and Backed Out** |
 | Completed (June 10, 2025) | **Transcript System Fixed - Missing database column and white screen issues resolved** |
+| Completed (June 12, 2025) | **Sessions Page Fixed - Missing HelmetProvider context resolved** |
 | IN PROGRESS | **Focus on Core Interview Features** |
-| Next | Test full interview flow with transcript saving |
-| Next | Verify transcript storage and speaker identification |
+| Next | Clean up temporary debugging code and SafeRender wrapper |
+| Next | Optimize navigation system (consolidate Navbar and Sidebar) |
+| Next | Test full interview flow end-to-end |
 | Next | Enhance transcript accuracy and formatting |
 | Next | Improve interview session management |
 | Next | Add interview analytics and insights |
@@ -270,7 +272,7 @@
   - ✅ Added robust error handling and loading states
   - ✅ Implemented better tenant ID lookup with fallbacks
   - ✅ Added comprehensive debug logging
-  - ✅ Created direct sidebar links for easier testing access
+  - ✅ Created direct sidebar links for easier test access
 - ✅ JWT Claims Hook Configuration:
   - ✅ Created auth.custom_access_token_hook function with proper JSONB signature
   - ✅ Applied migration to production database
@@ -309,11 +311,25 @@
   - Fixed interview-transcript edge function 500 errors
   - Root cause: Missing source_architecture column in database
   - Created and applied migration to add the column
-  - Fixed white screen after ending interview (pending user test)
+  - Fixed white screen after ending interview
   - Added proper cleanup delay and loading states
   - All fixes deployed to production
+- ✅ **Sessions Page Fixed** (2025-06-12)
+  - Fixed mysterious `.add()` error preventing page load
+  - Root cause: Missing HelmetProvider context for react-helmet-async
+  - Added HelmetProvider wrapper around Helmet component
+  - Disabled lovable-tagger plugin as precaution
+  - Created SafeRender error boundary component
+  - Sessions page now loads and functions properly
 
 ## In Progress
+- 🔄 **AI Interview Context Enhancement (December 19, 2024)**:
+  - 🔄 Planning comprehensive context flow for AI interviewer
+  - 🔄 Designing weight-based competency evaluation system
+  - ⬜ Updating `interview-start` edge function with enhanced data fetching
+  - ⬜ Implementing time-proportional interview strategy based on weights
+  - ⬜ Adding scoring rubric generation for objective evaluation
+  - ⬜ Testing AI's ability to focus on high-weight competencies
 - 🔄 **Focus on Core Interview Features (CURRENT PRIORITY)**:
   - 🔄 Investigating interview-transcript edge function errors
   - 🔄 Planning transcript enhancement features
@@ -448,41 +464,47 @@
   - Decision made to focus on core features instead
 
 ## Upcoming Priorities
-1. **🚨 IMMEDIATE: Test Transcript Fixes in Production**
-   - **Test full interview flow** on /test-interview page
-   - **Verify transcript saving** during conversation
-   - **Test "End Interview" button** - should show "Ending..." then navigate properly
-   - **Confirm no white screen error** after interview ends
-   - **Check database** for saved transcript entries with correct speaker identification
+1. **🚨 IMMEDIATE: Implement AI Context Enhancement**
+   - **Update `interview-start` edge function** with comprehensive data fetching
+   - **Add weight-based instruction generation** for competency-focused interviews
+   - **Deploy and test** with existing frontend (no UI changes needed)
+   - **Verify AI behavior** - should ask questions proportional to competency weights
+   - **Quick win**: 1-hour implementation for immediate improvement
 
-2. **Core Interview Feature Enhancements**
+2. **Test Enhanced AI Interviews**
+   - **Create test positions** with different weight distributions
+   - **Run sample interviews** to verify weight-based questioning
+   - **Validate time allocation** matches competency weights
+   - **Check scoring alignment** with defined criteria
+
+3. **Core Interview Feature Enhancements**
    - **Transcript improvements**: Format, accuracy, real-time display
    - **Interview analytics**: Generate insights from transcripts
    - **Session management**: Better UI for reviewing past interviews
    - **Export functionality**: Allow transcript download/export
 
-3. **Future Avatar Integration (When Timing is Right)**
+4. **Future Avatar Integration (When Timing is Right)**
    - Wait for dedicated avatar availability from AKOOL
    - Evaluate business case for avatar features
    - Consider alternative avatar providers
    - Plan phased rollout with proper testing
 
-4. Complete Hybrid Architecture Test Migration Plan
+5. Complete Hybrid Architecture Test Migration Plan
    - Finish Phase 4: Enhanced Hybrid Testing
    - Implement Phase 5: Test Automation
    - Create developer guide for testing
    - Add troubleshooting guide for hybrid architecture test failures
 
-5. Deploy edge functions for hybrid architecture support
+6. Deploy edge functions for hybrid architecture support
    - Update interview-start function with latest VM isolation fix
    - Ensure transcript-processor function is properly deployed
    - Test with new WebRTC implementation
 
-6. Test hybrid architecture with real interview sessions
-7. Implement VM per tenant strategy for isolation
-8. Configure JWT validation for API endpoints
-9. Add tenant_id validation to WebRTC sessions
-10. Set up monitoring and alerting for production
+7. Test hybrid architecture with real interview sessions
+8. Implement VM per tenant strategy for isolation
+9. Configure JWT validation for API endpoints
+10. Add tenant_id validation to WebRTC sessions
+11. Set up monitoring and alerting for production
 
 ## Completed Features
 - ✅ Core project structure and foundation
