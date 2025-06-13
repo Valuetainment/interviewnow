@@ -139,51 +139,6 @@ const DashboardSidebar: React.FC = () => {
                 <span>Settings</span>
               </SidebarMenuButton>
             </Link>
-            
-            {isActive('/settings') && (
-              <SidebarMenuSub className="ml-4 mt-1">
-                <SidebarMenuSubItem>
-                  <Link to="/settings/profile">
-                    <SidebarMenuSubButton 
-                      isActive={isActive('/settings/profile')}
-                      className="w-full"
-                    >
-                      <span>Profile</span>
-                    </SidebarMenuSubButton>
-                  </Link>
-                </SidebarMenuSubItem>
-                <SidebarMenuSubItem>
-                  <Link to="/settings/organization">
-                    <SidebarMenuSubButton 
-                      isActive={isActive('/settings/organization')}
-                      className="w-full"
-                    >
-                      <span>Organization</span>
-                    </SidebarMenuSubButton>
-                  </Link>
-                </SidebarMenuSubItem>
-                <SidebarMenuSubItem>
-                  <Link to="/settings/users">
-                    <SidebarMenuSubButton 
-                      isActive={isActive('/settings/users')}
-                      className="w-full"
-                    >
-                      <span>Users</span>
-                    </SidebarMenuSubButton>
-                  </Link>
-                </SidebarMenuSubItem>
-                <SidebarMenuSubItem>
-                  <Link to="/settings/billing">
-                    <SidebarMenuSubButton 
-                      isActive={isActive('/settings/billing')}
-                      className="w-full"
-                    >
-                      <span>Billing</span>
-                    </SidebarMenuSubButton>
-                  </Link>
-                </SidebarMenuSubItem>
-              </SidebarMenuSub>
-            )}
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarContent>
