@@ -247,13 +247,14 @@ export function useOpenAIConnection(
     console.log('Instructions length:', instructions.length);
 
     // Start the interview after a short delay
+    // The AI will use the instructions from session.update to introduce itself
     setTimeout(() => {
       if (dataChannelRef.current) {
         dataChannelRef.current.send(JSON.stringify({
           type: 'response.create',
           response: {
-            modalities: ['text', 'audio'],
-            instructions: 'Introduce yourself as an AI interviewer for a technical position, and ask the candidate to introduce themselves and their background in software development.'
+            modalities: ['text', 'audio']
+            // Removed hardcoded instructions - AI will use the personalized greeting from session.update
           }
         }));
         console.log('Started interview with OpenAI');
