@@ -21,13 +21,13 @@ ON CONFLICT (id) DO NOTHING;
 -- Create test users in public schema (assuming auth users exist)
 -- NOTE: These are commented out because auth users must be created first
 -- Use the setup-test-data-local.sh script to create auth users, then uncomment these
--- -- Admin user
+-- Admin user
 -- INSERT INTO public.users (id, tenant_id, role, created_at, updated_at)
 -- VALUES 
 --   ('a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'admin', NOW(), NOW())
 -- ON CONFLICT (id) DO NOTHING;
 
--- -- Regular user
+-- Regular user
 -- INSERT INTO public.users (id, tenant_id, role, created_at, updated_at)
 -- VALUES 
 --   ('b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user', NOW(), NOW())
