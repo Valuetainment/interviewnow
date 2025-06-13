@@ -43,20 +43,22 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex h-svh">
+      <div className="flex h-screen w-full">
         {/* Dashboard Sidebar */}
         <DashboardSidebar />
         
         {/* Main Content Area */}
-        <SidebarInset>
+        <SidebarInset className="flex-1">
           <div className="flex flex-col h-full">
             {/* Dashboard Header */}
             <DashboardHeader />
             
             {/* Main Content */}
-            <div className="flex-grow p-6">
-              {children || <Outlet />}
-            </div>
+            <main className="flex-1 overflow-y-auto">
+              <div className="container mx-auto p-6">
+                {children || <Outlet />}
+              </div>
+            </main>
             
             {/* Footer */}
             <Footer />

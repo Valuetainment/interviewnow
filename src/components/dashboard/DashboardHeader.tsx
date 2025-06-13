@@ -81,18 +81,18 @@ const DashboardHeader: React.FC = () => {
   };
 
   return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex items-center justify-between py-3">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-14 items-center justify-between px-6">
         <div className="flex items-center gap-4">
           {/* <SidebarTrigger className="md:hidden" /> -- Temporarily disabled for debugging */}
           
           <div className="flex items-center gap-2">
-            <div className="relative w-80 max-w-full">
+            <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search..."
-                className="w-full bg-background pl-8 md:w-[300px] lg:w-[400px]"
+                className="h-9 w-full bg-background pl-8 md:w-[300px] lg:w-[400px]"
               />
             </div>
           </div>
@@ -102,7 +102,7 @@ const DashboardHeader: React.FC = () => {
           {/* Company Selector */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1">
+              <Button variant="outline" size="sm" className="h-8 gap-1">
                 <Building className="h-4 w-4" />
                 <span className="max-w-[150px] truncate">
                   {loading ? 'Loading...' : (selectedCompany?.name || 'Select Company')}
@@ -140,21 +140,22 @@ const DashboardHeader: React.FC = () => {
 
           {/* Notification Bell */}
           <div className="relative">
-            <Button variant="ghost" size="icon">
-              <Bell className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Bell className="h-4 w-4" />
+              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+                3
+              </span>
             </Button>
-            <span className="absolute right-0 top-0 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
-              3
-            </span>
           </div>
 
           {/* Settings */}
           <Button 
             variant="ghost" 
             size="icon"
+            className="h-8 w-8"
             onClick={() => navigate('/settings')}
           >
-            <Settings className="h-5 w-5" />
+            <Settings className="h-4 w-4" />
           </Button>
 
           {/* User Menu */}

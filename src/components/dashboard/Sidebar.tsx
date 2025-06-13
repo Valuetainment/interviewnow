@@ -44,11 +44,11 @@ const DashboardSidebar: React.FC = () => {
 
   return (
     <Sidebar>
-      <SidebarHeader>
-        <div className="flex items-center px-2">
+      <SidebarHeader className="h-14 p-0">
+        <div className="flex h-full items-center px-4">
           <Link to="/" className="flex items-center gap-2">
-            <div className="rounded-md bg-primary p-1">
-              <div className="h-6 w-6 text-primary-foreground">
+            <div className="rounded-md bg-primary p-1.5">
+              <div className="h-5 w-5 text-primary-foreground">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M12 4L4 8L12 12L20 8L12 4Z" />
                   <path d="M4 12L12 16L20 12" />
@@ -56,24 +56,22 @@ const DashboardSidebar: React.FC = () => {
                 </svg>
               </div>
             </div>
-            <div className="font-semibold">InterviewAI</div>
+            <div className="font-semibold text-lg">InterviewAI</div>
           </Link>
         </div>
       </SidebarHeader>
       
       <SidebarContent>
-        <SidebarMenu>
+        <SidebarMenu className="px-2 py-2">
           <SidebarMenuItem>
             <Link to="/dashboard">
               <SidebarMenuButton 
-                asChild
                 isActive={isActive('/dashboard')}
                 tooltip="Dashboard"
+                className="w-full"
               >
-                <div className="flex items-center gap-2">
-                  <LayoutDashboard />
-                  <span>Dashboard</span>
-                </div>
+                <LayoutDashboard className="h-4 w-4" />
+                <span>Dashboard</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
@@ -81,14 +79,12 @@ const DashboardSidebar: React.FC = () => {
           <SidebarMenuItem>
             <Link to="/sessions">
               <SidebarMenuButton 
-                asChild
                 isActive={isActive('/sessions')}
                 tooltip="Interview Sessions"
+                className="w-full"
               >
-                <div className="flex items-center gap-2">
-                  <Video />
-                  <span>Sessions</span>
-                </div>
+                <Video className="h-4 w-4" />
+                <span>Sessions</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
@@ -96,14 +92,12 @@ const DashboardSidebar: React.FC = () => {
           <SidebarMenuItem>
             <Link to="/candidates">
               <SidebarMenuButton 
-                asChild
                 isActive={isActive('/candidates')}
                 tooltip="Candidates"
+                className="w-full"
               >
-                <div className="flex items-center gap-2">
-                  <Users />
-                  <span>Candidates</span>
-                </div>
+                <Users className="h-4 w-4" />
+                <span>Candidates</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
@@ -111,14 +105,12 @@ const DashboardSidebar: React.FC = () => {
           <SidebarMenuItem>
             <Link to="/positions">
               <SidebarMenuButton 
-                asChild
                 isActive={isActive('/positions')}
                 tooltip="Positions"
+                className="w-full"
               >
-                <div className="flex items-center gap-2">
-                  <BriefcaseBusiness />
-                  <span>Positions</span>
-                </div>
+                <BriefcaseBusiness className="h-4 w-4" />
+                <span>Positions</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
@@ -126,14 +118,12 @@ const DashboardSidebar: React.FC = () => {
           <SidebarMenuItem>
             <Link to="/companies">
               <SidebarMenuButton 
-                asChild
                 isActive={isActive('/companies')}
                 tooltip="Companies"
+                className="w-full"
               >
-                <div className="flex items-center gap-2">
-                  <Building />
-                  <span>Companies</span>
-                </div>
+                <Building className="h-4 w-4" />
+                <span>Companies</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
@@ -141,56 +131,54 @@ const DashboardSidebar: React.FC = () => {
           <SidebarMenuItem>
             <Link to="/settings">
               <SidebarMenuButton 
-                asChild
                 isActive={isActive('/settings')}
                 tooltip="Settings"
+                className="w-full"
               >
-                <div className="flex items-center gap-2">
-                  <Settings />
-                  <span>Settings</span>
-                </div>
+                <Settings className="h-4 w-4" />
+                <span>Settings</span>
               </SidebarMenuButton>
             </Link>
             
             {isActive('/settings') && (
-              <SidebarMenuSub>
+              <SidebarMenuSub className="ml-4 mt-1">
                 <SidebarMenuSubItem>
                   <Link to="/settings/profile">
                     <SidebarMenuSubButton 
-                      asChild
                       isActive={isActive('/settings/profile')}
+                      className="w-full"
                     >
-                      <div>Profile</div>
+                      <span>Profile</span>
                     </SidebarMenuSubButton>
                   </Link>
                 </SidebarMenuSubItem>
                 <SidebarMenuSubItem>
                   <Link to="/settings/organization">
                     <SidebarMenuSubButton 
-                      asChild
                       isActive={isActive('/settings/organization')}
+                      className="w-full"
                     >
-                      <div>Organization</div>
+                      <span>Organization</span>
                     </SidebarMenuSubButton>
                   </Link>
                 </SidebarMenuSubItem>
                 <SidebarMenuSubItem>
                   <Link to="/settings/users">
                     <SidebarMenuSubButton 
-                      asChild
                       isActive={isActive('/settings/users')}
+                      className="w-full"
                     >
-                      <div>Users</div>
+                      <span>Users</span>
                     </SidebarMenuSubButton>
                   </Link>
                 </SidebarMenuSubItem>
                 <SidebarMenuSubItem>
                   <Link to="/settings/billing">
                     <SidebarMenuSubButton 
-                      asChild
                       isActive={isActive('/settings/billing')}
+                      className="w-full"
                     >
-                      <div>Billing</div>
+                      <span>Billing</span>
                     </SidebarMenuSubButton>
                   </Link>
                 </SidebarMenuSubItem>
@@ -200,16 +188,14 @@ const DashboardSidebar: React.FC = () => {
         </SidebarMenu>
       </SidebarContent>
 
-      <SidebarFooter>
-        <div className="flex flex-col gap-2 px-2">
-          <Button variant="outline" size="sm" className="justify-start gap-2">
-            <Search className="h-4 w-4" />
-            <span className="truncate">Search...</span>
-            <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-              <span className="text-xs">⌘</span>K
-            </kbd>
-          </Button>
-        </div>
+      <SidebarFooter className="p-4">
+        <Button variant="outline" size="sm" className="w-full justify-start gap-2">
+          <Search className="h-4 w-4" />
+          <span className="flex-1 text-left">Search...</span>
+          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        </Button>
       </SidebarFooter>
     </Sidebar>
   );
