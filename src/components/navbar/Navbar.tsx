@@ -45,44 +45,44 @@ const Navbar: React.FC = () => {
         <NavigationMenu className="hidden md:block">
           <NavigationMenuList>
             <NavigationMenuItem>
-              <Link to="/">
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+              <NavigationMenuLink asChild>
+                <Link to="/" className={navigationMenuTriggerStyle()}>
                   Home
-                </NavigationMenuLink>
-              </Link>
+                </Link>
+              </NavigationMenuLink>
             </NavigationMenuItem>
             <NavigationMenuItem>
               <NavigationMenuTrigger>Features</NavigationMenuTrigger>
               <NavigationMenuContent>
                 <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
-                  <ListItem href="/features/interviews" title="AI Interviews">
+                  <ListItem to="/features/interviews" title="AI Interviews">
                     Conduct seamless interviews with AI-powered assistance
                   </ListItem>
-                  <ListItem href="/features/assessments" title="Assessments">
+                  <ListItem to="/features/assessments" title="Assessments">
                     Generate objective candidate assessments automatically
                   </ListItem>
-                  <ListItem href="/features/resume-parsing" title="Resume Parsing">
+                  <ListItem to="/features/resume-parsing" title="Resume Parsing">
                     Automatically extract and analyze candidate information
                   </ListItem>
-                  <ListItem href="/features/analytics" title="Analytics">
+                  <ListItem to="/features/analytics" title="Analytics">
                     Data-driven insights on your hiring process
                   </ListItem>
                 </ul>
               </NavigationMenuContent>
             </NavigationMenuItem>
             <NavigationMenuItem>
-              <Link to="/pricing">
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+              <NavigationMenuLink asChild>
+                <Link to="/pricing" className={navigationMenuTriggerStyle()}>
                   Pricing
-                </NavigationMenuLink>
-              </Link>
+                </Link>
+              </NavigationMenuLink>
             </NavigationMenuItem>
             <NavigationMenuItem>
-              <Link to="/about">
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+              <NavigationMenuLink asChild>
+                <Link to="/about" className={navigationMenuTriggerStyle()}>
                   About
-                </NavigationMenuLink>
-              </Link>
+                </Link>
+              </NavigationMenuLink>
             </NavigationMenuItem>
           </NavigationMenuList>
         </NavigationMenu>
@@ -109,19 +109,19 @@ const Navbar: React.FC = () => {
   );
 };
 
-interface ListItemProps extends React.ComponentPropsWithoutRef<"a"> {
+interface ListItemProps extends React.ComponentPropsWithoutRef<typeof Link> {
   title: string;
-  href: string;
+  to: string;
 }
 
 const ListItem = React.forwardRef<HTMLAnchorElement, ListItemProps>(
-  ({ className, title, children, href, ...props }, ref) => {
+  ({ className, title, children, to, ...props }, ref) => {
     return (
       <li>
         <NavigationMenuLink asChild>
-          <a
+          <Link
             ref={ref}
-            href={href}
+            to={to}
             className={cn(
               "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
               className
@@ -132,7 +132,7 @@ const ListItem = React.forwardRef<HTMLAnchorElement, ListItemProps>(
             <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
               {children}
             </p>
-          </a>
+          </Link>
         </NavigationMenuLink>
       </li>
     );
