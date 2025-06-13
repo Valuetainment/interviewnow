@@ -10,30 +10,16 @@ VALUES
   ('d0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'Test Company Inc', 'pro', NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
--- Create test auth users
--- Note: In Supabase, you typically create auth users through the dashboard or API
--- This is a placeholder showing the structure. Use Supabase Auth API to create actual users
--- Example users:
--- Email: admin@testcompany.com, Password: TestPassword123!
--- Email: user@testcompany.com, Password: TestPassword123!
--- Email: john.smith@example.com, Password: TestPassword123!
--- Email: sarah.johnson@example.com, Password: TestPassword123!
--- Email: michael.chen@example.com, Password: TestPassword123!
+-- Auth Users Information
+-- The setup-local-test-data.sh script will create the following auth users:
+-- Email: admin@testcompany.com, Password: TestPassword123! (Admin role)
+-- Email: user@testcompany.com, Password: TestPassword123! (User role)
+-- Email: john.smith@example.com, Password: TestPassword123! (User role - matches candidate)
+-- Email: sarah.johnson@example.com, Password: TestPassword123! (User role - matches candidate)
+-- Email: michael.chen@example.com, Password: TestPassword123! (User role - matches candidate)
 
--- Create test users in public schema (assuming auth users exist)
--- NOTE: These are commented out because auth users must be created first
--- Use the setup-test-data-local.sh script to create auth users, then uncomment these
--- Admin user
--- INSERT INTO public.users (id, tenant_id, role, created_at, updated_at)
--- VALUES 
---   ('a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'admin', NOW(), NOW())
--- ON CONFLICT (id) DO NOTHING;
-
--- Regular user
--- INSERT INTO public.users (id, tenant_id, role, created_at, updated_at)
--- VALUES 
---   ('b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'user', NOW(), NOW())
--- ON CONFLICT (id) DO NOTHING;
+-- Note: The public.users entries are created by the setup script after auth users are created
+-- The script will automatically link auth users to the correct tenant (Test Company Inc)
 
 -- Create test companies
 INSERT INTO public.companies (id, tenant_id, name, culture, story, values, benefits, core_values, benefits_list, created_at, updated_at)
@@ -702,22 +688,17 @@ BEGIN
   RAISE NOTICE 'Seed data created successfully!';
   RAISE NOTICE '';
   RAISE NOTICE 'Test Tenant ID: d0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0';
+  RAISE NOTICE 'Test Company: Test Company Inc';
   RAISE NOTICE '';
-  RAISE NOTICE 'To use this seed data, create the following auth users in Supabase Dashboard:';
-  RAISE NOTICE '1. Admin User:';
-  RAISE NOTICE '   - Email: admin@testcompany.com';
-  RAISE NOTICE '   - Password: TestPassword123!';
-  RAISE NOTICE '   - User ID: a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1';
+  RAISE NOTICE 'NOTE: Auth users are created by the setup-local-test-data.sh script';
+  RAISE NOTICE 'The following test accounts will be available:';
+  RAISE NOTICE '  - admin@testcompany.com (Admin role)';
+  RAISE NOTICE '  - user@testcompany.com (User role)';
+  RAISE NOTICE '  - john.smith@example.com (User role - matches candidate John Smith)';
+  RAISE NOTICE '  - sarah.johnson@example.com (User role - matches candidate Sarah Johnson)';
+  RAISE NOTICE '  - michael.chen@example.com (User role - matches candidate Michael Chen)';
   RAISE NOTICE '';
-  RAISE NOTICE '2. Regular User:';
-  RAISE NOTICE '   - Email: user@testcompany.com';
-  RAISE NOTICE '   - Password: TestPassword123!';
-  RAISE NOTICE '   - User ID: b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2';
-  RAISE NOTICE '';
-  RAISE NOTICE '3. Candidate User:';
-  RAISE NOTICE '   - Email: candidate1@example.com';
-  RAISE NOTICE '   - Password: TestPassword123!';
-  RAISE NOTICE '   - User ID: (any UUID)';
+  RAISE NOTICE 'All accounts use password: TestPassword123!';
 END $$;
 
 -- NOTE: This section is commented out to avoid duplication issues
