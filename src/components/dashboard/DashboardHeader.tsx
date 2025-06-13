@@ -122,7 +122,7 @@ const DashboardHeader: React.FC = () => {
                   >
                     {company.name}
                     {selectedCompany?.id === company.id && (
-                      <span className="ml-auto text-xs">✓</span>
+                      <span className="ml-auto pl-2 text-xs">✓</span>
                     )}
                   </DropdownMenuItem>
                 ))

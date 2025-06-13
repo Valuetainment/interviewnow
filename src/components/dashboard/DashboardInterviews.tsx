@@ -157,7 +157,7 @@ const DashboardInterviews: React.FC = () => {
               <TableRow>
                 <TableHead className="w-[200px]">Candidate</TableHead>
                 <TableHead className="w-[250px]">Position</TableHead>
-                <TableHead className="w-[180px]">Date & Time</TableHead>
+                <TableHead className="w-[200px]">Date & Time</TableHead>
                 <TableHead className="w-[100px]">Duration</TableHead>
                 <TableHead className="w-[120px]">Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -177,7 +177,7 @@ const DashboardInterviews: React.FC = () => {
                       <TableCell>{interview.positions?.title || 'Unknown Position'}</TableCell>
                       <TableCell>
                         {date ? (
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 whitespace-nowrap">
                             <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                             <span>{date} at {time}</span>
                           </div>
