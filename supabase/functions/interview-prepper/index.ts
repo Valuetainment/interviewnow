@@ -135,9 +135,9 @@ serve(async (req) => {
     };
 
     // Call OpenAI to analyze and prepare interview strategy
-    const openAIKey = Deno.env.get('OPENAI_API_KEY');
+    const openAIKey = Deno.env.get('OPENAI_PREPPER_API_KEY');
     if (!openAIKey) {
-      throw new Error('OpenAI API key not configured');
+      throw new Error('OpenAI Prepper API key not configured');
     }
 
     const analysisPrompt = `Analyze this candidate for a position and prepare a comprehensive interview strategy.
