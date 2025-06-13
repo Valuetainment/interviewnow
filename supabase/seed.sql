@@ -718,4 +718,67 @@ BEGIN
   RAISE NOTICE '   - Email: candidate1@example.com';
   RAISE NOTICE '   - Password: TestPassword123!';
   RAISE NOTICE '   - User ID: (any UUID)';
-END $$; 
+END $$;
+
+-- Insert more interview sessions with various statuses
+INSERT INTO public.interview_sessions (id, tenant_id, position_id, candidate_id, status, start_time, end_time, created_at, updated_at)
+VALUES 
+  -- Completed interviews
+  ('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 'pos11111-1111-1111-1111-111111111111', 'cand1111-1111-1111-1111-111111111111', 'completed', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days' + INTERVAL '45 minutes', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+  ('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111', 'pos22222-2222-2222-2222-222222222222', 'cand2222-2222-2222-2222-222222222222', 'completed', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days' + INTERVAL '30 minutes', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
+  ('44444444-4444-4444-4444-444444444444', '11111111-1111-1111-1111-111111111111', 'pos33333-3333-3333-3333-333333333333', 'cand3333-3333-3333-3333-333333333333', 'completed', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days' + INTERVAL '60 minutes', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
+  ('55555555-5555-5555-5555-555555555555', '11111111-1111-1111-1111-111111111111', 'pos11111-1111-1111-1111-111111111111', 'cand4444-4444-4444-4444-444444444444', 'completed', NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days' + INTERVAL '40 minutes', NOW() - INTERVAL '7 days', NOW() - INTERVAL '7 days'),
+  
+  -- Scheduled interviews
+  ('66666666-6666-6666-6666-666666666666', '11111111-1111-1111-1111-111111111111', 'pos22222-2222-2222-2222-222222222222', 'cand5555-5555-5555-5555-555555555555', 'scheduled', NOW() + INTERVAL '2 days', NULL, NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
+  ('77777777-7777-7777-7777-777777777777', '11111111-1111-1111-1111-111111111111', 'pos33333-3333-3333-3333-333333333333', 'cand1111-1111-1111-1111-111111111111', 'scheduled', NOW() + INTERVAL '3 days', NULL, NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+  
+  -- In progress interview
+  ('88888888-8888-8888-8888-888888888888', '11111111-1111-1111-1111-111111111111', 'pos44444-4444-4444-4444-444444444444', 'cand2222-2222-2222-2222-222222222222', 'in_progress', NOW() - INTERVAL '10 minutes', NULL, NOW() - INTERVAL '10 minutes', NOW() - INTERVAL '10 minutes'),
+  
+  -- Cancelled interview
+  ('99999999-9999-9999-9999-999999999999', '11111111-1111-1111-1111-111111111111', 'pos11111-1111-1111-1111-111111111111', 'cand3333-3333-3333-3333-333333333333', 'cancelled', NOW() - INTERVAL '4 days', NULL, NOW() - INTERVAL '6 days', NOW() - INTERVAL '4 days'),
+  
+  -- More completed interviews for statistics
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'pos11111-1111-1111-1111-111111111111', 'cand5555-5555-5555-5555-555555555555', 'completed', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days' + INTERVAL '35 minutes', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days'),
+  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '11111111-1111-1111-1111-111111111111', 'pos22222-2222-2222-2222-222222222222', 'cand4444-4444-4444-4444-444444444444', 'completed', NOW() - INTERVAL '12 days', NOW() - INTERVAL '12 days' + INTERVAL '50 minutes', NOW() - INTERVAL '12 days', NOW() - INTERVAL '12 days'),
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', '11111111-1111-1111-1111-111111111111', 'pos33333-3333-3333-3333-333333333333', 'cand1111-1111-1111-1111-111111111111', 'completed', NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days' + INTERVAL '25 minutes', NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days'),
+  ('dddddddd-dddd-dddd-dddd-dddddddddddd', '11111111-1111-1111-1111-111111111111', 'pos44444-4444-4444-4444-444444444444', 'cand2222-2222-2222-2222-222222222222', 'completed', NOW() - INTERVAL '18 days', NOW() - INTERVAL '18 days' + INTERVAL '55 minutes', NOW() - INTERVAL '18 days', NOW() - INTERVAL '18 days'),
+  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', '11111111-1111-1111-1111-111111111111', 'pos11111-1111-1111-1111-111111111111', 'cand3333-3333-3333-3333-333333333333', 'completed', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days' + INTERVAL '42 minutes', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days'),
+  ('ffffffff-ffff-ffff-ffff-ffffffffffff', '11111111-1111-1111-1111-111111111111', 'pos22222-2222-2222-2222-222222222222', 'cand5555-5555-5555-5555-555555555555', 'completed', NOW() - INTERVAL '22 days', NOW() - INTERVAL '22 days' + INTERVAL '38 minutes', NOW() - INTERVAL '22 days', NOW() - INTERVAL '22 days');
+
+-- Insert interview invitations
+INSERT INTO public.interview_invitations (token, tenant_id, session_id, candidate_id, expires_at, status, created_at, updated_at)
+VALUES 
+  -- Pending invitations
+  ('inv11111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', '66666666-6666-6666-6666-666666666666', 'cand5555-5555-5555-5555-555555555555', NOW() + INTERVAL '3 days', 'pending', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
+  ('inv22222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', '77777777-7777-7777-7777-777777777777', 'cand1111-1111-1111-1111-111111111111', NOW() + INTERVAL '4 days', 'pending', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+  
+  -- Accepted invitations
+  ('inv33333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'cand1111-1111-1111-1111-111111111111', NOW() - INTERVAL '1 day', 'accepted', NOW() - INTERVAL '3 days', NOW() - INTERVAL '1 day'),
+  ('inv44444-4444-4444-4444-444444444444', '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'cand1111-1111-1111-1111-111111111111', NOW() - INTERVAL '2 days', 'accepted', NOW() - INTERVAL '4 days', NOW() - INTERVAL '2 days'),
+  ('inv55555-5555-5555-5555-555555555555', '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'cand2222-2222-2222-2222-222222222222', NOW() - INTERVAL '3 days', 'accepted', NOW() - INTERVAL '5 days', NOW() - INTERVAL '3 days'),
+  
+  -- Expired invitations
+  ('inv66666-6666-6666-6666-666666666666', '11111111-1111-1111-1111-111111111111', '99999999-9999-9999-9999-999999999999', 'cand3333-3333-3333-3333-333333333333', NOW() - INTERVAL '2 days', 'pending', NOW() - INTERVAL '6 days', NOW() - INTERVAL '6 days');
+
+-- Insert more transcript entries for completed interviews
+INSERT INTO public.transcript_entries (id, tenant_id, session_id, speaker, content, timestamp, created_at, updated_at)
+VALUES 
+  -- For session 22222222
+  ('trans111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'interviewer', 'Hello Sarah, welcome to the interview for the Backend Node Engineer position. Can you tell me about your experience with Node.js?', 0, NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+  ('trans222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'candidate', 'Thank you for having me. I have been working with Node.js for the past 5 years, primarily building RESTful APIs and microservices. In my current role, I architected a high-performance API gateway that handles over 10 million requests daily.', 15, NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+  ('trans333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'interviewer', 'That sounds impressive. Can you describe the architecture of that API gateway?', 45, NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+  ('trans444-4444-4444-4444-444444444444', '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', 'candidate', 'Certainly. We used Express.js as the core framework with a custom middleware stack for authentication, rate limiting, and request validation. The gateway implements circuit breakers for downstream services and uses Redis for caching frequently accessed data. We also implemented custom logging and monitoring using Winston and Prometheus.', 60, NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+  
+  -- For session 33333333
+  ('trans555-5555-5555-5555-555555555555', '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'interviewer', 'Welcome Alex. Let''s start with your experience in digital marketing. What campaigns have you managed recently?', 0, NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
+  ('trans666-6666-6666-6666-666666666666', '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'candidate', 'In my recent role, I managed a $500K monthly ad spend across Facebook, Google, and TikTok. My most successful campaign was a multi-channel strategy for an e-commerce client that resulted in a 3.5x ROAS and 150% increase in conversions over 6 months.', 20, NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
+  ('trans777-7777-7777-7777-777777777777', '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'interviewer', 'How do you approach audience targeting and segmentation?', 50, NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
+  ('trans888-8888-8888-8888-888888888888', '11111111-1111-1111-1111-111111111111', '33333333-3333-3333-3333-333333333333', 'candidate', 'I start with thorough market research and customer data analysis. I use tools like Facebook Audience Insights and Google Analytics to identify key demographics, interests, and behaviors. Then I create detailed buyer personas and test different audience segments with small budgets before scaling successful segments.', 65, NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
+  
+  -- For session 44444444
+  ('trans999-9999-9999-9999-999999999999', '11111111-1111-1111-1111-111111111111', '44444444-4444-4444-4444-444444444444', 'interviewer', 'Maria, thank you for joining us. As a Cursor AI Engineer, how familiar are you with AI-assisted development tools?', 0, NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
+  ('transaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', '44444444-4444-4444-4444-444444444444', 'candidate', 'I''ve been using Cursor for the past year and it has transformed my development workflow. I''m particularly experienced with using AI for code generation, refactoring, and debugging. I''ve also created custom prompts and workflows that increased my team''s productivity by 40%.', 15, NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
+  ('transbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '11111111-1111-1111-1111-111111111111', '44444444-4444-4444-4444-444444444444', 'interviewer', 'Can you give an example of a complex problem you solved using AI-assisted development?', 45, NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
+  ('transccc-cccc-cccc-cccc-cccccccccccc', '11111111-1111-1111-1111-111111111111', '44444444-4444-4444-4444-444444444444', 'candidate', 'Recently, I needed to refactor a legacy codebase with over 100K lines of code. Using Cursor''s AI capabilities, I created a systematic approach to identify code smells, generate unit tests for uncovered code, and safely refactor complex functions. What would have taken months manually was completed in just 3 weeks with higher code quality.', 60, NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'); 
