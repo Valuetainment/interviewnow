@@ -56,28 +56,7 @@ create_user "sarah.johnson@example.com" "TestPassword123!" "Sarah Johnson"
 create_user "michael.chen@example.com" "TestPassword123!" "Michael Chen"
 
 echo ""
-echo "Step 2: Creating temporary seed file with public users enabled..."
-
-# Create a temporary seed file with public users uncommented
-cp supabase/seed.sql supabase/seed-with-users.sql
-
-# Uncomment the public users inserts
-sed -i 's/^-- INSERT INTO public.users/INSERT INTO public.users/g' supabase/seed-with-users.sql
-sed -i 's/^-- VALUES/VALUES/g' supabase/seed-with-users.sql
-sed -i 's/^--   (/  (/g' supabase/seed-with-users.sql
-sed -i 's/^-- ON CONFLICT (id) DO NOTHING;/ON CONFLICT (id) DO NOTHING;/g' supabase/seed-with-users.sql
-
-echo ""
-echo "Step 3: Running seed file..."
-
-# Run the modified seed file
-PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres -f supabase/seed-with-users.sql
-
-# Clean up temporary file
-rm -f supabase/seed-with-users.sql
-
-echo ""
-echo "Step 4: Ensuring all auth users are linked to public.users..."
+echo "Step 2: Ensuring all auth users are linked to public.users..."
 
 # Get the actual user IDs from auth.users and link them to public.users
 PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres << EOF
@@ -107,7 +86,7 @@ WHERE id IN (
 EOF
 
 echo ""
-echo "Step 5: Verifying setup..."
+echo "Step 3: Verifying setup..."
 
 # Check the linked users
 echo "Checking linked users:"
