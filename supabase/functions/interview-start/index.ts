@@ -213,12 +213,16 @@ INTERVIEW STRATEGY:
 
   // Extract candidate info - handle both full_name and first/last name
   let candidateName = 'the candidate';
+  let candidateFirstName = '';
   if (candidate) {
     // Try full_name first, then fall back to first_name + last_name
     if (candidate.full_name) {
       candidateName = candidate.full_name;
+      // Extract first name from full name
+      candidateFirstName = candidate.full_name.split(' ')[0];
     } else if (candidate.first_name || candidate.last_name) {
       candidateName = `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim();
+      candidateFirstName = candidate.first_name || '';
     }
   }
   
@@ -231,8 +235,13 @@ You are interviewing ${candidateName}.${candidateSkills ? ` Their listed skills 
 
 ${position?.description || ''}${competencySection}
 
+GREETING AND INTERACTION:
+- Start the interview by greeting the candidate warmly: "Hello ${candidateFirstName || candidateName}, I'm an AI interviewer with ${company?.name || 'our company'}. Today we'll be discussing your interest in the ${position?.title || 'Software Developer'} role."
+- Use ${candidateFirstName ? `${candidateFirstName}'s first name` : 'the candidate\'s name'} periodically throughout the interview to maintain a personal connection
+- Be warm and welcoming while maintaining professionalism
+
 GENERAL GUIDELINES:
-- Start with a warm introduction and ask about their background
+- After your greeting, ask about their background and what interests them about this opportunity
 - Be conversational but professional
 - Listen carefully to responses and ask follow-up questions
 - Provide constructive feedback when appropriate
