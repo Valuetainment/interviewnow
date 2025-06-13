@@ -14,41 +14,46 @@ if [ ! -f "supabase/config.toml" ]; then
     exit 1
 fi
 
-# Step 1: Create auth users
+# Step 1: Create auth users using the Supabase API
 echo "Step 1: Creating auth users..."
 
-# Admin user
-echo "Creating admin user..."
-npx supabase auth admin create-user \
-  --email "admin@testcompany.com" \
-  --password "TestPassword123!" \
-  --user-id "a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1" \
-  --confirm-email 2>/dev/null || echo "Admin user might already exist"
+# Configuration
+SUPABASE_URL="http://localhost:54321"
+SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
 
-# Regular user
-echo "Creating regular user..."
-npx supabase auth admin create-user \
-  --email "user@testcompany.com" \
-  --password "TestPassword123!" \
-  --user-id "b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2" \
-  --confirm-email 2>/dev/null || echo "Regular user might already exist"
+# Function to create a user
+create_user() {
+  local email=$1
+  local password=$2
+  local name=$3
+  
+  echo "Creating $name..."
+  
+  response=$(curl -s -X POST "$SUPABASE_URL/auth/v1/admin/users" \
+    -H "apikey: $SERVICE_ROLE_KEY" \
+    -H "Authorization: Bearer $SERVICE_ROLE_KEY" \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"email\": \"$email\",
+      \"password\": \"$password\",
+      \"email_confirm\": true
+    }")
+  
+  if echo "$response" | grep -q '"id"'; then
+    echo "  ✓ Created successfully"
+  elif echo "$response" | grep -q "email_exists"; then
+    echo "  ⚠ Already exists"
+  else
+    echo "  ✗ Failed: $response"
+  fi
+}
 
-# Candidate users
-echo "Creating candidate users..."
-npx supabase auth admin create-user \
-  --email "john.smith@example.com" \
-  --password "TestPassword123!" \
-  --confirm-email 2>/dev/null || echo "John Smith might already exist"
-
-npx supabase auth admin create-user \
-  --email "sarah.johnson@example.com" \
-  --password "TestPassword123!" \
-  --confirm-email 2>/dev/null || echo "Sarah Johnson might already exist"
-
-npx supabase auth admin create-user \
-  --email "michael.chen@example.com" \
-  --password "TestPassword123!" \
-  --confirm-email 2>/dev/null || echo "Michael Chen might already exist"
+# Create all users
+create_user "admin@testcompany.com" "TestPassword123!" "admin user"
+create_user "user@testcompany.com" "TestPassword123!" "regular user"
+create_user "john.smith@example.com" "TestPassword123!" "John Smith"
+create_user "sarah.johnson@example.com" "TestPassword123!" "Sarah Johnson"
+create_user "michael.chen@example.com" "TestPassword123!" "Michael Chen"
 
 echo ""
 echo "Step 2: Creating temporary seed file with public users enabled..."
