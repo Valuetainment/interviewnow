@@ -179,7 +179,7 @@ async function updateInterviewSession(
 }
 
 // Build enhanced instructions with competency weights and full candidate context
-function buildEnhancedInstructions(sessionData: any): string {
+function buildEnhancedInstructions(sessionData: any, prepperAnalysis?: any): string {
   const position = sessionData.positions;
   const candidate = sessionData.candidates;
   const company = sessionData.companies;
@@ -355,6 +355,32 @@ ${leadershipExperience ? '- "How did you scale your team while maintaining quali
 ${yearsOfExperience > 5 ? '- "How has your approach to software development evolved over your career?"' : '- "What key lessons have you learned in your career so far?"'}
 - "Given your background in ${candidateSkills.slice(0, 2).join(' and ') || 'technology'}, how would you approach our technical challenges?"`;
 
+  // Add AI-prepared analysis if available
+  let prepperSection = '';
+  if (prepperAnalysis) {
+    prepperSection = `
+
+AI INTERVIEW PREPARATION ANALYSIS:
+Overall Fit Score: ${prepperAnalysis.overall_fit_score || 'N/A'}
+
+Key Focus Areas:
+${prepperAnalysis.interview_strategy?.focus_areas?.map((area: string) => `- ${area}`).join('\n') || '- Assess general fit'}
+
+Must-Ask Questions from Analysis:
+${prepperAnalysis.interview_strategy?.must_ask_questions?.map((q: string) => `- ${q}`).join('\n') || '- Use standard questions'}
+
+Red Flags to Probe:
+${prepperAnalysis.red_flags?.map((flag: string) => `- ${flag}`).join('\n') || '- None identified'}
+
+Skill Gaps to Address:
+${prepperAnalysis.skill_gaps?.map((gap: string) => `- ${gap}`).join('\n') || '- None identified'}
+
+Conversation Bridges:
+${prepperAnalysis.interview_strategy?.conversation_bridges?.map((bridge: string) => `- ${bridge}`).join('\n') || '- Use natural transitions'}
+
+IMPORTANT: Use the AI analysis to guide your interview strategy. Focus extra time on the identified gaps and concerns.`;
+  }
+
   // Build the complete instructions
   return `You are an interviewer for ${company?.name || 'our company'}, conducting an interview for the position of ${position?.title || 'Software Developer'}.
 
@@ -363,7 +389,7 @@ ${experienceSection}${educationSection}
 
 Skills: ${skillsText}
 
-${position?.description || ''}${competencySection}${competencyIntelligence}${dynamicApproach}${behavioralQuestions}
+${position?.description || ''}${competencySection}${competencyIntelligence}${dynamicApproach}${behavioralQuestions}${prepperSection}
 
 GREETING AND INTERACTION:
 - Start the interview by greeting the candidate warmly: "Hello ${candidateFirstName || candidateName}, I'm an AI interviewer with ${company?.name || 'our company'}. Today we'll be discussing your interest in the ${position?.title || 'Software Developer'} role."
@@ -559,6 +585,35 @@ serve(async (req) => {
       );
     }
 
+    // Call interview-prepper for AI analysis
+    let prepperAnalysis = null;
+    try {
+      console.log(`Calling interview-prepper for session ${interview_session_id} [${operationId}]`);
+      
+      const prepperResponse = await supabaseClient.functions.invoke('interview-prepper', {
+        body: {
+          candidate_id: sessionData.candidate_id,
+          position_id: sessionData.position_id,
+          company_id: sessionData.company_id,
+          tenant_id: tenant_id
+        }
+      });
+
+      if (prepperResponse.data?.success && prepperResponse.data?.analysis) {
+        prepperAnalysis = prepperResponse.data.analysis;
+        console.log(`Interview prep analysis received [${operationId}]:`, {
+          overall_fit: prepperAnalysis.overall_fit_score,
+          skill_gaps: prepperAnalysis.skill_gaps?.length || 0,
+          focus_areas: prepperAnalysis.interview_strategy?.focus_areas?.length || 0
+        });
+      } else {
+        console.warn(`Interview prepper failed or returned no analysis [${operationId}]`);
+      }
+    } catch (prepError) {
+      console.error(`Error calling interview-prepper [${operationId}]:`, prepError);
+      // Continue without prep analysis - don't fail the entire interview
+    }
+
     // Set up Fly.io VM for the interview
     const {
       url: webrtcServerUrl,
@@ -625,7 +680,7 @@ serve(async (req) => {
           silence_duration_ms: openai_settings.turn_detection?.silence_duration_ms || 800,
           threshold: openai_settings.turn_detection?.threshold || 0.5
         },
-        instructions: buildEnhancedInstructions(sessionData)
+        instructions: buildEnhancedInstructions(sessionData, prepperAnalysis)
       };
       
       // DEBUG: Log the generated instructions
