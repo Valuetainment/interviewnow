@@ -158,7 +158,7 @@ const Dashboard: React.FC = () => {
         </TabsList>
         
         <TabsContent value="overview">
-          <DashboardOverview />
+          <DashboardOverview onNavigateToStatistics={() => setActiveTab('statistics')} />
         </TabsContent>
         
         <TabsContent value="interviews">

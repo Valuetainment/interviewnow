@@ -8,7 +8,6 @@ import {
   Video,
   Settings,
   BriefcaseBusiness,
-  Search,
   BarChart,
   TestTube,
   Beaker,
@@ -32,7 +31,6 @@ import {
 } from '@/components/ui/sidebar';
 
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 
 const DashboardSidebar: React.FC = () => {
   const location = useLocation();
@@ -85,6 +83,19 @@ const DashboardSidebar: React.FC = () => {
               >
                 <Video className="h-4 w-4" />
                 <span>Sessions</span>
+              </SidebarMenuButton>
+            </Link>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
+            <Link to="/transcripts">
+              <SidebarMenuButton 
+                isActive={isActive('/transcripts')}
+                tooltip="Interview Transcripts"
+                className="w-full"
+              >
+                <FileText className="h-4 w-4" />
+                <span>Transcripts</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>
@@ -144,13 +155,7 @@ const DashboardSidebar: React.FC = () => {
       </SidebarContent>
 
       <SidebarFooter className="p-4">
-        <Button variant="outline" size="sm" className="w-full justify-start gap-2">
-          <Search className="h-4 w-4" />
-          <span className="flex-1 text-left">Search...</span>
-          <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-            <span className="text-xs">⌘</span>K
-          </kbd>
-        </Button>
+        {/* Search button removed */}
       </SidebarFooter>
     </Sidebar>
   );

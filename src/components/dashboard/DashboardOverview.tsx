@@ -203,15 +203,15 @@ const UpcomingInterview = ({
   )
 };
 
-const DashboardOverview: React.FC = () => {
+const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({ onNavigateToStatistics }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuth();
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState({
     totalInterviews: 0,
     upcomingInterviews: 0,
-    avgDuration: 0,
-    completionRate: 0,
+    avgDuration: 45,
+    completionRate: 85,
     lastMonthInterviews: 0,
     lastMonthAvgDuration: 0
   });
@@ -717,7 +717,7 @@ const DashboardOverview: React.FC = () => {
               </div>
             </CardContent>
           <CardFooter>
-            <Button variant="outline" className="w-full" onClick={() => navigate('/statistics')}>
+            <Button variant="outline" className="w-full" onClick={() => onNavigateToStatistics ? onNavigateToStatistics() : navigate('/statistics')}>
               <BarChart3 className="mr-2 h-4 w-4" />
               View Detailed Analytics
             </Button>
