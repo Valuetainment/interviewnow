@@ -15,17 +15,8 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { user, isLoading } = useAuth();
 
-  // If not authenticated, redirect to login
-  if (!isLoading && !user) {
-    return <Navigate to="/login" />;
-  }
-
-  // Show loading indicator while checking auth status
-  if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
-  }
-
   // Add a global error suppressor for the lovable-tagger error
+  // This must be before any conditional returns to follow Rules of Hooks
   React.useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       if (event.error?.message?.includes('Cannot read properties of undefined') && 
@@ -39,6 +30,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     window.addEventListener('error', handleError, true);
     return () => window.removeEventListener('error', handleError, true);
   }, []);
+
+  // If not authenticated, redirect to login
+  if (!isLoading && !user) {
+    return <Navigate to="/login" />;
+  }
+
+  // Show loading indicator while checking auth status
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
 
   return (
     <SidebarProvider defaultOpen={true}>

@@ -64,36 +64,51 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Create test positions
-INSERT INTO public.positions (id, tenant_id, title, description, company_id, experience_level, created_at, updated_at)
+INSERT INTO public.positions (id, tenant_id, title, description, role_overview, key_responsibilities, required_qualifications, preferred_qualifications, benefits, key_competencies_section, company_id, experience_level, created_at, updated_at)
 VALUES 
   (
     '11111111-1111-1111-1111-111111111111',
     'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
     'Senior Software Engineer',
-    '# Senior Software Engineer
-
-## About the Role
-We are seeking an experienced Senior Software Engineer to join our growing engineering team. You will be responsible for designing, developing, and maintaining scalable web applications using modern technologies.
-
-## Responsibilities
-- Design and implement robust, scalable software solutions
-- Mentor junior developers and conduct code reviews
-- Collaborate with product managers and designers
-- Contribute to architectural decisions
-- Ensure code quality and best practices
-
-## Requirements
-- 5+ years of software development experience
-- Strong proficiency in JavaScript/TypeScript and React
-- Experience with Node.js and RESTful APIs
-- Familiarity with cloud platforms (AWS/GCP/Azure)
-- Excellent problem-solving skills
-
-## Nice to Have
-- Experience with WebRTC and real-time applications
-- Knowledge of AI/ML integration
-- Open source contributions
-- Experience with microservices architecture',
+    'We are seeking an experienced Senior Software Engineer to join our growing engineering team.',
+    'As a Senior Software Engineer at TechCorp Solutions, you will be responsible for designing, developing, and maintaining scalable web applications using modern technologies. You''ll work on cutting-edge AI-powered solutions that serve Fortune 500 companies worldwide.',
+    '• Design and implement robust, scalable software solutions
+• Mentor junior developers and conduct code reviews
+• Collaborate with product managers and designers to deliver features
+• Contribute to architectural decisions and technical strategy
+• Ensure code quality and best practices are followed
+• Participate in agile development processes
+• Debug and resolve complex technical issues',
+    '• 5+ years of software development experience
+• Strong proficiency in JavaScript/TypeScript and React
+• Experience with Node.js and RESTful APIs
+• Familiarity with cloud platforms (AWS/GCP/Azure)
+• Excellent problem-solving skills
+• Strong understanding of software design patterns
+• Experience with version control systems (Git)
+• Bachelor''s degree in Computer Science or related field',
+    '• Experience with WebRTC and real-time applications
+• Knowledge of AI/ML integration
+• Open source contributions
+• Experience with microservices architecture
+• Familiarity with containerization (Docker/Kubernetes)
+• Experience with GraphQL
+• Knowledge of CI/CD pipelines',
+    'At TechCorp Solutions, we offer:
+• Comprehensive health, dental, and vision insurance
+• 401(k) with 6% company match
+• Flexible work arrangements (remote/hybrid)
+• Unlimited PTO policy
+• $2,000 annual professional development budget
+• Stock options
+• Modern equipment and tools
+• Wellness programs and gym membership',
+    'For this role, we value:
+• Technical Excellence - Deep expertise in modern web technologies
+• Problem Solving - Ability to tackle complex technical challenges
+• Mentorship - Guide and develop junior team members
+• Communication - Clear technical and non-technical communication
+• Innovation - Drive technical innovation and best practices',
     'c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1',
     'Senior',
     NOW(),
@@ -103,24 +118,46 @@ We are seeking an experienced Senior Software Engineer to join our growing engin
     '22222222-2222-2222-2222-222222222222',
     'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
     'Product Manager',
-    '# Product Manager
-
-## About the Role
-We are looking for a Product Manager to lead our AI interview platform product development. You will work closely with engineering, design, and sales teams to deliver exceptional products.
-
-## Responsibilities
-- Define product vision and roadmap
-- Gather and prioritize product requirements
-- Work with engineering to deliver features
-- Analyze user feedback and metrics
-- Coordinate product launches
-
-## Requirements
-- 3+ years of product management experience
-- Experience with B2B SaaS products
-- Strong analytical and communication skills
-- Technical background preferred
-- Customer-focused mindset',
+    'We are looking for a Product Manager to lead our AI interview platform product development.',
+    'Join our product team as a Product Manager where you''ll drive the vision and execution of our AI-powered interview platform. You''ll work at the intersection of technology and user experience, shaping products that transform how companies conduct technical interviews.',
+    '• Define product vision, strategy, and roadmap
+• Gather and prioritize product requirements from stakeholders
+• Work closely with engineering teams to deliver features
+• Analyze user feedback and metrics to inform decisions
+• Coordinate product launches and go-to-market strategies
+• Conduct user research and competitive analysis
+• Create detailed product specifications and user stories
+• Monitor product performance and iterate based on data',
+    '• 3+ years of product management experience
+• Experience with B2B SaaS products
+• Strong analytical and communication skills
+• Technical background or ability to work closely with engineers
+• Customer-focused mindset
+• Experience with agile development methodologies
+• Data-driven decision making skills
+• Bachelor''s degree in Business, Computer Science, or related field',
+    '• Experience in HR Tech or recruiting industry
+• Background in AI/ML products
+• MBA or advanced degree
+• Experience with product analytics tools (Mixpanel, Amplitude)
+• Knowledge of user research methodologies
+• Experience with A/B testing and experimentation
+• Public speaking or thought leadership experience',
+    'We offer competitive benefits including:
+• Full medical, dental, and vision coverage
+• 401(k) with company matching
+• Flexible work location and hours
+• Generous PTO and parental leave
+• Learning and development stipend
+• Equity compensation
+• Annual company retreats
+• Home office setup allowance',
+    'Key competencies for success:
+• Strategic Thinking - Develop long-term product vision
+• User Empathy - Deep understanding of customer needs
+• Data Analysis - Make decisions based on metrics and insights
+• Communication - Articulate product vision to all stakeholders
+• Leadership - Influence without authority across teams',
     'c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1',
     'Mid-level',
     NOW(),
