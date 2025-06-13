@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Bell, 
@@ -29,22 +29,50 @@ import { Button } from "@/components/ui/button";
 // import { SidebarTrigger } from "@/components/ui/sidebar"; -- Temporarily disabled for debugging
 import { Input } from "@/components/ui/input";
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 const DashboardHeader: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, tenantId } = useAuth();
   const navigate = useNavigate();
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
   };
 
-  // Placeholder for tenant/organization selector
-  // In a real implementation, this would come from a tenant context or similar
-  const currentOrganization = {
-    name: 'Acme Corp',
-    id: '1',
-  };
+  // Fetch companies for the current tenant
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      if (!tenantId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('companies')
+          .select('id, name')
+          .eq('tenant_id', tenantId)
+          .order('name');
+          
+        if (error) {
+          console.error('Error fetching companies:', error);
+        } else {
+          setCompanies(data || []);
+          // Set the first company as selected if none is selected
+          if (data && data.length > 0 && !selectedCompany) {
+            setSelectedCompany(data[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching companies:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchCompanies();
+  }, [tenantId, selectedCompany]);
 
   // Extract initials for avatar fallback
   const getUserInitials = () => {
@@ -53,8 +81,8 @@ const DashboardHeader: React.FC = () => {
   };
 
   return (
-    <header className="h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-full items-center justify-between">
+    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container flex items-center justify-between py-3">
         <div className="flex items-center gap-4">
           {/* <SidebarTrigger className="md:hidden" /> -- Temporarily disabled for debugging */}
           
@@ -71,38 +99,54 @@ const DashboardHeader: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Organization Selector */}
+          {/* Company Selector */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="gap-1">
                 <Building className="h-4 w-4" />
-                <span className="max-w-[150px] truncate">{currentOrganization.name}</span>
+                <span className="max-w-[150px] truncate">
+                  {loading ? 'Loading...' : (selectedCompany?.name || 'Select Company')}
+                </span>
                 <ChevronDown className="h-4 w-4 opacity-50" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Organizations</DropdownMenuLabel>
+              <DropdownMenuLabel>Companies</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer">
-                Acme Corp
-              </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer">
-                Stark Industries
-              </DropdownMenuItem>
+              {companies.length > 0 ? (
+                companies.map((company) => (
+                  <DropdownMenuItem 
+                    key={company.id} 
+                    className="cursor-pointer"
+                    onClick={() => setSelectedCompany(company)}
+                  >
+                    {company.name}
+                    {selectedCompany?.id === company.id && (
+                      <span className="ml-auto text-xs">✓</span>
+                    )}
+                  </DropdownMenuItem>
+                ))
+              ) : (
+                <DropdownMenuItem disabled>
+                  No companies found
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/settings/organizations')}>
-                Manage Organizations
+              <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/companies')}>
+                Manage Companies
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           {/* Notification Bell */}
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+          <div className="relative">
+            <Button variant="ghost" size="icon">
+              <Bell className="h-5 w-5" />
+            </Button>
+            <span className="absolute right-0 top-0 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
               3
             </span>
-          </Button>
+          </div>
 
           {/* Settings */}
           <Button 
