@@ -5,6 +5,7 @@
 
 set -e  # Exit on error
 
+echo ""
 echo "=== Resetting database and setting up test data ==="
 echo ""
 
@@ -13,6 +14,33 @@ if [ ! -f "supabase/config.toml" ]; then
     echo "Error: Please run this script from the project root directory"
     exit 1
 fi
+
+# Check if node_modules exists
+if [ ! -d "node_modules" ]; then
+    echo "Error: node_modules not found. Please run 'npm install' first"
+    exit 1
+fi
+
+# Check if Supabase CLI is available
+if ! npx supabase --version >/dev/null 2>&1; then
+    echo "Error: Supabase CLI not found. Please run 'npm install' first"
+    exit 1
+fi
+
+# Check if Supabase is running
+if ! npx supabase status >/dev/null 2>&1; then
+    echo "Error: Supabase is not running. Please run 'npx supabase start' first"
+    exit 1
+fi
+
+# Check if setup script exists and is executable
+if [ ! -f "./scripts/setup-local-test-data.sh" ]; then
+    echo "Error: setup-local-test-data.sh not found"
+    exit 1
+fi
+
+# Make sure the setup script is executable
+chmod +x ./scripts/setup-local-test-data.sh
 
 # Step 1: Reset the database
 echo "Step 1: Resetting local database..."
