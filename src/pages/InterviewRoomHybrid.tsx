@@ -120,6 +120,13 @@ const InterviewRoomHybrid = () => {
       if (!data) throw new Error('No configuration received from server');
 
       console.log('Interview configuration received:', data);
+      
+      // Log the OpenAI config specifically
+      if (data.openai_api_config) {
+        console.log('OpenAI config received:', data.openai_api_config);
+        console.log('Instructions:', data.openai_api_config.instructions);
+        console.log('Instructions length:', data.openai_api_config.instructions?.length);
+      }
 
       // Show visible debug info
       toast.success(`WebRTC URL: ${data.webrtc_server_url || 'MISSING'}`);

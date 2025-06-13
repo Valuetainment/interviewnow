@@ -10,6 +10,7 @@ export interface OpenAIConnectionConfig {
     voice?: string;
     temperature?: number;
     maximumLength?: number;
+    instructions?: string;
   };
   jobDescription?: string;
   resume?: string;
@@ -215,13 +216,17 @@ export function useOpenAIConnection(
     console.log('OpenAI data channel open - sending session configuration');
 
     // Configure the interview session
+    // Use enhanced instructions from edge function if available, otherwise fallback to default
+    const instructions = settings.instructions || 
+      `You are an AI technical interviewer conducting an interview for a ${config.jobDescription || 'software engineering position'}.
+       The candidate has submitted a resume indicating: ${config.resume || 'they have experience in web development'}.
+       Ask challenging but fair technical questions, evaluate their responses,
+       and provide constructive feedback. Be conversational but professional.`;
+    
     const sessionConfig = {
       type: 'session.update',
       session: {
-        instructions: `You are an AI technical interviewer conducting an interview for a ${config.jobDescription || 'software engineering position'}.
-                     The candidate has submitted a resume indicating: ${config.resume || 'they have experience in web development'}.
-                     Ask challenging but fair technical questions, evaluate their responses,
-                     and provide constructive feedback. Be conversational but professional.`,
+        instructions: instructions,
         voice: settings.voice,
         temperature: settings.temperature,
         input_audio_transcription: { model: 'whisper-1' },
@@ -238,6 +243,8 @@ export function useOpenAIConnection(
     // Send configuration
     dataChannelRef.current.send(JSON.stringify(sessionConfig));
     console.log('Sent session configuration to OpenAI');
+    console.log('Instructions being used:', instructions);
+    console.log('Instructions length:', instructions.length);
 
     // Start the interview after a short delay
     setTimeout(() => {
