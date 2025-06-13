@@ -16,7 +16,9 @@ ON CONFLICT (id) DO NOTHING;
 -- Example users:
 -- Email: admin@testcompany.com, Password: TestPassword123!
 -- Email: user@testcompany.com, Password: TestPassword123!
--- Email: candidate1@example.com, Password: TestPassword123!
+-- Email: john.smith@example.com, Password: TestPassword123!
+-- Email: sarah.johnson@example.com, Password: TestPassword123!
+-- Email: michael.chen@example.com, Password: TestPassword123!
 
 -- Create test users in public schema (assuming auth users exist)
 -- NOTE: These are commented out because auth users must be created first

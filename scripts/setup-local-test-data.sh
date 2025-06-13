@@ -1,196 +1,128 @@
 #!/bin/bash
 
-# Comprehensive script to set up all test data after a database reset
-# Run this AFTER: npx supabase db reset
+# Setup Local Test Data Script
+# This script creates auth users and then runs the seed file to populate test data
 
-set -e
+set -e  # Exit on error
 
-echo "==================================="
-echo "Setting up local test data..."
-echo "==================================="
+echo "=== Setting up local test data ==="
 echo ""
 
-# Configuration
-SUPABASE_URL="http://localhost:54321"
-SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
-TENANT_ID="d0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0"
-
-# Check if Supabase is running
-if ! npx supabase status >/dev/null 2>&1; then
-    echo "❌ Error: Supabase is not running. Please run: npx supabase start"
+# Check if we're in the right directory
+if [ ! -f "supabase/config.toml" ]; then
+    echo "Error: Please run this script from the project root directory"
     exit 1
 fi
-
-echo "✓ Supabase is running"
-echo ""
 
 # Step 1: Create auth users
 echo "Step 1: Creating auth users..."
-echo "=============================="
 
 # Admin user
-echo -n "Creating admin@testcompany.com... "
-response=$(curl -s -X POST "$SUPABASE_URL/auth/v1/admin/users" \
-    -H "apikey: $SERVICE_ROLE_KEY" \
-    -H "Authorization: Bearer $SERVICE_ROLE_KEY" \
-    -H "Content-Type: application/json" \
-    -d '{
-        "email": "admin@testcompany.com",
-        "password": "TestPassword123!",
-        "email_confirm": true
-    }')
-
-admin_id=$(echo "$response" | grep -o '"id":"[^"]*' | cut -d'"' -f4 | head -1)
-if [ -n "$admin_id" ] && [ "$admin_id" != "null" ]; then
-    echo "✓ Created (ID: $admin_id)"
-else
-    # Check if user already exists
-    if echo "$response" | grep -q "email_exists"; then
-        echo "⚠️  Already exists, fetching ID..."
-        # Get existing user ID
-        admin_id=$(PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres -t -c \
-            "SELECT id FROM auth.users WHERE email = 'admin@testcompany.com';" | tr -d ' \n')
-        echo "   Found existing ID: $admin_id"
-    else
-        echo "✗ Failed: $response"
-        exit 1
-    fi
-fi
+echo "Creating admin user..."
+npx supabase auth admin create-user \
+  --email "admin@testcompany.com" \
+  --password "TestPassword123!" \
+  --user-id "a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1" \
+  --confirm-email 2>/dev/null || echo "Admin user might already exist"
 
 # Regular user
-echo -n "Creating user@testcompany.com... "
-response=$(curl -s -X POST "$SUPABASE_URL/auth/v1/admin/users" \
-    -H "apikey: $SERVICE_ROLE_KEY" \
-    -H "Authorization: Bearer $SERVICE_ROLE_KEY" \
-    -H "Content-Type: application/json" \
-    -d '{
-        "email": "user@testcompany.com",
-        "password": "TestPassword123!",
-        "email_confirm": true
-    }')
-
-user_id=$(echo "$response" | grep -o '"id":"[^"]*' | cut -d'"' -f4 | head -1)
-if [ -n "$user_id" ] && [ "$user_id" != "null" ]; then
-    echo "✓ Created (ID: $user_id)"
-else
-    # Check if user already exists
-    if echo "$response" | grep -q "email_exists"; then
-        echo "⚠️  Already exists, fetching ID..."
-        # Get existing user ID
-        user_id=$(PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres -t -c \
-            "SELECT id FROM auth.users WHERE email = 'user@testcompany.com';" | tr -d ' \n')
-        echo "   Found existing ID: $user_id"
-    else
-        echo "✗ Failed: $response"
-        exit 1
-    fi
-fi
+echo "Creating regular user..."
+npx supabase auth admin create-user \
+  --email "user@testcompany.com" \
+  --password "TestPassword123!" \
+  --user-id "b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2" \
+  --confirm-email 2>/dev/null || echo "Regular user might already exist"
 
 # Candidate users
-for email in "john.smith@example.com" "sarah.johnson@example.com" "michael.chen@example.com"; do
-    echo -n "Creating $email... "
-    response=$(curl -s -X POST "$SUPABASE_URL/auth/v1/admin/users" \
-        -H "apikey: $SERVICE_ROLE_KEY" \
-        -H "Authorization: Bearer $SERVICE_ROLE_KEY" \
-        -H "Content-Type: application/json" \
-        -d "{
-            \"email\": \"$email\",
-            \"password\": \"TestPassword123!\",
-            \"email_confirm\": true
-        }")
-    
-    if echo "$response" | grep -q '"id"'; then
-        echo "✓ Created"
-    elif echo "$response" | grep -q "email_exists"; then
-        echo "⚠️  Already exists"
-    else
-        echo "✗ Failed: $response"
-    fi
-done
+echo "Creating candidate users..."
+npx supabase auth admin create-user \
+  --email "john.smith@example.com" \
+  --password "TestPassword123!" \
+  --confirm-email 2>/dev/null || echo "John Smith might already exist"
+
+npx supabase auth admin create-user \
+  --email "sarah.johnson@example.com" \
+  --password "TestPassword123!" \
+  --confirm-email 2>/dev/null || echo "Sarah Johnson might already exist"
+
+npx supabase auth admin create-user \
+  --email "michael.chen@example.com" \
+  --password "TestPassword123!" \
+  --confirm-email 2>/dev/null || echo "Michael Chen might already exist"
 
 echo ""
+echo "Step 2: Creating temporary seed file with public users enabled..."
 
-# Step 2: Link users to public.users table
-echo "Step 2: Linking users to public.users table..."
-echo "=============================================="
+# Create a temporary seed file with public users uncommented
+cp supabase/seed.sql supabase/seed-with-users.sql
 
-# Link admin user
-echo -n "Linking admin user... "
-PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres -c \
-    "INSERT INTO public.users (id, tenant_id, role, created_at, updated_at) 
-     VALUES ('$admin_id', '$TENANT_ID', 'admin', NOW(), NOW()) 
-     ON CONFLICT (id) DO UPDATE 
-     SET tenant_id = EXCLUDED.tenant_id, role = EXCLUDED.role;" >/dev/null 2>&1
-
-if [ $? -eq 0 ]; then
-    echo "✓ Linked"
-else
-    echo "✗ Failed to link"
-    exit 1
-fi
-
-# Link regular user
-echo -n "Linking regular user... "
-PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres -c \
-    "INSERT INTO public.users (id, tenant_id, role, created_at, updated_at) 
-     VALUES ('$user_id', '$TENANT_ID', 'user', NOW(), NOW()) 
-     ON CONFLICT (id) DO UPDATE 
-     SET tenant_id = EXCLUDED.tenant_id, role = EXCLUDED.role;" >/dev/null 2>&1
-
-if [ $? -eq 0 ]; then
-    echo "✓ Linked"
-else
-    echo "✗ Failed to link"
-    exit 1
-fi
+# Uncomment the public users inserts
+sed -i 's/^-- INSERT INTO public.users/INSERT INTO public.users/g' supabase/seed-with-users.sql
+sed -i 's/^-- VALUES/VALUES/g' supabase/seed-with-users.sql
+sed -i 's/^--   (/  (/g' supabase/seed-with-users.sql
+sed -i 's/^-- ON CONFLICT (id) DO NOTHING;/ON CONFLICT (id) DO NOTHING;/g' supabase/seed-with-users.sql
 
 echo ""
+echo "Step 3: Running seed file..."
 
-# Step 3: Verify setup
-echo "Step 3: Verifying setup..."
-echo "=========================="
+# Run the modified seed file
+PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres -f supabase/seed-with-users.sql
 
+# Clean up temporary file
+rm -f supabase/seed-with-users.sql
+
+echo ""
+echo "Step 4: Ensuring all auth users are linked to public.users..."
+
+# Get the actual user IDs from auth.users and link them to public.users
+PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres << EOF
+-- Link any auth users that aren't already in public.users
+INSERT INTO public.users (id, tenant_id, role, created_at, updated_at)
+SELECT 
+    au.id,
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0'::uuid as tenant_id,
+    CASE 
+        WHEN au.email = 'admin@testcompany.com' THEN 'admin'
+        ELSE 'user'
+    END as role,
+    NOW() as created_at,
+    NOW() as updated_at
+FROM auth.users au
+LEFT JOIN public.users pu ON au.id = pu.id
+WHERE pu.id IS NULL
+AND au.email IN ('admin@testcompany.com', 'user@testcompany.com', 'john.smith@example.com', 'sarah.johnson@example.com', 'michael.chen@example.com');
+
+-- Update any existing records to ensure they have the correct tenant_id
+UPDATE public.users 
+SET tenant_id = 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0'::uuid
+WHERE id IN (
+    SELECT id FROM auth.users 
+    WHERE email IN ('admin@testcompany.com', 'user@testcompany.com', 'john.smith@example.com', 'sarah.johnson@example.com', 'michael.chen@example.com')
+);
+EOF
+
+echo ""
+echo "Step 5: Verifying setup..."
+
+# Check the linked users
 echo "Checking linked users:"
 PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres -t -c \
-    "SELECT u.email || ' -> ' || pu.role || ' (Tenant: ' || t.name || ')' 
+    "SELECT u.email || ' -> ' || COALESCE(pu.role, 'not linked') || ' (Tenant: ' || COALESCE(t.name, 'none') || ')' 
      FROM auth.users u 
-     INNER JOIN public.users pu ON u.id = pu.id 
-     INNER JOIN public.tenants t ON pu.tenant_id = t.id 
-     WHERE u.email IN ('admin@testcompany.com', 'user@testcompany.com')
+     LEFT JOIN public.users pu ON u.id = pu.id 
+     LEFT JOIN public.tenants t ON pu.tenant_id = t.id 
+     WHERE u.email IN ('admin@testcompany.com', 'user@testcompany.com', 'john.smith@example.com', 'sarah.johnson@example.com', 'michael.chen@example.com')
      ORDER BY u.email;" | sed 's/^[ \t]*/  /'
 
 echo ""
-echo "Checking test data:"
-echo -n "  Tenants: "
-PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres -t -c \
-    "SELECT COUNT(*) FROM public.tenants WHERE id = '$TENANT_ID';" | tr -d ' \n'
+echo "=== Setup complete! ==="
 echo ""
-
-echo -n "  Companies: "
-PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres -t -c \
-    "SELECT COUNT(*) FROM public.companies WHERE tenant_id = '$TENANT_ID';" | tr -d ' \n'
+echo "Test users created:"
+echo "  - admin@testcompany.com (password: TestPassword123!)"
+echo "  - user@testcompany.com (password: TestPassword123!)"
+echo "  - john.smith@example.com (password: TestPassword123!)"
+echo "  - sarah.johnson@example.com (password: TestPassword123!)"
+echo "  - michael.chen@example.com (password: TestPassword123!)"
 echo ""
-
-echo -n "  Positions: "
-PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres -t -c \
-    "SELECT COUNT(*) FROM public.positions WHERE tenant_id = '$TENANT_ID';" | tr -d ' \n'
-echo ""
-
-echo -n "  Candidates: "
-PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres -t -c \
-    "SELECT COUNT(*) FROM public.candidates WHERE tenant_id = '$TENANT_ID';" | tr -d ' \n'
-echo ""
-
-echo ""
-echo "==================================="
-echo "✅ Setup complete!"
-echo "==================================="
-echo ""
-echo "Test credentials:"
-echo "  Admin: admin@testcompany.com / TestPassword123!"
-echo "  User: user@testcompany.com / TestPassword123!"
-echo "  Candidates: [name]@example.com / TestPassword123!"
-echo ""
-echo "Test Tenant ID: $TENANT_ID"
-echo ""
-echo "You can now access the application at: http://localhost:8080" 
+echo "All users are now properly linked to the test tenant."
+echo "You can now log in with any of these users to test the application." 

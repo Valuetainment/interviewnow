@@ -50,7 +50,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 
 interface InvitationStatus {
-  id: string;
+  token: string;
   status: 'pending' | 'sent' | 'accepted' | 'expired';
 }
 
@@ -67,7 +67,7 @@ interface InterviewSession {
   };
   start_time: string;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
-  invitation: InvitationStatus[];
+  interview_invitations: InvitationStatus[];
 }
 
 const SessionList: React.FC = () => {
@@ -93,11 +93,11 @@ const SessionList: React.FC = () => {
         .from('interview_sessions')
         .select(`
           id,
-          candidate:candidate_id (id, full_name, email),
-          position:position_id (id, title),
+          candidate:candidates!interview_sessions_candidate_id_fkey (id, full_name, email),
+          position:positions!interview_sessions_position_id_fkey (id, title),
           start_time,
           status,
-          invitation:interview_invitations (id, status)
+          interview_invitations (token, status)
         `)
         .order('start_time', { ascending: false })
         .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
@@ -170,11 +170,11 @@ const SessionList: React.FC = () => {
   };
   
   const getInvitationStatus = (session: InterviewSession) => {
-    if (!session.invitation || session.invitation.length === 0) {
+    if (!session.interview_invitations || session.interview_invitations.length === 0) {
       return <Badge variant="outline">Not Invited</Badge>;
     }
     
-    const invitation = session.invitation[0];
+    const invitation = session.interview_invitations[0];
     switch (invitation.status) {
       case 'pending':
         return <Badge variant="outline" className="border-yellow-500 text-yellow-500">Pending</Badge>;

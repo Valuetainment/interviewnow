@@ -35,7 +35,7 @@ interface SessionData {
   status: string;
   video_url?: string;
   created_at: string;
-  invitations?: {
+  interview_invitations?: {
     token: string;
     status: string;
     expires_at: string;
@@ -62,14 +62,14 @@ const SessionDetail = () => {
         .from('interview_sessions')
         .select(`
           id,
-          position:position_id (id, title),
-          candidate:candidate_id (id, full_name, email),
+          position:positions!interview_sessions_position_id_fkey (id, title),
+          candidate:candidates!interview_sessions_candidate_id_fkey (id, full_name, email),
           start_time,
           end_time,
           status,
           video_url,
           created_at,
-          invitations:interview_invitations (
+          interview_invitations (
             token,
             status,
             expires_at
@@ -241,14 +241,14 @@ const SessionDetail = () => {
                     </div>
                   </div>
                   
-                  {session.invitations && session.invitations.length > 0 && (
+                  {session.interview_invitations && session.interview_invitations.length > 0 && (
                     <div className="flex items-start">
                       <div className="bg-primary/10 rounded-full p-1 mr-3 mt-0.5">
                         <Calendar className="h-3 w-3 text-primary" />
                       </div>
                       <div>
-                        <p className="text-sm">Invitation {session.invitations[0].status}</p>
-                        <p className="text-xs text-muted-foreground">Expires on {format(parseISO(session.invitations[0].expires_at), 'PPP')}</p>
+                        <p className="text-sm">Invitation {session.interview_invitations[0].status}</p>
+                        <p className="text-xs text-muted-foreground">Expires on {format(parseISO(session.interview_invitations[0].expires_at), 'PPP')}</p>
                       </div>
                     </div>
                   )}
@@ -281,9 +281,9 @@ const SessionDetail = () => {
             candidateEmail={session.candidate.email}
             positionTitle={session.position.title}
             scheduledTime={session.start_time}
-            tokenValue={session.invitations && session.invitations.length > 0 ? session.invitations[0].token : undefined}
-            expiresAt={session.invitations && session.invitations.length > 0 ? session.invitations[0].expires_at : undefined}
-            status={session.invitations && session.invitations.length > 0 ? session.invitations[0].status : undefined}
+            tokenValue={session.interview_invitations && session.interview_invitations.length > 0 ? session.interview_invitations[0].token : undefined}
+            expiresAt={session.interview_invitations && session.interview_invitations.length > 0 ? session.interview_invitations[0].expires_at : undefined}
+            status={session.interview_invitations && session.interview_invitations.length > 0 ? session.interview_invitations[0].status : undefined}
             onInvitationSent={fetchSessionData}
           />
         </TabsContent>
