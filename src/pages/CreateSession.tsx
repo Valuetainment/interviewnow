@@ -358,7 +358,7 @@ const CreateSession = () => {
             <CardFooter className="flex justify-end space-x-4">
               <Button
                 variant="outline"
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate(-1)}
                 type="button"
               >
                 Cancel
