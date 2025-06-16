@@ -115,6 +115,16 @@ const DashboardInterviews: React.FC = () => {
     );
   });
   
+  const sortedInterviews = filteredInterviews.sort((a, b) => {
+    const statusOrder = {
+      'in_progress': 1,
+      'scheduled': 2,
+      'completed': 3,
+      'cancelled': 4
+    };
+    return statusOrder[a.status] - statusOrder[b.status];
+  });
+
   if (loading) {
     return (
       <Card>
@@ -164,8 +174,8 @@ const DashboardInterviews: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredInterviews.length > 0 ? (
-                filteredInterviews.map((interview) => {
+              {sortedInterviews.length > 0 ? (
+                sortedInterviews.map((interview) => {
                   const { date, time } = formatDateTime(interview.start_time);
                   const duration = calculateDuration(interview.start_time, interview.end_time);
                   
