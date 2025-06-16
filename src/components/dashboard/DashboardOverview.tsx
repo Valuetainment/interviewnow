@@ -107,8 +107,7 @@ const RecentCandidateActivity = ({
   candidate, 
   action, 
   time, 
-  position,
-  score
+  position
 }: { 
   candidate: { 
     name: string; 
@@ -118,7 +117,6 @@ const RecentCandidateActivity = ({
   action: string; 
   time: string; 
   position: string;
-  score?: number;
 }) => {
   return (
     <div className="flex items-center gap-4 py-3">
@@ -130,11 +128,6 @@ const RecentCandidateActivity = ({
         <p className="text-sm font-medium leading-none">{candidate.name}</p>
         <div className="flex items-center text-sm text-muted-foreground">
           <span>{action}</span>
-          {score !== undefined && (
-            <Badge variant="outline" className="ml-2 bg-green-50">
-              {score}/10
-            </Badge>
-          )}
         </div>
         <div className="flex items-center">
           <Clock3 className="mr-1 h-3 w-3 text-muted-foreground" />
@@ -153,15 +146,6 @@ const RecentCandidateActivity = ({
             <p className="text-sm">
               {action} {time.toLowerCase()}
             </p>
-            {score !== undefined && (
-              <div className="pt-2">
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="text-xs">Assessment score</span>
-                  <span className="text-xs font-medium">{score}/10</span>
-                </div>
-                <Progress value={score * 10} className="h-1" />
-              </div>
-            )}
           </div>
         </HoverCardContent>
       </HoverCard>
@@ -213,7 +197,9 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({ 
     avgDuration: 45,
     completionRate: 85,
     lastMonthInterviews: 0,
-    lastMonthAvgDuration: 0
+    lastMonthAvgDuration: 0,
+    thisMonthInterviews: 0,
+    lastMonthCompletionRate: 0
   });
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [upcomingInterviews, setUpcomingInterviews] = useState<any[]>([]);
@@ -293,22 +279,67 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({ 
       : 0;
 
     // Last month's data for trends
-    const lastMonth = new Date();
-    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    const today = new Date();
+    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
     
-    const { count: lastMonthCount } = await supabase
+    // Count of interviews from last month (for comparison)
+    const { count: lastMonthTotalCount } = await supabase
       .from('interview_sessions')
       .select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
-      .gte('created_at', lastMonth.toISOString());
+      .gte('created_at', lastMonthStart.toISOString())
+      .lte('created_at', lastMonthEnd.toISOString());
+
+    // Count of interviews from this month so far
+    const { count: thisMonthCount } = await supabase
+      .from('interview_sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .gte('created_at', thisMonthStart.toISOString());
+
+    // Last month's completed interviews for average duration
+    const { data: lastMonthCompletedInterviews } = await supabase
+      .from('interview_sessions')
+      .select('start_time, end_time')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'completed')
+      .not('end_time', 'is', null)
+      .gte('created_at', lastMonthStart.toISOString())
+      .lte('created_at', lastMonthEnd.toISOString());
+
+    let lastMonthAvgDuration = 0;
+    if (lastMonthCompletedInterviews && lastMonthCompletedInterviews.length > 0) {
+      const totalDuration = lastMonthCompletedInterviews.reduce((acc, session) => {
+        const duration = new Date(session.end_time).getTime() - new Date(session.start_time).getTime();
+        return acc + duration;
+      }, 0);
+      lastMonthAvgDuration = Math.round(totalDuration / lastMonthCompletedInterviews.length / 60000);
+    }
+
+    // Last month's completion rate
+    const { count: lastMonthScheduledCount } = await supabase
+      .from('interview_sessions')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .in('status', ['scheduled', 'completed'])
+      .gte('created_at', lastMonthStart.toISOString())
+      .lte('created_at', lastMonthEnd.toISOString());
+
+    const lastMonthCompletionRate = lastMonthScheduledCount > 0 
+      ? Math.round((lastMonthCompletedInterviews?.length || 0) / lastMonthScheduledCount * 100)
+      : 0;
 
     setMetrics({
       totalInterviews: totalCount || 0,
       upcomingInterviews: upcomingCount || 0,
       avgDuration,
       completionRate,
-      lastMonthInterviews: lastMonthCount || 0,
-      lastMonthAvgDuration: avgDuration - 5 // Mock trend for now
+      lastMonthInterviews: lastMonthTotalCount || 0,
+      lastMonthAvgDuration,
+      thisMonthInterviews: thisMonthCount || 0,
+      lastMonthCompletionRate
     });
   };
 
@@ -364,8 +395,7 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({ 
           },
           action,
           time: timeAgo,
-          position: position?.title || 'Unknown Position',
-          score: session.status === 'completed' ? Math.floor(Math.random() * 3) + 7 : undefined
+          position: position?.title || 'Unknown Position'
         };
       });
 
@@ -569,10 +599,14 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({ 
 
   // Calculate trends
   const interviewTrend = metrics.lastMonthInterviews > 0
-    ? Math.round(((metrics.totalInterviews - metrics.lastMonthInterviews) / metrics.lastMonthInterviews) * 100)
+    ? Math.round(((metrics.thisMonthInterviews - metrics.lastMonthInterviews) / metrics.lastMonthInterviews) * 100)
     : 0;
 
   const durationTrend = metrics.avgDuration - metrics.lastMonthAvgDuration;
+  
+  const completionRateTrend = metrics.lastMonthCompletionRate > 0
+    ? metrics.completionRate - metrics.lastMonthCompletionRate
+    : 0;
 
   return (
     <div className="space-y-8">
@@ -614,10 +648,11 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({ 
           value={metrics.completionRate.toString() + "%"}
           description="Of scheduled interviews"
           icon={<Check className="h-4 w-4 text-muted-foreground" />}
-          trend={{
-            value: "4%",
-            direction: "up"
-          }}
+          trend={completionRateTrend !== 0 ? {
+            value: Math.abs(completionRateTrend).toString() + "%",
+            direction: completionRateTrend > 0 ? "up" : "down",
+            label: "vs last month"
+          } : undefined}
         />
       </div>
       
