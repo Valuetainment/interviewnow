@@ -249,7 +249,7 @@ const Transcripts: React.FC = () => {
                           {session.transcript_entries.length > 0 && (
                             <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
                               {session.transcript_entries.length} entries
-                            </span>
+                          </span>
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">{session.position.title}</p>
@@ -334,20 +334,20 @@ const Transcripts: React.FC = () => {
                         {selectedSession.transcript_entries.length > 0 ? (
                           selectedSession.transcript_entries.map((entry) => (
                             <div key={entry.id} className="flex gap-4">
-                              <div className="w-24 flex-shrink-0 text-xs text-muted-foreground pt-1">
+                            <div className="w-24 flex-shrink-0 text-xs text-muted-foreground pt-1">
                                 {formatTimestamp(entry.start_ms)}
-                              </div>
-                              <div className="flex-grow">
-                                <p className={`text-sm font-medium mb-1 ${
-                                  entry.speaker.toLowerCase() === "interviewer" || entry.speaker.toLowerCase() === "assistant"
-                                    ? "text-primary" 
-                                    : "text-foreground"
-                                }`}>
-                                  {entry.speaker}
-                                </p>
-                                <p className="text-foreground">{entry.text}</p>
-                              </div>
                             </div>
+                            <div className="flex-grow">
+                              <p className={`text-sm font-medium mb-1 ${
+                                  entry.speaker.toLowerCase() === "interviewer" || entry.speaker.toLowerCase() === "assistant"
+                                  ? "text-primary" 
+                                  : "text-foreground"
+                              }`}>
+                                {entry.speaker}
+                              </p>
+                              <p className="text-foreground">{entry.text}</p>
+                            </div>
+                          </div>
                           ))
                         ) : (
                           <p className="text-center text-muted-foreground py-8">
