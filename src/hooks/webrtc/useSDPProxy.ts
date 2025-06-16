@@ -182,8 +182,8 @@ export function useSDPProxy(
         },
         body: JSON.stringify({
           sessionId: sessionIdRef.current,
-          voice: config.openAISettings?.voice || 'alloy',
-          model: config.openAISettings?.model || 'gpt-4o-realtime-preview-2024-12-17'
+          voice: config.openAISettings?.voice || 'verse',
+          model: config.openAISettings?.model || 'gpt-4o-realtime-preview-2025-06-03'
         })
       });
       
@@ -247,8 +247,8 @@ export function useSDPProxy(
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       sessionId: sessionIdRef.current,
-                      voice: config.openAISettings?.voice || 'alloy',
-                      model: config.openAISettings?.model || 'gpt-4o-realtime-preview-2024-12-17'
+                      voice: config.openAISettings?.voice || 'verse',
+                      model: config.openAISettings?.model || 'gpt-4o-realtime-preview-2025-06-03'
                     })
                   });
                   
@@ -382,7 +382,7 @@ export function useSDPProxy(
               type: 'session.update',
               session: {
                 instructions: config.openAISettings.instructions,
-                voice: config.openAISettings.voice || 'alloy',
+                voice: config.openAISettings.voice || 'verse',
                 input_audio_transcription: {
                   model: 'whisper-1'
                 },

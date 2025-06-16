@@ -404,7 +404,7 @@ describe('useOpenAIConnection in Hybrid Architecture', () => {
 
     // Should use default settings specific to the hybrid architecture
     const sentMessage = JSON.parse(mockDataChannel.send.mock.calls[0][0]);
-    expect(sentMessage.session.voice).toBe('alloy');
+    expect(sentMessage.session.voice).toBe('verse');
     expect(sentMessage.session.temperature).toBe(0.7);
   });
 

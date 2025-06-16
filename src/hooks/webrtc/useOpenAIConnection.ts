@@ -29,7 +29,7 @@ export interface OpenAIConnectionHandlers {
 }
 
 const DEFAULT_SETTINGS = {
-  voice: 'alloy',
+  voice: 'verse',
   temperature: 0.7,
   maximumLength: 5
 };
@@ -356,7 +356,7 @@ export function useOpenAIConnection(
       console.log('ICE gathering complete');
 
       let authToken: string;
-      let model = 'gpt-4o-realtime-preview-2024-12-17';
+      let model = 'gpt-4o-realtime-preview-2025-06-03';
 
       // If we have a server URL, fetch ephemeral token
       if (config.serverUrl) {
@@ -375,7 +375,7 @@ export function useOpenAIConnection(
         
         const tokenPayload = {
           model: model,
-          voice: settings.voice || 'alloy'
+          voice: settings.voice || 'verse'
         };
         console.log('Token request payload:', tokenPayload);
         

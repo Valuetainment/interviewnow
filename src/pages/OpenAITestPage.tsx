@@ -27,7 +27,7 @@ const OpenAITestPage: React.FC = () => {
     'Software engineer with 5 years of experience in web development, React, and TypeScript.'
   );
   const [interviewSettings, setInterviewSettings] = useState({
-    voice: 'alloy',
+    voice: 'verse',
     temperature: 0.7,
     maximumLength: 5, // minutes
   });

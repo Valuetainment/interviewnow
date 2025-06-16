@@ -673,7 +673,7 @@ serve(async (req) => {
     if (usedArchitecture === 'hybrid') {
       // ENHANCED: Use the new instruction builder
       openaiConfig = {
-        voice: openai_settings.voice || 'alloy',
+        voice: openai_settings.voice || 'verse',
         model: openai_settings.model || 'gpt-4o',
         temperature: openai_settings.temperature || 0.7,
         turn_detection: {

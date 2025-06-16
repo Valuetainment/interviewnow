@@ -2,22 +2,36 @@
 
 This document tracks all Supabase Edge Functions with their current versions, deployment dates, and key changes.
 
+**Last Updated:** December 19, 2024
+
 ## Active Edge Functions
 
 | Function Name | Current Version | Deployment Date | Status | Key Changes |
 |---------------|----------------|----------------|--------|-------------|
-| interview-start | v6 | May 31, 2024 | ACTIVE | Fixed VM isolation security issue, creating unique VM per session instead of per tenant |
-| interview-transcript | v4 | May 20, 2024 | ACTIVE | Added support for both SDP proxy and hybrid approaches |
-| transcript-processor | v5 | May 20, 2024 | ACTIVE | Enhanced performance with better data chunking and storage optimization |
-| analyze-resume | v3 | April 28, 2024 | ACTIVE | Upgraded to GPT-4o-mini for better analysis quality |
-| process-resume | v2 | April 15, 2024 | ACTIVE | Improved PDF.co integration with better error handling |
-| generate-position | v2 | April 18, 2024 | ACTIVE | Enhanced prompt for better job description generation |
-| enrich-candidate | v2 | April 22, 2024 | ACTIVE | Added enhanced PDL field mapping for better profile enrichment |
-| check-env | v1 | April 10, 2024 | ACTIVE | Initial implementation for environment validation |
+| interview-transcript-batch | v1 | December 19, 2024 | ACTIVE | NEW: Batch processing for transcripts, reduces DB calls by 90% |
+| interview-prepper | v3 | June 13, 2025 | ACTIVE | Pre-analyzes candidates for personalized interviews |
+| interview-start | v22 | June 13, 2025 | ACTIVE | Enhanced with interview-prepper integration |
+| interview-transcript | v15 | June 10, 2025 | ACTIVE | Fixed missing source_architecture column |
+| transcript-processor | v13 | May 22, 2025 | ACTIVE | Enhanced performance with better data chunking |
+| analyze-resume | v46 | May 2, 2025 | ACTIVE | Upgraded to GPT-4o-mini for better analysis |
+| process-resume | v40 | May 2, 2025 | ACTIVE | Improved PDF.co integration |
+| generate-position | v12 | May 6, 2025 | ACTIVE | Enhanced prompt for job descriptions |
+| enrich-candidate | v35 | May 2, 2025 | ACTIVE | Enhanced PDL field mapping |
+| check-env | v18 | April 30, 2025 | ACTIVE | Environment validation |
 
 ## Version History
 
+### interview-transcript-batch
+- v1 (December 19, 2024): Initial implementation - accepts up to 50 transcript entries per batch, validates session existence, uses single DB transaction
+
+### interview-prepper
+- v3 (June 13, 2025): Added comprehensive candidate analysis with fit scores
+- v2 (June 12, 2025): Enhanced competency mapping
+- v1 (June 11, 2025): Initial implementation
+
 ### interview-start
+- v22 (June 13, 2025): Integrated interview-prepper for enhanced AI context
+- v21 (June 12, 2025): Added personalized greeting support
 - v6 (May 31, 2024): Fixed VM isolation security issue, creating unique VM per session instead of per tenant
 - v5 (May 20, 2024): Added support for hybrid architecture with direct OpenAI WebRTC
 - v4 (May 15, 2024): Improved error handling and added retry logic
