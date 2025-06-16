@@ -23,6 +23,7 @@ A multi-tenant SaaS platform for end-to-end AI-driven hiring processes built on 
 7. **[🏗️ Implementation Details](docs/architecture/hybrid-implementation-details.md)** - Technical specs and APIs
 8. **[🔒 Security Model](docs/architecture/vm-isolation-guide.md)** - Per-session VM isolation
 9. **[✅ Checklists](memory-bank/checklist.md)** - Implementation status tracking
+10. **[📊 Transcript Optimization](TRANSCRIPT_OPTIMIZATION_PLAN.md)** - Performance improvements roadmap
 
 **⚠️ Critical Updates**: 
 - WebRTC architecture identified: Fly.io needs to use HTTP-based SDP exchange with OpenAI

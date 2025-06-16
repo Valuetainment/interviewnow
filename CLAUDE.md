@@ -470,3 +470,58 @@ The current integration focuses on implementing the hybrid approach in the main 
    - Test if .add() error still exists after fixing SidebarProvider issue
    - If resolved, properly fix sidebar system with SidebarProvider
    - If not resolved, continue investigating injected code
+
+### June 13, 2025 - Major AI Interview Enhancements
+1. **Fixed AI Context Issue**: 
+   - Discovered AI was using generic instructions instead of personalized context
+   - Root cause: Instructions from edge function weren't reaching OpenAI connection
+   - Fixed by passing instructions through WebRTCManager and hooks properly
+   - Removed hardcoded "technical position" introduction that overrode personalized greetings
+   
+2. **Added Personalized Greetings**:
+   - AI now greets candidates by their first name
+   - Introduces itself with the company name and position title
+   - Example: "Hello Ben, I'm an AI interviewer with Valuetainment. Today we'll be discussing your interest in the CTO role."
+   - Uses candidate's name periodically throughout interview
+
+3. **Enhanced AI Prompts with Full Candidate Context** (Improvements 1-5):
+   - **Work Experience**: Parses and includes all job history with companies, roles, and durations
+   - **Education**: Includes education background in context
+   - **Career Analysis**: Calculates years of experience and detects leadership roles
+   - **Smart Competency Scoring**: Pre-analyzes resume for competency evidence
+   - **Dynamic Questions**: References actual companies and projects from candidate's background
+   - **Personalized Behavioral Questions**: Based on seniority and actual experience
+   - **Interview Intelligence**: Identifies gaps, progression, and key talking points
+
+4. **Created interview-prepper Edge Function**:
+   - New edge function that pre-analyzes candidates before interview
+   - Uses GPT-4o-mini for cost-effective analysis
+   - Provides comprehensive interview strategy including:
+     - Overall fit score (0-1)
+     - Skill matches and gaps
+     - Red flags and green flags  
+     - Must-ask questions tailored to candidate
+     - Focus areas and time allocation
+     - Conversation bridges
+   - Integrated into interview-start flow for enhanced guidance
+   
+5. **Architecture Benefits**:
+   - One-time context compression saves tokens
+   - AI conducts highly targeted interviews
+   - Focus on gaps and areas needing validation
+   - Skip areas with strong resume evidence
+   - Better candidate experience with relevant questions
+
+## Commands Added
+```bash
+# Deploy the new edge functions
+supabase functions deploy interview-prepper
+supabase functions deploy interview-start
+```
+
+## Testing Instructions
+To verify everything is working:
+1. Check browser console for "Interview prep analysis received"
+2. Look for "AI INTERVIEW PREPARATION ANALYSIS" section in instructions
+3. AI should greet by name and ask targeted questions based on gaps
+4. Check Supabase dashboard → Functions → Logs for both edge functions
