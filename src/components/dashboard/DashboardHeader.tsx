@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Bell,
-  Search,
   User,
   LogOut,
   ChevronDown,
@@ -26,7 +25,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 // import { SidebarTrigger } from "@/components/ui/sidebar"; -- Temporarily disabled for debugging
-import { Input } from "@/components/ui/input";
+import GlobalSearch from './GlobalSearch';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -86,14 +85,7 @@ const DashboardHeader: React.FC = () => {
           {/* <SidebarTrigger className="md:hidden" /> -- Temporarily disabled for debugging */}
           
           <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search..."
-                className="h-9 w-full bg-background pl-8 md:w-[300px] lg:w-[400px]"
-              />
-            </div>
+            <GlobalSearch />
           </div>
         </div>
 
