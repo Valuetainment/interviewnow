@@ -3,7 +3,7 @@ import { Helmet, HelmetProvider } from 'react-helmet-async';
 import SessionList from '@/components/interview/SessionList';
 import SafeRender from '@/components/SafeRender';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, ClipboardList, Video } from 'lucide-react';
+import { Calendar, Play, CheckCircle } from 'lucide-react';
 
 const Sessions: React.FC = () => {
   return (
@@ -27,46 +27,32 @@ const Sessions: React.FC = () => {
               <Calendar className="h-4 w-4 mr-2" />
               Upcoming
             </TabsTrigger>
-            <TabsTrigger value="completed">
-              <ClipboardList className="h-4 w-4 mr-2" />
-              Completed
+            <TabsTrigger value="in_progress">
+              <Play className="h-4 w-4 mr-2" />
+              In Progress
             </TabsTrigger>
-            <TabsTrigger value="recordings">
-              <Video className="h-4 w-4 mr-2" />
-              Recordings
+            <TabsTrigger value="completed">
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Completed
             </TabsTrigger>
           </TabsList>
           
           <TabsContent value="upcoming" className="mt-6">
             <SafeRender>
-              <SessionList />
+              <SessionList filterStatus="scheduled" />
+            </SafeRender>
+          </TabsContent>
+          
+          <TabsContent value="in_progress" className="mt-6">
+            <SafeRender>
+              <SessionList filterStatus="in_progress" />
             </SafeRender>
           </TabsContent>
           
           <TabsContent value="completed" className="mt-6">
-            <div className="flex flex-col items-center justify-center p-12 text-center">
-              <ClipboardList className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-xl font-medium mb-2">Completed Sessions</h3>
-              <p className="text-muted-foreground max-w-md">
-                View completed interviews with assessment results and analytics
-              </p>
-              <p className="text-sm text-muted-foreground mt-4">
-                Coming soon
-              </p>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="recordings" className="mt-6">
-            <div className="flex flex-col items-center justify-center p-12 text-center">
-              <Video className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-xl font-medium mb-2">Interview Recordings</h3>
-              <p className="text-muted-foreground max-w-md">
-                Access recordings of past interviews for review and analysis
-              </p>
-              <p className="text-sm text-muted-foreground mt-4">
-                Coming soon
-              </p>
-            </div>
+            <SafeRender>
+              <SessionList filterStatus="completed" />
+            </SafeRender>
           </TabsContent>
         </Tabs>
       </div>

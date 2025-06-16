@@ -231,7 +231,7 @@ const GlobalSearch: React.FC = () => {
             title: `Transcript: ${candidateName}`,
             subtitle: session.positions?.title || 'Transcript',
             metadata: 'Contains matching text',
-            route: `/transcripts/${session.id}`
+            route: `/sessions/${session.id}`
           };
         }));
       }
