@@ -233,9 +233,11 @@ const Profile: React.FC = () => {
                     </Avatar>
                     
                     <div className="absolute -bottom-2 -right-2">
-                      <Label 
-                        htmlFor="avatar-upload" 
-                        className="cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 rounded-full p-2 shadow-sm"
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById('avatar-upload')?.click()}
+                        className="bg-background border border-input text-foreground hover:bg-accent hover:text-accent-foreground rounded-full p-2 shadow-sm transition-colors flex items-center justify-center"
+                        disabled={uploading}
                       >
                         {uploading ? (
                           <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -255,7 +257,7 @@ const Profile: React.FC = () => {
                         ) : (
                           <Upload className="h-4 w-4" />
                         )}
-                      </Label>
+                      </button>
                       <Input 
                         id="avatar-upload" 
                         type="file" 
