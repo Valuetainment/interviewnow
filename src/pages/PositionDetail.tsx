@@ -162,20 +162,48 @@ const PositionDetail = () => {
         if (sessionsError) {
           console.error('Error fetching candidates:', sessionsError);
         } else if (sessionsData) {
-          // Transform the data to match the expected format
-          const transformedCandidates = sessionsData
+          // Group sessions by candidate ID to avoid duplicates
+          const candidateMap = new Map();
+          
+          sessionsData
             .filter(session => session.candidates)
-            .map(session => ({
-              id: session.candidates.id,
-              name: session.candidates.full_name,
-              email: session.candidates.email,
-              skills: session.candidates.skills || [],
-              yearsOfExperience: 0, // Would need to calculate from experience
-              matchScore: 0, // Would need actual scoring logic
-              status: session.status === 'completed' ? 'Interviewed' : 
-                     session.status === 'scheduled' ? 'Scheduled' : 'Pending Review',
-              lastInterviewedAt: session.start_time ? new Date(session.start_time).toLocaleDateString() : 'Not scheduled'
-            }));
+            .forEach(session => {
+              const candidateId = session.candidates.id;
+              
+              // If candidate already exists, update with latest session info
+              if (candidateMap.has(candidateId)) {
+                const existing = candidateMap.get(candidateId);
+                // Update status based on most recent or highest priority status
+                if (session.status === 'completed' || 
+                    (existing.status !== 'Interviewed' && session.status === 'scheduled')) {
+                  existing.status = session.status === 'completed' ? 'Interviewed' : 
+                                   session.status === 'scheduled' ? 'Scheduled' : 'Pending Review';
+                }
+                // Update last interview date if more recent
+                if (session.start_time && (!existing.lastInterviewDate || 
+                    new Date(session.start_time) > new Date(existing.lastInterviewDate))) {
+                  existing.lastInterviewDate = session.start_time;
+                  existing.lastInterviewedAt = new Date(session.start_time).toLocaleDateString();
+                }
+              } else {
+                // Add new candidate
+                candidateMap.set(candidateId, {
+                  id: session.candidates.id,
+                  name: session.candidates.full_name,
+                  email: session.candidates.email,
+                  skills: session.candidates.skills || [],
+                  yearsOfExperience: 0, // Would need to calculate from experience
+                  matchScore: 0, // Would need actual scoring logic
+                  status: session.status === 'completed' ? 'Interviewed' : 
+                         session.status === 'scheduled' ? 'Scheduled' : 'Pending Review',
+                  lastInterviewDate: session.start_time,
+                  lastInterviewedAt: session.start_time ? new Date(session.start_time).toLocaleDateString() : 'Not scheduled'
+                });
+              }
+            });
+          
+          // Convert map to array
+          const transformedCandidates = Array.from(candidateMap.values());
           
           setCandidates(transformedCandidates);
         }
