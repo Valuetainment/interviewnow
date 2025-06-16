@@ -3,7 +3,7 @@ import { Helmet, HelmetProvider } from 'react-helmet-async';
 import SessionList from '@/components/interview/SessionList';
 import SafeRender from '@/components/SafeRender';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Play, CheckCircle } from 'lucide-react';
+import { Calendar, Play, CheckCircle, LayoutList, XCircle } from 'lucide-react';
 
 const Sessions: React.FC = () => {
   return (
@@ -21,8 +21,12 @@ const Sessions: React.FC = () => {
           </p>
         </div>
         
-        <Tabs defaultValue="upcoming">
+        <Tabs defaultValue="all">
           <TabsList>
+            <TabsTrigger value="all">
+              <LayoutList className="h-4 w-4 mr-2" />
+              All
+            </TabsTrigger>
             <TabsTrigger value="upcoming">
               <Calendar className="h-4 w-4 mr-2" />
               Upcoming
@@ -35,7 +39,17 @@ const Sessions: React.FC = () => {
               <CheckCircle className="h-4 w-4 mr-2" />
               Completed
             </TabsTrigger>
+            <TabsTrigger value="cancelled">
+              <XCircle className="h-4 w-4 mr-2" />
+              Cancelled
+            </TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="all" className="mt-6">
+            <SafeRender>
+              <SessionList filterStatus="all" />
+            </SafeRender>
+          </TabsContent>
           
           <TabsContent value="upcoming" className="mt-6">
             <SafeRender>
@@ -52,6 +66,12 @@ const Sessions: React.FC = () => {
           <TabsContent value="completed" className="mt-6">
             <SafeRender>
               <SessionList filterStatus="completed" />
+            </SafeRender>
+          </TabsContent>
+          
+          <TabsContent value="cancelled" className="mt-6">
+            <SafeRender>
+              <SessionList filterStatus="cancelled" />
             </SafeRender>
           </TabsContent>
         </Tabs>

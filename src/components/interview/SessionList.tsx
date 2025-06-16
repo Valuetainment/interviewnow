@@ -210,6 +210,19 @@ const SessionList: React.FC<SessionListProps> = ({ filterStatus }) => {
     );
   });
   
+  // Sort sessions if showing all
+  const sortedSessions = statusFilter === 'all' 
+    ? [...filteredSessions].sort((a, b) => {
+        const statusOrder = {
+          'in_progress': 1,
+          'scheduled': 2,
+          'completed': 3,
+          'cancelled': 4
+        };
+        return statusOrder[a.status] - statusOrder[b.status];
+      })
+    : filteredSessions;
+  
   return (
     <Card>
       <CardHeader>
@@ -290,8 +303,8 @@ const SessionList: React.FC<SessionListProps> = ({ filterStatus }) => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSessions.length > 0 ? (
-                    filteredSessions.map((session) => (
+                  {sortedSessions.length > 0 ? (
+                    sortedSessions.map((session) => (
                       <TableRow key={session.id}>
                         <TableCell>
                           <div className="flex items-center space-x-2">
