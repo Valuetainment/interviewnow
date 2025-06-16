@@ -86,7 +86,126 @@ WHERE id IN (
 EOF
 
 echo ""
-echo "Step 3: Verifying setup..."
+echo "Step 3: Creating test notifications..."
+
+# Create test notifications for the users
+PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres << EOF
+-- Create notifications for admin user
+INSERT INTO public.notifications (
+    user_id,
+    tenant_id,
+    interview_session_id,
+    type,
+    title,
+    message,
+    is_read,
+    created_at,
+    updated_at
+)
+SELECT 
+    u.id,
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0'::uuid,
+    '22222222-2222-2222-2222-222222222226'::uuid,
+    'interview_completed',
+    'Interview Completed',
+    'Interview with Sarah Johnson for Product Manager has been completed',
+    false,
+    NOW() - INTERVAL '1 day',
+    NOW() - INTERVAL '1 day'
+FROM public.users u
+WHERE u.role = 'admin' 
+AND u.tenant_id = 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0'::uuid
+LIMIT 1;
+
+-- Create another unread notification for admin
+INSERT INTO public.notifications (
+    user_id,
+    tenant_id,
+    interview_session_id,
+    type,
+    title,
+    message,
+    is_read,
+    created_at,
+    updated_at
+)
+SELECT 
+    u.id,
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0'::uuid,
+    '22222222-2222-2222-2222-222222222228'::uuid,
+    'interview_completed',
+    'Interview Completed',
+    'Interview with Michael Chen for Senior Software Engineer has been completed',
+    false,
+    NOW() - INTERVAL '3 days',
+    NOW() - INTERVAL '3 days'
+FROM public.users u
+WHERE u.role = 'admin' 
+AND u.tenant_id = 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0'::uuid
+LIMIT 1;
+
+-- Create a read notification for admin (to show read state)
+INSERT INTO public.notifications (
+    user_id,
+    tenant_id,
+    interview_session_id,
+    type,
+    title,
+    message,
+    is_read,
+    created_at,
+    updated_at
+)
+SELECT 
+    u.id,
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0'::uuid,
+    '22222222-2222-2222-2222-222222222227'::uuid,
+    'interview_completed',
+    'Interview Completed',
+    'Interview with John Smith for Senior Software Engineer has been completed',
+    true,
+    NOW() - INTERVAL '2 days',
+    NOW() - INTERVAL '1 hour'
+FROM public.users u
+WHERE u.role = 'admin' 
+AND u.tenant_id = 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0'::uuid
+LIMIT 1;
+
+-- Create notification for regular user
+INSERT INTO public.notifications (
+    user_id,
+    tenant_id,
+    interview_session_id,
+    type,
+    title,
+    message,
+    is_read,
+    created_at,
+    updated_at
+)
+SELECT 
+    u.id,
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0'::uuid,
+    '22222222-2222-2222-2222-222222222226'::uuid,
+    'interview_completed',
+    'Interview Completed',
+    'Interview with Sarah Johnson for Product Manager has been completed',
+    false,
+    NOW() - INTERVAL '1 day',
+    NOW() - INTERVAL '1 day'
+FROM public.users u
+JOIN auth.users au ON u.id = au.id
+WHERE u.role = 'user' 
+AND u.tenant_id = 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0'::uuid
+AND au.email = 'user@testcompany.com'
+LIMIT 1;
+
+-- Verify notifications were created
+SELECT COUNT(*) as notification_count FROM public.notifications;
+EOF
+
+echo ""
+echo "Step 4: Verifying setup..."
 
 # Check the linked users
 echo "Checking linked users:"
