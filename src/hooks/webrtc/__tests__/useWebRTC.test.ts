@@ -327,7 +327,7 @@ describe('useWebRTC - Hybrid Architecture', () => {
 
   it('should support various OpenAI configuration options', async () => {
     const openAISettings = {
-      voice: 'alloy',
+      voice: 'verse',
       temperature: 0.7,
       maximumLength: 5
     };

@@ -41,8 +41,8 @@ export function WebRTCTestPage() {
     {
       serverUrl,
       openAISettings: {
-        voice: 'alloy',
-        model: 'gpt-4o-realtime-preview-2024-12-17',
+        voice: 'verse',
+        model: 'gpt-4o-realtime-preview-2025-06-03',
         instructions: 'You are a helpful AI assistant conducting a technical interview. Please introduce yourself and ask the candidate about their background.'
       }
     },

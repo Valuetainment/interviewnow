@@ -17,6 +17,7 @@ export interface WebRTCConfig {
     voice?: string;
     temperature?: number;
     maximumLength?: number;
+    instructions?: string;
   };
 }
 
@@ -55,6 +56,7 @@ export function useWebRTC(
   const [useHybridMode, setUseHybridMode] = useState(false);
   const [architectureDetermined, setArchitectureDetermined] = useState(false);
   const [hasStartedInitialization, setHasStartedInitialization] = useState(false);
+  const [hybridOpenAIConfig, setHybridOpenAIConfig] = useState<WebRTCConfig['openAISettings'] | null>(null);
 
   // Use transcript manager
   const { clearTranscript } = useTranscriptManager({
@@ -81,7 +83,8 @@ export function useWebRTC(
     {
       openAIKey: config.openAIKey,
       serverUrl: useHybridMode ? hybridServerUrl || undefined : config.serverUrl, // Use hybrid server URL when in hybrid mode
-      openAISettings: config.openAISettings,
+      // Use hybrid config from edge function if available, otherwise fall back to config from props
+      openAISettings: useHybridMode && hybridOpenAIConfig ? hybridOpenAIConfig : config.openAISettings,
       jobDescription: config.jobDescription,
       resume: config.resume,
       // Disable until architecture is determined (unless explicitly in OpenAI mode)
@@ -149,6 +152,13 @@ export function useWebRTC(
       }
 
       console.log(`Initializing WebRTC in ${useDirectOpenAI ? (useHybridMode ? 'Hybrid' : 'Direct OpenAI') : config.simulationMode ? 'Simulation' : 'SDP Proxy'} mode`);
+      
+      // Debug log the openAI settings
+      if (config.openAISettings) {
+        console.log('OpenAI settings in useWebRTC:', config.openAISettings);
+        console.log('Instructions present:', !!config.openAISettings.instructions);
+        console.log('Instructions preview:', config.openAISettings.instructions?.substring(0, 100) + '...');
+      }
 
       // Get tenant ID for the current user if not in simulation or OpenAI mode
       if (!config.simulationMode && !useDirectOpenAI && !architectureDetermined) {
@@ -186,6 +196,15 @@ export function useWebRTC(
             console.log(`Using hybrid architecture with ephemeral tokens`);
             console.log(`Server URL for tokens: ${data.webrtc_server_url}`);
             console.log(`[DEPLOYMENT VERIFICATION] New code deployed at ${new Date().toISOString()}`);
+            
+            // Log the OpenAI config from edge function
+            if (data.openai_api_config) {
+              console.log('OpenAI config from edge function:', data.openai_api_config);
+              console.log('Instructions present in response:', !!data.openai_api_config.instructions);
+              
+              // Store the OpenAI config from edge function for hybrid mode
+              setHybridOpenAIConfig(data.openai_api_config);
+            }
             
             // Switch to hybrid mode using OpenAI connection with ephemeral tokens
             setHybridServerUrl(data.webrtc_server_url);
@@ -269,6 +288,7 @@ export function useWebRTC(
     setArchitectureDetermined(false);
     setUseHybridMode(false);
     setHybridServerUrl(null);
+    setHybridOpenAIConfig(null);
   }, [activeConnection]);
 
   // Clean up on unmount

@@ -23,6 +23,7 @@ interface WebRTCManagerProps {
     voice?: string;
     temperature?: number;
     maximumLength?: number;
+    instructions?: string;
   };
 }
 

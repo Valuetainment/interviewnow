@@ -172,7 +172,7 @@ wss.on('connection', (ws, req) => {
                 }
                 
                 // Connect to OpenAI's WebRTC endpoint
-                const openaiWs = new WebSocket('wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview', {
+                const openaiWs = new WebSocket('wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2025-06-03', {
                   headers: {
                     'Authorization': 'Bearer ' + apiKey,
                     'OpenAI-Beta': 'realtime=v1'
@@ -376,7 +376,7 @@ wss.on('connection', (ws, req) => {
                 session: {
                   modalities: ['text', 'audio'],
                   instructions: 'You are a helpful AI assistant conducting an interview. Be professional and engaging.',
-                  voice: 'alloy',
+                  voice: 'verse',
                   input_audio_format: 'webm-opus',
                   output_audio_format: 'webm-opus',
                   input_audio_transcription: {
@@ -534,7 +534,7 @@ app.post('/api/realtime/sessions', async (req, res) => {
     }
 
     // Get configuration from request body
-    const { model = 'gpt-4o-realtime-preview', voice = 'alloy' } = req.body;
+    const { model = 'gpt-4o-realtime-preview', voice = 'verse' } = req.body;
     
     // Call OpenAI REST API to create ephemeral token
     const response = await fetch('https://api.openai.com/v1/realtime/sessions', {

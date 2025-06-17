@@ -11,7 +11,7 @@ const InterviewTestSimple: React.FC = () => {
   const [openAIKey, setOpenAIKey] = useState<string>('');
   const [jobDescription, setJobDescription] = useState<string>('Software Engineering Position');
   const [resume, setResume] = useState<string>('Experienced developer with React, TypeScript and WebRTC skills');
-  const [voice, setVoice] = useState<string>('alloy');
+  const [voice, setVoice] = useState<string>('verse');
   const [temperature, setTemperature] = useState<number>(0.7);
   const [recordSession, setRecordSession] = useState<boolean>(false);
   const [sessionLogs, setSessionLogs] = useState<Array<{timestamp: string; event: string; data?: any}>>([]);

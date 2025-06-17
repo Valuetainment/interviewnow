@@ -10,6 +10,7 @@ export interface OpenAIConnectionConfig {
     voice?: string;
     temperature?: number;
     maximumLength?: number;
+    instructions?: string;
   };
   jobDescription?: string;
   resume?: string;
@@ -28,7 +29,7 @@ export interface OpenAIConnectionHandlers {
 }
 
 const DEFAULT_SETTINGS = {
-  voice: 'alloy',
+  voice: 'verse',
   temperature: 0.7,
   maximumLength: 5
 };
@@ -215,13 +216,17 @@ export function useOpenAIConnection(
     console.log('OpenAI data channel open - sending session configuration');
 
     // Configure the interview session
+    // Use enhanced instructions from edge function if available, otherwise fallback to default
+    const instructions = settings.instructions || 
+      `You are an AI technical interviewer conducting an interview for a ${config.jobDescription || 'software engineering position'}.
+       The candidate has submitted a resume indicating: ${config.resume || 'they have experience in web development'}.
+       Ask challenging but fair technical questions, evaluate their responses,
+       and provide constructive feedback. Be conversational but professional.`;
+    
     const sessionConfig = {
       type: 'session.update',
       session: {
-        instructions: `You are an AI technical interviewer conducting an interview for a ${config.jobDescription || 'software engineering position'}.
-                     The candidate has submitted a resume indicating: ${config.resume || 'they have experience in web development'}.
-                     Ask challenging but fair technical questions, evaluate their responses,
-                     and provide constructive feedback. Be conversational but professional.`,
+        instructions: instructions,
         voice: settings.voice,
         temperature: settings.temperature,
         input_audio_transcription: { model: 'whisper-1' },
@@ -238,15 +243,18 @@ export function useOpenAIConnection(
     // Send configuration
     dataChannelRef.current.send(JSON.stringify(sessionConfig));
     console.log('Sent session configuration to OpenAI');
+    console.log('Instructions being used:', instructions);
+    console.log('Instructions length:', instructions.length);
 
     // Start the interview after a short delay
+    // The AI will use the instructions from session.update to introduce itself
     setTimeout(() => {
       if (dataChannelRef.current) {
         dataChannelRef.current.send(JSON.stringify({
           type: 'response.create',
           response: {
-            modalities: ['text', 'audio'],
-            instructions: 'Introduce yourself as an AI interviewer for a technical position, and ask the candidate to introduce themselves and their background in software development.'
+            modalities: ['text', 'audio']
+            // Removed hardcoded instructions - AI will use the personalized greeting from session.update
           }
         }));
         console.log('Started interview with OpenAI');
@@ -348,7 +356,7 @@ export function useOpenAIConnection(
       console.log('ICE gathering complete');
 
       let authToken: string;
-      let model = 'gpt-4o-realtime-preview-2024-12-17';
+      let model = 'gpt-4o-realtime-preview-2025-06-03';
 
       // If we have a server URL, fetch ephemeral token
       if (config.serverUrl) {
@@ -367,7 +375,7 @@ export function useOpenAIConnection(
         
         const tokenPayload = {
           model: model,
-          voice: settings.voice || 'alloy'
+          voice: settings.voice || 'verse'
         };
         console.log('Token request payload:', tokenPayload);
         
