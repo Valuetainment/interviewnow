@@ -199,7 +199,7 @@ const Positions = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="container max-w-6xl pt-24 pb-16">
+      <div className="container max-w-7xl pt-24 pb-16">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Positions</h1>
           <Link to="/create-position">
@@ -238,61 +238,67 @@ const Positions = () => {
             ) : error ? (
               <div className="py-10 text-center text-destructive">{error}</div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Position Title</TableHead>
-                    <TableHead>Company</TableHead>
-                    <TableHead>Experience Level</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead className="text-center">Applicants</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPositions.length > 0 ? (
-                    filteredPositions.map((position) => (
-                      <TableRow key={position.id} className="hover:cursor-pointer">
-                        <TableCell className="font-medium">
-                          <Link to={`/positions/${position.id}`} className="text-primary hover:underline">
-                            {position.title}
-                          </Link>
-                        </TableCell>
-                        <TableCell>{position.company}</TableCell>
-                        <TableCell>
-                          <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
-                            ${position.experienceLevel === 'entry-level' ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20' : 
-                              position.experienceLevel === 'mid-level' ? 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20' :
-                              position.experienceLevel === 'senior' ? 'bg-purple-50 text-purple-700 ring-1 ring-inset ring-purple-600/20' :
-                              position.experienceLevel === 'lead' ? 'bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-600/20' :
-                              'bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-600/20'}`}>
-                            {position.experienceLevel.charAt(0).toUpperCase() + position.experienceLevel.slice(1)}
-                          </span>
-                        </TableCell>
-                        <TableCell>{position.department}</TableCell>
-                        <TableCell>{position.location}</TableCell>
-                        <TableCell className="text-center">{position.applicants}</TableCell>
-                        <TableCell>{position.created}</TableCell>
-                        <TableCell>
-                          <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-                            {position.status}
-                          </span>
+              <div className="overflow-x-auto rounded-md border">
+                <Table className="min-w-[1000px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[200px]">Position Title</TableHead>
+                      <TableHead className="min-w-[150px]">Company</TableHead>
+                      <TableHead className="min-w-[140px]">Experience Level</TableHead>
+                      <TableHead className="min-w-[120px]">Department</TableHead>
+                      <TableHead className="min-w-[120px]">Location</TableHead>
+                      <TableHead className="text-center min-w-[100px]">Applicants</TableHead>
+                      <TableHead className="min-w-[100px]">Created</TableHead>
+                      <TableHead className="min-w-[80px]">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPositions.length > 0 ? (
+                      filteredPositions.map((position) => (
+                        <TableRow key={position.id} className="hover:cursor-pointer">
+                          <TableCell className="font-medium">
+                            <Link to={`/positions/${position.id}`} className="text-primary hover:underline">
+                              {position.title}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">{position.company}</TableCell>
+                          <TableCell>
+                            <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium whitespace-nowrap
+                              ${position.experienceLevel === 'entry-level' ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20' : 
+                                position.experienceLevel === 'mid-level' ? 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20' :
+                                position.experienceLevel === 'senior' ? 'bg-purple-50 text-purple-700 ring-1 ring-inset ring-purple-600/20' :
+                                position.experienceLevel === 'lead' ? 'bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-600/20' :
+                                'bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-600/20'}`}>
+                              {position.experienceLevel === 'entry-level' ? 'Entry' :
+                               position.experienceLevel === 'mid-level' ? 'Mid' :
+                               position.experienceLevel === 'senior' ? 'Senior' :
+                               position.experienceLevel === 'lead' ? 'Lead' :
+                               position.experienceLevel.charAt(0).toUpperCase() + position.experienceLevel.slice(1)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">{position.department}</TableCell>
+                          <TableCell className="whitespace-nowrap">{position.location}</TableCell>
+                          <TableCell className="text-center">{position.applicants}</TableCell>
+                          <TableCell className="whitespace-nowrap">{position.created}</TableCell>
+                          <TableCell>
+                            <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 whitespace-nowrap">
+                              {position.status}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          {positions.length === 0 ? 
+                            "No positions found. Create your first position!" :
+                            "No positions found matching your search criteria."}
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                        {positions.length === 0 ? 
-                          "No positions found. Create your first position!" :
-                          "No positions found matching your search criteria."}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
