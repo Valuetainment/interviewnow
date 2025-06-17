@@ -4,8 +4,7 @@
 Table tenants {
   id uuid [pk]
   name text
-  industry text
-  settings jsonb
+  plan_tier text [default: 'free']
   created_at timestamp
   updated_at timestamp
 }
@@ -13,7 +12,7 @@ Table tenants {
 Table users {
   id uuid [pk, note: 'References auth.users in Supabase']
   tenant_id uuid [ref: > tenants.id]
-  role text
+  role text [default: 'user']
   created_at timestamp
   updated_at timestamp
 }
@@ -22,10 +21,10 @@ Table companies {
   id uuid [pk]
   tenant_id uuid [ref: > tenants.id]
   name text
-  website text
-  description text
-  industry text
-  size text
+  culture text
+  story text
+  benefits_data jsonb [note: 'Structured as {description: string, items: string[]}']
+  values_data jsonb [note: 'Structured as {description: string, items: string[]}']
   created_at timestamp
   updated_at timestamp
 }
@@ -36,11 +35,13 @@ Table positions {
   company_id uuid [ref: > companies.id]
   title text
   description text
-  requirements text
+  role_overview text
+  key_responsibilities text
+  required_qualifications text
+  preferred_qualifications text
+  benefits text
+  key_competencies_section text
   experience_level text
-  location text
-  employment_type text
-  is_active boolean
   created_at timestamp
   updated_at timestamp
 }
@@ -49,8 +50,12 @@ Table candidates {
   id uuid [pk]
   tenant_id uuid [ref: > tenants.id]
   full_name text
-  email text
+  email text [note: 'unique per tenant']
   phone text
+  first_name text
+  last_name text
+  auth_email text
+  auth_id uuid [note: 'references auth.users']
   skills text[]
   experience jsonb
   education text
@@ -67,11 +72,56 @@ Table candidates {
 Table candidate_profiles {
   id uuid [pk]
   tenant_id uuid [ref: > tenants.id]
-  candidate_id uuid [ref: - candidates.id]
-  profile_data jsonb
+  candidate_id uuid [ref: > candidates.id]
   pdl_id text
-  pdl_likelihood numeric
+  pdl_likelihood integer
   last_enriched_at timestamp
+  first_name text
+  last_name text
+  middle_name text
+  birth_year integer
+  gender text
+  location_name text
+  location_locality text
+  location_region text
+  location_country text
+  location_continent text
+  location_street_address text
+  location_postal_code text
+  location_geo text
+  linkedin_id text
+  linkedin_url text
+  linkedin_username text
+  facebook_url text
+  facebook_username text
+  twitter_url text
+  twitter_username text
+  github_url text
+  github_username text
+  job_title text
+  job_company_name text
+  job_company_industry text
+  job_company_size text
+  job_start_date text
+  job_last_updated text
+  job_title_levels text[]
+  industry text
+  interests text[]
+  skills text[]
+  countries text[]
+  experience jsonb
+  education jsonb
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table candidate_tenants {
+  candidate_id uuid [ref: > candidates.id, pk]
+  tenant_id uuid [ref: > tenants.id, pk]
+  status text [default: 'active']
+  relationship_type text [default: 'candidate']
+  invitation_date timestamp
+  last_interaction timestamp
   created_at timestamp
   updated_at timestamp
 }
@@ -79,18 +129,17 @@ Table candidate_profiles {
 Table competencies {
   id uuid [pk]
   tenant_id uuid [ref: > tenants.id]
-  name text
+  name text [note: 'unique per tenant']
   description text
   created_at timestamp
   updated_at timestamp
 }
 
 Table position_competencies {
-  id uuid [pk]
+  position_id uuid [ref: > positions.id, pk]
+  competency_id uuid [ref: > competencies.id, pk]
   tenant_id uuid [ref: > tenants.id]
-  position_id uuid [ref: > positions.id]
-  competency_id uuid [ref: > competencies.id]
-  weight integer
+  weight integer [note: '0-100']
   created_at timestamp
   updated_at timestamp
 }
@@ -107,7 +156,8 @@ Table interview_sessions {
   start_time timestamp
   end_time timestamp
   status text [note: 'scheduled, in_progress, completed, cancelled']
-  webrtc_status text
+  video_url text
+  webrtc_status text [default: 'pending']
   webrtc_server_url text
   webrtc_session_id text
   webrtc_architecture text
@@ -116,9 +166,11 @@ Table interview_sessions {
   ice_candidates jsonb
   sdp_offers jsonb
   sdp_answers jsonb
-  avatar_enabled boolean
-  avatar_session_id text
-  avatar_provider text
+  ai_persona text [default: 'default']
+  openai_configuration jsonb [default: '{}']
+  avatar_enabled boolean [default: false]
+  avatar_session_id varchar(255)
+  avatar_provider varchar(50) [default: 'akool']
   created_at timestamp
   updated_at timestamp
 }
@@ -129,15 +181,17 @@ Table transcript_entries {
   session_id uuid [ref: > interview_sessions.id]
   speaker text
   text text
+  timestamp timestamp
   start_ms integer
-  end_ms integer
-  confidence numeric
+  actual_start_ms integer
+  duration_ms integer
+  confidence float [note: '0-1']
+  source_architecture text
   created_at timestamp
 }
 
 Table video_segments {
   id uuid [pk]
-  tenant_id uuid [ref: > tenants.id]
   session_id uuid [ref: > interview_sessions.id]
   segment_url text
   start_ms integer
@@ -170,13 +224,13 @@ Table candidate_assessments {
 
 Table notifications {
   id uuid [pk]
-  user_id uuid [ref: > users.id]
+  user_id uuid [note: 'references auth.users']
   tenant_id uuid [ref: > tenants.id]
   interview_session_id uuid [ref: > interview_sessions.id]
   type text [note: 'interview_completed, interview_scheduled, interview_cancelled, assessment_ready']
   title text
   message text
-  is_read boolean
+  is_read boolean [default: false]
   created_at timestamp
   updated_at timestamp
 }
@@ -184,7 +238,11 @@ Table notifications {
 Table tenant_preferences {
   id uuid [pk]
   tenant_id uuid [ref: > tenants.id]
-  preferences jsonb
+  avatar_enabled_default boolean
+  avatar_provider varchar(50)
+  default_avatar_id varchar(100)
+  avatar_monthly_limit integer
+  avatar_usage_count integer
   created_at timestamp
   updated_at timestamp
 }
@@ -193,7 +251,6 @@ Table usage_events {
   id uuid [pk]
   tenant_id uuid [ref: > tenants.id]
   event_type text
-  metadata jsonb
-  quantity integer
+  quantity integer [note: 'must be > 0']
   created_at timestamp
 } 
