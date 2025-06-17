@@ -183,6 +183,13 @@ const Transcripts: React.FC = () => {
     });
   };
 
+  // Clear selected session if it's no longer in filtered results
+  useEffect(() => {
+    if (selectedSessionId && !filteredSessions.find(s => s.id === selectedSessionId)) {
+      setSelectedSessionId(null);
+    }
+  }, [filteredSessions, selectedSessionId]);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-6xl mx-auto">
@@ -204,7 +211,10 @@ const Transcripts: React.FC = () => {
           <div className="w-full md:w-48">
             <Select 
               value={filterStatus} 
-              onValueChange={setFilterStatus}
+              onValueChange={(value) => {
+                setFilterStatus(value);
+                setSelectedSessionId(null); // Reset selected session when filter changes
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Filter by status" />
