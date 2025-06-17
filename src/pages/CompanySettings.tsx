@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,9 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import { Building, Users, Settings } from "lucide-react";
+import { Building, Users, Settings, CreditCard } from "lucide-react";
 
 const CompanySettings = () => {
   const { toast } = useToast();
@@ -55,16 +52,40 @@ const CompanySettings = () => {
       });
     }, 1000);
   };
+
+  const updatePaymentMethod = () => {
+    setLoading(true);
+    
+    // Mock API call
+    setTimeout(() => {
+      setLoading(false);
+      toast({
+        title: "Payment method updated",
+        description: "Your payment information has been updated successfully",
+      });
+    }, 1000);
+  };
+
+  const changePlan = (plan: string) => {
+    setLoading(true);
+    
+    // Mock API call
+    setTimeout(() => {
+      setLoading(false);
+      toast({
+        title: "Plan updated",
+        description: `Successfully switched to ${plan} plan`,
+      });
+    }, 1000);
+  };
   
   return (
-    <div className="flex flex-col min-h-screen">
-      <Navbar />
-      <div className="flex-grow container mx-auto px-4 py-24 md:py-32">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl md:text-4xl font-bold mb-8">Company Settings</h1>
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl md:text-4xl font-bold mb-8">Company Settings</h1>
           
           <Tabs defaultValue="profile" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="profile" className="flex items-center gap-2">
                 <Building size={16} />
                 <span>Company Profile</span>
@@ -72,6 +93,10 @@ const CompanySettings = () => {
               <TabsTrigger value="users" className="flex items-center gap-2">
                 <Users size={16} />
                 <span>Users</span>
+              </TabsTrigger>
+              <TabsTrigger value="billing" className="flex items-center gap-2">
+                <CreditCard size={16} />
+                <span>Billing</span>
               </TabsTrigger>
               <TabsTrigger value="settings" className="flex items-center gap-2">
                 <Settings size={16} />
@@ -183,6 +208,169 @@ const CompanySettings = () => {
               </Card>
             </TabsContent>
             
+            {/* Billing Tab */}
+            <TabsContent value="billing">
+              <div className="space-y-6">
+                {/* Current Plan */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Current Plan</CardTitle>
+                    <CardDescription>
+                      Manage your subscription and billing preferences
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="rounded-lg border p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h3 className="text-lg font-semibold">Professional Plan</h3>
+                            <p className="text-sm text-muted-foreground">$99/month • Billed monthly</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold">$99</p>
+                            <p className="text-sm text-muted-foreground">per month</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-sm">✓ Unlimited interviews</p>
+                          <p className="text-sm">✓ Advanced AI analytics</p>
+                          <p className="text-sm">✓ 50 team members</p>
+                          <p className="text-sm">✓ Priority support</p>
+                        </div>
+                      </div>
+                      
+                      {/* Plan Options */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                        <div className="border rounded-lg p-4">
+                          <h4 className="font-semibold mb-2">Starter</h4>
+                          <p className="text-2xl font-bold mb-2">$49<span className="text-sm font-normal">/mo</span></p>
+                          <p className="text-sm text-muted-foreground mb-4">Perfect for small teams</p>
+                          <Button 
+                            variant="outline" 
+                            className="w-full"
+                            onClick={() => changePlan('Starter')}
+                          >
+                            Downgrade
+                          </Button>
+                        </div>
+                        
+                        <div className="border-2 border-primary rounded-lg p-4">
+                          <h4 className="font-semibold mb-2">Professional</h4>
+                          <p className="text-2xl font-bold mb-2">$99<span className="text-sm font-normal">/mo</span></p>
+                          <p className="text-sm text-muted-foreground mb-4">Current plan</p>
+                          <Button variant="secondary" className="w-full" disabled>
+                            Current Plan
+                          </Button>
+                        </div>
+                        
+                        <div className="border rounded-lg p-4">
+                          <h4 className="font-semibold mb-2">Enterprise</h4>
+                          <p className="text-2xl font-bold mb-2">$299<span className="text-sm font-normal">/mo</span></p>
+                          <p className="text-sm text-muted-foreground mb-4">Unlimited everything</p>
+                          <Button 
+                            className="w-full"
+                            onClick={() => changePlan('Enterprise')}
+                          >
+                            Upgrade
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Payment Method */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Payment Method</CardTitle>
+                    <CardDescription>
+                      Update your payment information
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="rounded-lg border p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <CreditCard className="h-8 w-8 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">•••• •••• •••• 4242</p>
+                          <p className="text-sm text-muted-foreground">Expires 12/25</p>
+                        </div>
+                      </div>
+                      <Button variant="outline" onClick={updatePaymentMethod}>
+                        Update
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Billing Email</Label>
+                      <Input defaultValue="billing@company.com" />
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button className="ml-auto" onClick={updatePaymentMethod}>
+                      Save Payment Details
+                    </Button>
+                  </CardFooter>
+                </Card>
+
+                {/* Billing History */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Billing History</CardTitle>
+                    <CardDescription>
+                      View and download your past invoices
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="rounded-md border">
+                      <div className="p-4">
+                        <div className="grid grid-cols-4 font-medium text-sm">
+                          <div>Date</div>
+                          <div>Description</div>
+                          <div>Amount</div>
+                          <div className="text-right">Invoice</div>
+                        </div>
+                      </div>
+                      <Separator />
+                      <div className="divide-y">
+                        <div className="p-4">
+                          <div className="grid grid-cols-4 items-center text-sm">
+                            <div>Dec 1, 2024</div>
+                            <div>Professional Plan</div>
+                            <div>$99.00</div>
+                            <div className="text-right">
+                              <Button variant="ghost" size="sm">Download</Button>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <div className="grid grid-cols-4 items-center text-sm">
+                            <div>Nov 1, 2024</div>
+                            <div>Professional Plan</div>
+                            <div>$99.00</div>
+                            <div className="text-right">
+                              <Button variant="ghost" size="sm">Download</Button>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <div className="grid grid-cols-4 items-center text-sm">
+                            <div>Oct 1, 2024</div>
+                            <div>Professional Plan</div>
+                            <div>$99.00</div>
+                            <div className="text-right">
+                              <Button variant="ghost" size="sm">Download</Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+            
             {/* App Settings Tab */}
             <TabsContent value="settings">
               <Card>
@@ -262,8 +450,6 @@ const CompanySettings = () => {
           </Tabs>
         </div>
       </div>
-      <Footer />
-    </div>
   );
 };
 

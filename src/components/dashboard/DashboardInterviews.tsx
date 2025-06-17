@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -11,64 +10,134 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableHeader, TableHead, TableRow, TableBody, TableCell } from "@/components/ui/table";
 import { Calendar, Eye, FileText, Search, Star } from "lucide-react";
-
-// Mock data for interviews
-const MOCK_INTERVIEWS = [
-  { 
-    id: 1, 
-    candidate: "Ben Pappas", 
-    position: "Digital Marketing Media Buyer", 
-    date: null, 
-    time: null, 
-    duration: "N/A", 
-    status: "Completed" 
-  },
-  { 
-    id: 2, 
-    candidate: "Ben Pappas", 
-    position: "President", 
-    date: "04/28/2025", 
-    time: "09:03 AM", 
-    duration: "1 min", 
-    status: "Completed" 
-  },
-  { 
-    id: 3, 
-    candidate: "Ben Pappas", 
-    position: "Backend Node Engineer", 
-    date: null, 
-    time: null, 
-    duration: "N/A", 
-    status: "Completed" 
-  },
-  { 
-    id: 4, 
-    candidate: "Ben Pappas", 
-    position: "Cursor AI Engineer", 
-    date: "04/28/2025", 
-    time: "08:11 AM", 
-    duration: "1 min", 
-    status: "Completed" 
-  },
-  { 
-    id: 5, 
-    candidate: "Ben Pappas", 
-    position: "Backend Node Engineer", 
-    date: null, 
-    time: null, 
-    duration: "N/A", 
-    status: "Completed" 
-  }
-];
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 const DashboardInterviews: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [interviews, setInterviews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { tenantId } = useAuth();
+  const navigate = useNavigate();
   
-  const filteredInterviews = MOCK_INTERVIEWS.filter(interview => 
-    interview.candidate.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    interview.position.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    if (tenantId) {
+      fetchInterviews();
+    }
+  }, [tenantId]);
+
+  const fetchInterviews = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('interview_sessions')
+        .select(`
+          id,
+          start_time,
+          end_time,
+          status,
+          created_at,
+          candidates (
+            id,
+            full_name,
+            email
+          ),
+          positions (
+            id,
+            title
+          )
+        `)
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error('Error fetching interviews:', error);
+      } else {
+        setInterviews(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching interviews:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDateTime = (dateString: string | null) => {
+    if (!dateString) return { date: null, time: null };
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString('en-US', { 
+        month: '2-digit', 
+        day: '2-digit', 
+        year: 'numeric' 
+      }),
+      time: date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      })
+    };
+  };
+
+  const calculateDuration = (startTime: string | null, endTime: string | null) => {
+    if (!startTime || !endTime) return 'N/A';
+    const duration = new Date(endTime).getTime() - new Date(startTime).getTime();
+    const minutes = Math.floor(duration / 60000);
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${hours}h ${remainingMinutes}m`;
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'scheduled':
+        return 'bg-blue-100 text-blue-800';
+      case 'in_progress':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const filteredInterviews = interviews.filter(interview => {
+    const candidateName = interview.candidates?.full_name || '';
+    const positionTitle = interview.positions?.title || '';
+    return (
+      candidateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      positionTitle.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
   
+  const sortedInterviews = filteredInterviews.sort((a, b) => {
+    const statusOrder = {
+      'in_progress': 1,
+      'scheduled': 2,
+      'completed': 3,
+      'cancelled': 4
+    };
+    return statusOrder[a.status] - statusOrder[b.status];
+  });
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading interviews...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -98,57 +167,75 @@ const DashboardInterviews: React.FC = () => {
               <TableRow>
                 <TableHead className="w-[200px]">Candidate</TableHead>
                 <TableHead className="w-[250px]">Position</TableHead>
-                <TableHead className="w-[180px]">Date & Time</TableHead>
+                <TableHead className="w-[200px]">Date & Time</TableHead>
                 <TableHead className="w-[100px]">Duration</TableHead>
                 <TableHead className="w-[120px]">Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredInterviews.length > 0 ? (
-                filteredInterviews.map((interview) => (
-                  <TableRow key={interview.id}>
-                    <TableCell className="font-medium">{interview.candidate}</TableCell>
-                    <TableCell>{interview.position}</TableCell>
-                    <TableCell>
-                      {interview.date ? (
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span>{interview.date} at {interview.time}</span>
+              {sortedInterviews.length > 0 ? (
+                sortedInterviews.map((interview) => {
+                  const { date, time } = formatDateTime(interview.start_time);
+                  const duration = calculateDuration(interview.start_time, interview.end_time);
+                  
+                  return (
+                    <TableRow key={interview.id}>
+                      <TableCell className="font-medium">
+                        {interview.candidates?.full_name || 'Unknown Candidate'}
+                      </TableCell>
+                      <TableCell>{interview.positions?.title || 'Unknown Position'}</TableCell>
+                      <TableCell>
+                        {date ? (
+                          <div className="flex items-center gap-1 whitespace-nowrap">
+                            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span>{date} at {time}</span>
+                          </div>
+                        ) : (
+                          "Not scheduled"
+                        )}
+                      </TableCell>
+                      <TableCell>{duration}</TableCell>
+                      <TableCell>
+                        <span 
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
+                          ${getStatusColor(interview.status)}`}
+                        >
+                          {interview.status.replace('_', ' ')}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => navigate(`/candidates/${interview.candidates?.id}`)}
+                            disabled={!interview.candidates?.id}
+                          >
+                            <Eye className="h-4 w-4" />
+                            <span className="ml-1">Profile</span>
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => navigate(`/sessions/${interview.id}`)}
+                          >
+                            <FileText className="h-4 w-4" />
+                            <span className="ml-1">Transcript</span>
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            disabled={interview.status !== 'completed'}
+                          >
+                            <Star className="h-4 w-4" />
+                            <span className="ml-1">Assessment</span>
+                          </Button>
                         </div>
-                      ) : (
-                        "Not scheduled"
-                      )}
-                    </TableCell>
-                    <TableCell>{interview.duration}</TableCell>
-                    <TableCell>
-                      <span 
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                        ${interview.status === "Completed" ? "bg-green-100 text-green-800" : 
-                          interview.status === "Scheduled" ? "bg-blue-100 text-blue-800" : 
-                          "bg-yellow-100 text-yellow-800"}`}
-                      >
-                        {interview.status}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                          <span className="ml-1">Profile</span>
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <FileText className="h-4 w-4" />
-                          <span className="ml-1">Transcript</span>
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Star className="h-4 w-4" />
-                          <span className="ml-1">Assessment</span>
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center">

@@ -364,7 +364,7 @@ const CandidateProfile = () => {
   
   // Location - try enriched profile first, then resume_analysis
   const location = enrichedProfile?.location_name || 
-                  candidate.resume_analysis?.personal_info.geographic_location || '';
+                  candidate.resume_analysis?.personal_info?.geographic_location || '';
   
   // Contact info - prefer candidate record, then enriched data
   const email = candidate.email || candidate.resume_analysis?.personal_info?.email || '';
@@ -375,13 +375,13 @@ const CandidateProfile = () => {
   // Current position - try enriched profile first, then resume_analysis
   const jobTitle = enrichedProfile?.job_title || 
                   (candidate.resume_analysis?.experience?.positions_held && 
-                   candidate.resume_analysis.experience.positions_held.length > 0 ? 
-                   candidate.resume_analysis.experience.positions_held[0].title : '');
+                   candidate.resume_analysis?.experience?.positions_held?.length > 0 ? 
+                   candidate.resume_analysis?.experience?.positions_held?.[0]?.title : '');
                    
   const company = enrichedProfile?.job_company_name || 
                   (candidate.resume_analysis?.experience?.positions_held && 
-                   candidate.resume_analysis.experience.positions_held.length > 0 ? 
-                   candidate.resume_analysis.experience.positions_held[0].company : '');
+                   candidate.resume_analysis?.experience?.positions_held?.length > 0 ? 
+                   candidate.resume_analysis?.experience?.positions_held?.[0]?.company : '');
   
   // Professional summary from resume_analysis
   const summary = candidate.resume_analysis?.professional_summary || '';

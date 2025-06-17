@@ -15,17 +15,8 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { user, isLoading } = useAuth();
 
-  // If not authenticated, redirect to login
-  if (!isLoading && !user) {
-    return <Navigate to="/login" />;
-  }
-
-  // Show loading indicator while checking auth status
-  if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
-  }
-
   // Add a global error suppressor for the lovable-tagger error
+  // This must be before any conditional returns to follow Rules of Hooks
   React.useEffect(() => {
     const handleError = (event: ErrorEvent) => {
       if (event.error?.message?.includes('Cannot read properties of undefined') && 
@@ -40,22 +31,34 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     return () => window.removeEventListener('error', handleError, true);
   }, []);
 
+  // If not authenticated, redirect to login
+  if (!isLoading && !user) {
+    return <Navigate to="/login" />;
+  }
+
+  // Show loading indicator while checking auth status
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex h-svh">
+      <div className="flex h-screen w-full">
         {/* Dashboard Sidebar */}
         <DashboardSidebar />
         
         {/* Main Content Area */}
-        <SidebarInset>
+        <SidebarInset className="flex-1">
           <div className="flex flex-col h-full">
             {/* Dashboard Header */}
             <DashboardHeader />
             
             {/* Main Content */}
-            <div className="flex-grow p-6">
-              {children || <Outlet />}
-            </div>
+            <main className="flex-1 overflow-y-auto">
+              <div className="container mx-auto p-6">
+                {children || <Outlet />}
+              </div>
+            </main>
             
             {/* Footer */}
             <Footer />

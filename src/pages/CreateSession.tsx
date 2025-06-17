@@ -5,8 +5,6 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { supabase, getCurrentTenantId } from '@/integrations/supabase/client';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import {
   Card,
   CardContent,
@@ -172,222 +170,216 @@ const CreateSession = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <Navbar />
-      <div className="flex-grow container mx-auto px-4 py-24 md:py-32">
-        <div className="max-w-5xl mx-auto">
-          <h1 className="text-3xl md:text-4xl font-bold mb-8">Create Interview Session</h1>
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)}>
-              <Card className="mb-8">
-                <CardHeader>
-                  <CardTitle>Interview Details</CardTitle>
-                  <CardDescription>
-                    Set up a new interview session by selecting a candidate and position
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {loadingData ? (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    </div>
-                  ) : (
-                    <>
-                      <FormField
-                        control={form.control}
-                        name="candidateId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Candidate</FormLabel>
-                            <Select 
-                              onValueChange={field.onChange} 
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a candidate" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {candidates.map((candidate) => (
-                                  <SelectItem key={candidate.id} value={candidate.id}>
-                                    {candidate.full_name} ({candidate.email})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>
-                              The candidate to be interviewed
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="positionId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Position</FormLabel>
-                            <Select 
-                              onValueChange={field.onChange} 
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a position" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {positions.map((position) => (
-                                  <SelectItem key={position.id} value={position.id}>
-                                    {position.title}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>
-                              The position being interviewed for
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="scheduledTime"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Scheduled Date & Time</FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    variant="outline"
-                                    className="w-full pl-3 text-left font-normal"
-                                  >
-                                    {field.value ? (
-                                      format(field.value, "PPP p")
-                                    ) : (
-                                      <span>Pick a date and time</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                  mode="single"
-                                  selected={field.value}
-                                  onSelect={field.onChange}
-                                  initialFocus
-                                />
-                                <div className="p-3 border-t border-border">
-                                  <Input
-                                    type="time"
-                                    onChange={(e) => {
-                                      const date = field.value || new Date();
-                                      const [hours, minutes] = e.target.value.split(':');
-                                      date.setHours(parseInt(hours, 10));
-                                      date.setMinutes(parseInt(minutes, 10));
-                                      field.onChange(date);
-                                    }}
-                                  />
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                            <FormDescription>
-                              When the interview will take place
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="duration"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Duration</FormLabel>
-                            <Select 
-                              onValueChange={field.onChange} 
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select duration" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="15">15 minutes</SelectItem>
-                                <SelectItem value="30">30 minutes</SelectItem>
-                                <SelectItem value="45">45 minutes</SelectItem>
-                                <SelectItem value="60">60 minutes</SelectItem>
-                                <SelectItem value="90">90 minutes</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormDescription>
-                              How long the interview will last
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="notes"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Additional Notes</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Any additional information for the interviewer"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormDescription>
-                              Optional notes for the interview
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </>
-                  )}
-                </CardContent>
-                <CardFooter className="flex justify-end space-x-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate('/dashboard')}
-                    type="button"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={loading || loadingData}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      'Create Interview Session'
+    <div className="max-w-5xl mx-auto">
+      <h1 className="text-3xl md:text-4xl font-bold mb-8">Create Interview Session</h1>
+      
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)}>
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Interview Details</CardTitle>
+              <CardDescription>
+                Set up a new interview session by selecting a candidate and position
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {loadingData ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="candidateId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Candidate</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a candidate" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {candidates.map((candidate) => (
+                              <SelectItem key={candidate.id} value={candidate.id}>
+                                {candidate.full_name} ({candidate.email})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          The candidate to be interviewed
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                  </Button>
-                </CardFooter>
-              </Card>
-            </form>
-          </Form>
-        </div>
-      </div>
-      <Footer />
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="positionId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Position</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a position" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {positions.map((position) => (
+                              <SelectItem key={position.id} value={position.id}>
+                                {position.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          The position being interviewed for
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="scheduledTime"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Scheduled Date & Time</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className="w-full pl-3 text-left font-normal"
+                              >
+                                {field.value ? (
+                                  format(field.value, "PPP p")
+                                ) : (
+                                  <span>Pick a date and time</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              initialFocus
+                            />
+                            <div className="p-3 border-t border-border">
+                              <Input
+                                type="time"
+                                onChange={(e) => {
+                                  const date = field.value || new Date();
+                                  const [hours, minutes] = e.target.value.split(':');
+                                  date.setHours(parseInt(hours, 10));
+                                  date.setMinutes(parseInt(minutes, 10));
+                                  field.onChange(date);
+                                }}
+                              />
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                        <FormDescription>
+                          When the interview will take place
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="duration"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Duration</FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select duration" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="15">15 minutes</SelectItem>
+                            <SelectItem value="30">30 minutes</SelectItem>
+                            <SelectItem value="45">45 minutes</SelectItem>
+                            <SelectItem value="60">60 minutes</SelectItem>
+                            <SelectItem value="90">90 minutes</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          How long the interview will last
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Additional Notes</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Any additional information for the interviewer"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Optional notes for the interview
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
+            </CardContent>
+            <CardFooter className="flex justify-end space-x-4">
+              <Button
+                variant="outline"
+                onClick={() => navigate(-1)}
+                type="button"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={loading || loadingData}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Interview Session'
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
+        </form>
+      </Form>
     </div>
   );
 };

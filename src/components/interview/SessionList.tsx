@@ -50,7 +50,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 
 interface InvitationStatus {
-  id: string;
+  token: string;
   status: 'pending' | 'sent' | 'accepted' | 'expired';
 }
 
@@ -67,19 +67,30 @@ interface InterviewSession {
   };
   start_time: string;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
-  invitation: InvitationStatus[];
+  interview_invitations: InvitationStatus[];
 }
 
-const SessionList: React.FC = () => {
+interface SessionListProps {
+  filterStatus?: string;
+}
+
+const SessionList: React.FC<SessionListProps> = ({ filterStatus }) => {
   const navigate = useNavigate();
   const [sessions, setSessions] = useState<InterviewSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>(filterStatus || 'all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
   
+  // Update statusFilter when filterStatus prop changes
+  useEffect(() => {
+    if (filterStatus) {
+      setStatusFilter(filterStatus);
+    }
+  }, [filterStatus]);
+
   // Fetch sessions on component mount
   useEffect(() => {
     fetchSessions();
@@ -93,11 +104,11 @@ const SessionList: React.FC = () => {
         .from('interview_sessions')
         .select(`
           id,
-          candidate:candidate_id (id, full_name, email),
-          position:position_id (id, title),
+          candidate:candidates!interview_sessions_candidate_id_fkey (id, full_name, email),
+          position:positions!interview_sessions_position_id_fkey (id, title),
           start_time,
           status,
-          invitation:interview_invitations (id, status)
+          interview_invitations (token, status)
         `)
         .order('start_time', { ascending: false })
         .range((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage - 1);
@@ -170,11 +181,11 @@ const SessionList: React.FC = () => {
   };
   
   const getInvitationStatus = (session: InterviewSession) => {
-    if (!session.invitation || session.invitation.length === 0) {
+    if (!session.interview_invitations || session.interview_invitations.length === 0) {
       return <Badge variant="outline">Not Invited</Badge>;
     }
     
-    const invitation = session.invitation[0];
+    const invitation = session.interview_invitations[0];
     switch (invitation.status) {
       case 'pending':
         return <Badge variant="outline" className="border-yellow-500 text-yellow-500">Pending</Badge>;
@@ -199,20 +210,45 @@ const SessionList: React.FC = () => {
     );
   });
   
+  // Sort sessions if showing all
+  const sortedSessions = statusFilter === 'all' 
+    ? [...filteredSessions].sort((a, b) => {
+        const statusOrder = {
+          'in_progress': 1,
+          'scheduled': 2,
+          'completed': 3,
+          'cancelled': 4
+        };
+        return statusOrder[a.status] - statusOrder[b.status];
+      })
+    : filteredSessions;
+  
   return (
     <Card>
       <CardHeader>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <CardTitle>Interview Sessions</CardTitle>
+            <CardTitle>
+              {statusFilter === 'scheduled' && 'Upcoming Interview Sessions'}
+              {statusFilter === 'in_progress' && 'Sessions In Progress'}
+              {statusFilter === 'completed' && 'Completed Interview Sessions'}
+              {statusFilter === 'all' && 'Interview Sessions'}
+              {statusFilter === 'cancelled' && 'Cancelled Interview Sessions'}
+            </CardTitle>
             <CardDescription>
-              Manage your scheduled and completed interview sessions
+              {statusFilter === 'scheduled' && 'View and manage your upcoming interviews'}
+              {statusFilter === 'in_progress' && 'Active interview sessions currently running'}
+              {statusFilter === 'completed' && 'Review past interview sessions and transcripts'}
+              {statusFilter === 'all' && 'Manage your scheduled and completed interview sessions'}
+              {statusFilter === 'cancelled' && 'View cancelled interview sessions'}
             </CardDescription>
           </div>
-          <Button onClick={handleCreateSession} className="mt-4 md:mt-0">
-            <Plus className="mr-2 h-4 w-4" />
-            New Session
-          </Button>
+          {(statusFilter === 'scheduled' || statusFilter === 'all') && (
+            <Button onClick={handleCreateSession} className="mt-4 md:mt-0">
+              <Plus className="mr-2 h-4 w-4" />
+              New Session
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -226,24 +262,26 @@ const SessionList: React.FC = () => {
               className="w-full md:w-[300px]"
             />
           </div>
-          <div className="flex items-center space-x-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select
-              value={statusFilter}
-              onValueChange={setStatusFilter}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="scheduled">Scheduled</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {!filterStatus && (
+            <div className="flex items-center space-x-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select
+                value={statusFilter}
+                onValueChange={setStatusFilter}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         
         {loading ? (
@@ -265,8 +303,8 @@ const SessionList: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSessions.length > 0 ? (
-                    filteredSessions.map((session) => (
+                  {sortedSessions.length > 0 ? (
+                    sortedSessions.map((session) => (
                       <TableRow key={session.id}>
                         <TableCell>
                           <div className="flex items-center space-x-2">
@@ -337,11 +375,22 @@ const SessionList: React.FC = () => {
                       <TableCell colSpan={6} className="text-center h-32">
                         <div className="flex flex-col items-center justify-center p-4">
                           <Calendar className="h-8 w-8 text-muted-foreground mb-2" />
-                          <p className="text-lg font-medium">No sessions found</p>
-                          <p className="text-sm text-muted-foreground">
-                            {searchTerm ? 'Try a different search term' : 'Create your first interview session'}
+                          <p className="text-lg font-medium">
+                            {statusFilter === 'scheduled' && 'No upcoming sessions'}
+                            {statusFilter === 'in_progress' && 'No sessions in progress'}
+                            {statusFilter === 'completed' && 'No completed sessions'}
+                            {statusFilter === 'all' && 'No sessions found'}
+                            {statusFilter === 'cancelled' && 'No cancelled sessions'}
                           </p>
-                          {!searchTerm && (
+                          <p className="text-sm text-muted-foreground">
+                            {searchTerm ? 'Try a different search term' : 
+                              statusFilter === 'scheduled' ? 'Schedule an interview session to get started' :
+                              statusFilter === 'in_progress' ? 'Start a scheduled interview to see it here' :
+                              statusFilter === 'completed' ? 'Complete an interview to see it here' :
+                              'Create your first interview session'
+                            }
+                          </p>
+                          {!searchTerm && statusFilter === 'scheduled' && (
                             <Button onClick={handleCreateSession} className="mt-4">
                               <Plus className="mr-2 h-4 w-4" />
                               New Session

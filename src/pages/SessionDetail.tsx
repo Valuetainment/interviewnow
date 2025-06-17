@@ -15,9 +15,16 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Calendar, Clock, Users, ArrowRight } from 'lucide-react';
+import { AlertCircle, Calendar, Clock, Users, ArrowRight, List, FileText } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import InterviewInvitation from '@/components/interview/InterviewInvitation';
+
+interface TranscriptEntry {
+  id: string;
+  speaker: string;
+  text: string;
+  start_ms: number;
+}
 
 interface SessionData {
   id: string;
@@ -35,11 +42,12 @@ interface SessionData {
   status: string;
   video_url?: string;
   created_at: string;
-  invitations?: {
+  interview_invitations?: {
     token: string;
     status: string;
     expires_at: string;
   }[];
+  transcript_entries?: TranscriptEntry[];
 }
 
 const SessionDetail = () => {
@@ -62,14 +70,14 @@ const SessionDetail = () => {
         .from('interview_sessions')
         .select(`
           id,
-          position:position_id (id, title),
-          candidate:candidate_id (id, full_name, email),
+          position:positions!interview_sessions_position_id_fkey (id, title),
+          candidate:candidates!interview_sessions_candidate_id_fkey (id, full_name, email),
           start_time,
           end_time,
           status,
           video_url,
           created_at,
-          invitations:interview_invitations (
+          interview_invitations (
             token,
             status,
             expires_at
@@ -80,6 +88,19 @@ const SessionDetail = () => {
 
       if (error) throw error;
       if (!data) throw new Error('Session not found');
+
+      // If session is completed, fetch transcript entries
+      if (data.status === 'completed') {
+        const { data: transcriptData, error: transcriptError } = await supabase
+          .from('transcript_entries')
+          .select('*')
+          .eq('session_id', id)
+          .order('start_ms', { ascending: true });
+
+        if (!transcriptError && transcriptData) {
+          data.transcript_entries = transcriptData;
+        }
+      }
 
       setSession(data);
     } catch (err) {
@@ -117,6 +138,14 @@ const SessionDetail = () => {
         {config.label}
       </Badge>
     );
+  };
+
+  // Format timestamp from milliseconds
+  const formatTimestamp = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   if (loading) {
@@ -241,14 +270,14 @@ const SessionDetail = () => {
                     </div>
                   </div>
                   
-                  {session.invitations && session.invitations.length > 0 && (
+                  {session.interview_invitations && session.interview_invitations.length > 0 && (
                     <div className="flex items-start">
                       <div className="bg-primary/10 rounded-full p-1 mr-3 mt-0.5">
                         <Calendar className="h-3 w-3 text-primary" />
                       </div>
                       <div>
-                        <p className="text-sm">Invitation {session.invitations[0].status}</p>
-                        <p className="text-xs text-muted-foreground">Expires on {format(parseISO(session.invitations[0].expires_at), 'PPP')}</p>
+                        <p className="text-sm">Invitation {session.interview_invitations[0].status}</p>
+                        <p className="text-xs text-muted-foreground">Expires on {format(parseISO(session.interview_invitations[0].expires_at), 'PPP')}</p>
                       </div>
                     </div>
                   )}
@@ -268,7 +297,7 @@ const SessionDetail = () => {
               </div>
             </CardContent>
             <CardFooter>
-              <Button variant="outline" onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
+              <Button variant="outline" onClick={() => navigate('/sessions')}>Back to Sessions</Button>
             </CardFooter>
           </Card>
         </TabsContent>
@@ -281,9 +310,9 @@ const SessionDetail = () => {
             candidateEmail={session.candidate.email}
             positionTitle={session.position.title}
             scheduledTime={session.start_time}
-            tokenValue={session.invitations && session.invitations.length > 0 ? session.invitations[0].token : undefined}
-            expiresAt={session.invitations && session.invitations.length > 0 ? session.invitations[0].expires_at : undefined}
-            status={session.invitations && session.invitations.length > 0 ? session.invitations[0].status : undefined}
+            tokenValue={session.interview_invitations && session.interview_invitations.length > 0 ? session.interview_invitations[0].token : undefined}
+            expiresAt={session.interview_invitations && session.interview_invitations.length > 0 ? session.interview_invitations[0].expires_at : undefined}
+            status={session.interview_invitations && session.interview_invitations.length > 0 ? session.interview_invitations[0].status : undefined}
             onInvitationSent={fetchSessionData}
           />
         </TabsContent>
@@ -298,11 +327,74 @@ const SessionDetail = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {/* This would be replaced with real transcript data */}
-                <p className="text-muted-foreground text-center py-10">
-                  Transcript is being processed. Check back soon.
-                </p>
+                {session.transcript_entries && session.transcript_entries.length > 0 ? (
+                  <div className="space-y-6">
+                    <div className="bg-muted p-4 rounded-lg mb-6">
+                      <h3 className="font-medium mb-2">Transcript Overview</h3>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Total Entries:</p>
+                          <p>{session.transcript_entries.length}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Duration:</p>
+                          <p>{session.transcript_entries.length > 0 
+                            ? formatTimestamp(session.transcript_entries[session.transcript_entries.length - 1].start_ms) 
+                            : 'N/A'}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="font-medium mb-4 flex items-center gap-2">
+                        <List className="h-4 w-4" />
+                        Conversation
+                      </h3>
+                      
+                      <div className="space-y-6 max-h-[600px] overflow-y-auto">
+                        {session.transcript_entries.map((entry) => (
+                          <div key={entry.id} className="flex gap-4">
+                            <div className="w-24 flex-shrink-0 text-xs text-muted-foreground pt-1">
+                              {formatTimestamp(entry.start_ms)}
+                            </div>
+                            <div className="flex-grow">
+                              <p className={`text-sm font-medium mb-1 ${
+                                entry.speaker.toLowerCase() === "interviewer" || entry.speaker.toLowerCase() === "assistant"
+                                  ? "text-primary" 
+                                  : "text-foreground"
+                              }`}>
+                                {entry.speaker.charAt(0).toUpperCase() + entry.speaker.slice(1).toLowerCase()}
+                              </p>
+                              <p className="text-foreground">{entry.text}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                    <FileText className="h-12 w-12 mb-4 opacity-30" />
+                    <p>No transcript entries available for this interview.</p>
+                    <p className="text-sm mt-2">The transcript may still be processing.</p>
+                  </div>
+                )}
               </CardContent>
+              <CardFooter className="flex justify-between">
+                <Button
+                  variant="outline"
+                  disabled={!session.transcript_entries || session.transcript_entries.length === 0}
+                  onClick={() => toast.success("Transcript export feature coming soon")}
+                >
+                  Export Transcript
+                </Button>
+                <Button
+                  disabled={!session.transcript_entries || session.transcript_entries.length === 0}
+                  onClick={() => toast.success("AI summary feature coming soon")}
+                >
+                  Generate AI Summary
+                </Button>
+              </CardFooter>
             </Card>
           </TabsContent>
         )}

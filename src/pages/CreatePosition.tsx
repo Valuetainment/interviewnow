@@ -12,7 +12,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import Navbar from '@/components/Navbar';
 import { CompetencyWeights } from '@/components/CompetencyWeights';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import CompanySelect from '@/components/companies/CompanySelect';
@@ -280,9 +279,7 @@ const CreatePosition = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="container max-w-4xl pt-24 pb-16">
+    <div className="container max-w-4xl py-8">
         <h1 className="text-3xl font-bold mb-6">Create New Position</h1>
         
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -525,7 +522,6 @@ const CreatePosition = () => {
             )}
           </TabsContent>
         </Tabs>
-      </div>
     </div>
   );
 };

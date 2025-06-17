@@ -22,7 +22,7 @@ import SimpleWebRTCTest from "./pages/SimpleWebRTCTest";
 import BasicWebRTCTest from "./pages/BasicWebRTCTest";
 import Transcripts from "./pages/Transcripts";
 import Positions2 from "./pages/Positions2";
-import PositionDetail2 from "./pages/PositionDetail2";
+import PositionDetail from "./pages/PositionDetail";
 import Dashboard from "./pages/Dashboard";
 import Companies from "./pages/Companies";
 import NewCompany from "./pages/NewCompany";
@@ -49,7 +49,10 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <BrowserRouter future={{ 
+            v7_startTransition: true,
+            v7_relativeSplatPath: true 
+          }}>
             <Routes>
               {/* Public routes with MainLayout */}
               <Route element={<MainLayout />}>
@@ -79,7 +82,7 @@ const App = () => (
                 <Route path="/interview-test-production" element={<InterviewTestProduction />} />
                 <Route path="/transcripts" element={<Transcripts />} />
                 <Route path="/positions" element={<Positions2 />} />
-                <Route path="/positions/:id" element={<PositionDetail2 />} />
+                <Route path="/positions/:id" element={<PositionDetail />} />
                 <Route path="/companies" element={<Companies />} />
                 <Route path="/companies/new" element={<NewCompany />} />
                 <Route path="/companies/:id/edit" element={<EditCompany />} />

@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Star } from 'lucide-react';
+import { ArrowLeft, Star, Calendar, Building, Users, FileText, Award, Briefcase, CheckCircle, Gift, UserCheck } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -20,106 +20,211 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-// Mock position data
-const mockPositions = [
-  {
-    id: '1',
-    title: 'Senior Frontend Developer',
-    department: 'Engineering',
-    location: 'Remote',
-    createdAt: '2025-03-12',
-    status: 'Active',
-    description: 'We are looking for an experienced Frontend Developer to join our engineering team. You will be responsible for building and maintaining our web applications, ensuring high performance and responsiveness.',
-    requirements: [
-      'At least 5 years of experience with JavaScript/TypeScript',
-      'Proficiency with React and modern frontend frameworks',
-      'Experience with responsive design and CSS frameworks',
-      'Understanding of web performance optimization techniques',
-      'Strong problem-solving skills and attention to detail'
-    ]
-  },
-  // More positions would be here
-];
-
-// Mock candidates data with ranking
-const mockCandidates = [
-  {
-    id: '1',
-    name: 'Jane Smith',
-    email: 'jane.smith@example.com',
-    skills: ['React', 'TypeScript', 'CSS', 'Node.js'],
-    yearsOfExperience: 6,
-    matchScore: 92,
-    status: 'Interviewed',
-    lastInterviewedAt: '2025-04-12',
-  },
-  {
-    id: '2',
-    name: 'Michael Johnson',
-    email: 'michael.j@example.com',
-    skills: ['React', 'JavaScript', 'HTML/CSS', 'Vue'],
-    yearsOfExperience: 5,
-    matchScore: 87,
-    status: 'Scheduled',
-    lastInterviewedAt: '2025-04-18',
-  },
-  {
-    id: '3',
-    name: 'Sarah Williams',
-    email: 'sarah.w@example.com',
-    skills: ['Angular', 'TypeScript', 'React', 'AWS'],
-    yearsOfExperience: 7,
-    matchScore: 85,
-    status: 'Pending Review',
-    lastInterviewedAt: '2025-04-05',
-  },
-  {
-    id: '4',
-    name: 'David Brown',
-    email: 'david.b@example.com',
-    skills: ['React', 'Redux', 'JavaScript', 'GraphQL'],
-    yearsOfExperience: 4,
-    matchScore: 78,
-    status: 'Interviewed',
-    lastInterviewedAt: '2025-04-10',
-  },
-  {
-    id: '5',
-    name: 'Emily Davis',
-    email: 'emily.d@example.com',
-    skills: ['React Native', 'React', 'JavaScript', 'CSS'],
-    yearsOfExperience: 3,
-    matchScore: 72,
-    status: 'Pending Review',
-    lastInterviewedAt: '2025-04-08',
-  },
-];
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import ReactMarkdown from 'react-markdown';
+import { toast } from 'sonner';
 
 const PositionDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const { tenantId } = useAuth();
   const [position, setPosition] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<any[]>([]);
+  const [competencies, setCompetencies] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Fetch position and candidates
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: Briefcase },
+    { id: 'responsibilities', label: 'Responsibilities', icon: CheckCircle },
+    { id: 'qualifications', label: 'Qualifications', icon: Award },
+    { id: 'benefits', label: 'Benefits', icon: Gift },
+    { id: 'candidates', label: 'Candidates', icon: UserCheck },
+  ];
+
+  // Parse the markdown description into sections
+  const parseDescription = (description: string) => {
+    if (!description) return {};
+    
+    const sections: any = {};
+    const lines = description.split('\n');
+    let currentSection = '';
+    let currentContent: string[] = [];
+    
+    for (const line of lines) {
+      // Check if this is a section header (starts with ##)
+      if (line.startsWith('## ')) {
+        // Save previous section if exists
+        if (currentSection && currentContent.length > 0) {
+          sections[currentSection] = currentContent.join('\n').trim();
+        }
+        // Start new section
+        currentSection = line.replace('## ', '').trim();
+        currentContent = [];
+      } else if (line.startsWith('# ') && !currentSection) {
+        // Handle main title
+        sections.title = line.replace('# ', '').trim();
+      } else {
+        // Add to current section content
+        currentContent.push(line);
+      }
+    }
+    
+    // Save last section
+    if (currentSection && currentContent.length > 0) {
+      sections[currentSection] = currentContent.join('\n').trim();
+    }
+    
+    return sections;
+  };
+
+  // Fetch position and candidates from the database
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const foundPosition = mockPositions.find(p => p.id === id);
-      setPosition(foundPosition);
-      setCandidates(mockCandidates.sort((a, b) => b.matchScore - a.matchScore)); // Sort by match score
-      setLoading(false);
-    }, 500);
-  }, [id]);
+    const fetchPosition = async () => {
+      try {
+        if (!id) return;
+        
+        console.log("Fetching position with ID:", id);
+        
+        // Fetch the position from the database with company info
+        const { data: positionData, error: positionError } = await supabase
+          .from('positions')
+          .select(`
+            *,
+            companies (
+              id,
+              name
+            )
+          `)
+          .eq('id', id)
+          .single();
+          
+        if (positionError) {
+          console.error("Error fetching position:", positionError);
+          setLoadError("Failed to load position data");
+          setPosition(null);
+          setLoading(false);
+          return;
+        }
+        
+        console.log("Position data:", positionData);
+        
+        if (!positionData) {
+          setLoadError("Position not found");
+          setPosition(null);
+          setLoading(false);
+          return;
+        }
+        
+        setPosition(positionData);
+        
+        // Fetch related competencies
+        const { data: positionCompetencies, error: compError } = await supabase
+          .from('position_competencies')
+          .select(`
+            weight,
+            competencies:competency_id(id, name, description)
+          `)
+          .eq('position_id', id);
+          
+        if (compError) {
+          console.error("Error fetching competencies:", compError);
+        } else if (positionCompetencies && positionCompetencies.length > 0) {
+          // Transform the data to match expected format
+          const formattedCompetencies = positionCompetencies
+            .filter(pc => pc.competencies)
+            .map(pc => ({
+              id: pc.competencies.id,
+              name: pc.competencies.name,
+              description: pc.competencies.description,
+              weight: pc.weight
+            }));
+          
+          setCompetencies(formattedCompetencies);
+        }
+        
+        // Fetch candidates for this position (from interview sessions)
+        const { data: sessionsData, error: sessionsError } = await supabase
+          .from('interview_sessions')
+          .select(`
+            *,
+            candidates (
+              id,
+              full_name,
+              email,
+              skills,
+              experience
+            )
+          `)
+          .eq('position_id', id);
+
+        if (sessionsError) {
+          console.error('Error fetching candidates:', sessionsError);
+        } else if (sessionsData) {
+          // Group sessions by candidate ID to avoid duplicates
+          const candidateMap = new Map();
+          
+          sessionsData
+            .filter(session => session.candidates)
+            .forEach(session => {
+              const candidateId = session.candidates.id;
+              
+              // If candidate already exists, update with latest session info
+              if (candidateMap.has(candidateId)) {
+                const existing = candidateMap.get(candidateId);
+                // Update status based on most recent or highest priority status
+                if (session.status === 'completed' || 
+                    (existing.status !== 'Interviewed' && session.status === 'scheduled')) {
+                  existing.status = session.status === 'completed' ? 'Interviewed' : 
+                                   session.status === 'scheduled' ? 'Scheduled' : 'Pending Review';
+                }
+                // Update last interview date if more recent
+                if (session.start_time && (!existing.lastInterviewDate || 
+                    new Date(session.start_time) > new Date(existing.lastInterviewDate))) {
+                  existing.lastInterviewDate = session.start_time;
+                  existing.lastInterviewedAt = new Date(session.start_time).toLocaleDateString();
+                }
+              } else {
+                // Add new candidate
+                candidateMap.set(candidateId, {
+                  id: session.candidates.id,
+                  name: session.candidates.full_name,
+                  email: session.candidates.email,
+                  skills: session.candidates.skills || [],
+                  yearsOfExperience: 0, // Would need to calculate from experience
+                  matchScore: 0, // Would need actual scoring logic
+                  status: session.status === 'completed' ? 'Interviewed' : 
+                         session.status === 'scheduled' ? 'Scheduled' : 'Pending Review',
+                  lastInterviewDate: session.start_time,
+                  lastInterviewedAt: session.start_time ? new Date(session.start_time).toLocaleDateString() : 'Not scheduled'
+                });
+              }
+            });
+          
+          // Convert map to array
+          const transformedCandidates = Array.from(candidateMap.values());
+          
+          setCandidates(transformedCandidates);
+        }
+        
+      } catch (error) {
+        console.error("Unexpected error fetching position:", error);
+        setLoadError("An unexpected error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPosition();
+  }, [id, tenantId]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="container max-w-6xl pt-24 pb-16 flex justify-center">
-          <p>Loading...</p>
+          <p>Loading position details...</p>
         </div>
       </div>
     );
@@ -130,7 +235,7 @@ const PositionDetail = () => {
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="container max-w-6xl pt-24 pb-16 flex flex-col items-center">
-          <p className="text-xl mb-4">Position not found</p>
+          <p className="text-xl mb-4">{loadError || "Position not found"}</p>
           <Button asChild>
             <Link to="/positions">Back to Positions</Link>
           </Button>
@@ -152,138 +257,316 @@ const PositionDetail = () => {
           <h1 className="text-3xl font-bold">{position.title}</h1>
         </div>
 
+        <div className="flex flex-wrap gap-2 mb-6">
+          {position.experience_level && (
+            <Badge variant="outline" className="bg-purple-50">
+              {position.experience_level}
+            </Badge>
+          )}
+          {position.department && (
+            <Badge variant="outline" className="bg-blue-50">
+              {position.department}
+            </Badge>
+          )}
+          {position.location && (
+            <Badge variant="outline" className="bg-green-50">
+              {position.location}
+            </Badge>
+          )}
+          {position.companies?.name && (
+            <Badge variant="outline" className="bg-amber-50 flex items-center gap-1">
+              <Building className="h-3 w-3" /> {position.companies.name}
+            </Badge>
+          )}
+          <Badge variant="outline" className="bg-slate-50 flex items-center gap-1">
+            <Calendar className="h-3 w-3" /> Created {new Date(position.created_at).toLocaleDateString()}
+          </Badge>
+        </div>
+
         <Tabs defaultValue="overview" className="mb-6" onValueChange={setActiveTab} value={activeTab}>
           <TabsList>
-            <TabsTrigger value="overview">Position Overview</TabsTrigger>
-            <TabsTrigger value="candidates">Candidates</TabsTrigger>
+            {tabs.map((tab) => (
+              <TabsTrigger key={tab.id} value={tab.id}>
+                <span className="flex items-center gap-2">
+                  <tab.icon className="h-4 w-4" />
+                  {tab.label}
+                </span>
+              </TabsTrigger>
+            ))}
           </TabsList>
 
           <TabsContent value="overview" className="mt-4">
-            <div className="grid gap-6 grid-cols-1">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Position Details</CardTitle>
-                  <CardDescription>
-                    {position.department} • {position.location} • Created on {position.createdAt}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-lg font-medium mb-2">Description</h3>
-                      <p className="text-muted-foreground">{position.description}</p>
+            <Card>
+              <CardHeader>
+                <CardTitle>Position Overview</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-8">
+                  <section>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Summary</h3>
+                    <div className="prose prose-gray max-w-none">
+                      {position.description && (
+                        <p className="text-gray-700 mb-4">{position.description}</p>
+                      )}
+                      {position.role_overview && (
+                        <div className="text-gray-700">
+                          <ReactMarkdown>
+                            {position.role_overview}
+                          </ReactMarkdown>
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <h3 className="text-lg font-medium mb-2">Requirements</h3>
-                      <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                        {position.requirements.map((req: string, idx: number) => (
-                          <li key={idx}>{req}</li>
-                        ))}
-                      </ul>
+                  </section>
+
+                  <section>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Competencies</h3>
+                    <div className="prose prose-gray max-w-none">
+                      {position.key_competencies_section ? (
+                        <div className="space-y-2">
+                          {position.key_competencies_section.split('\n').map((item, index) => {
+                            const trimmedItem = item.trim();
+                            if (trimmedItem.startsWith('•')) {
+                              return (
+                                <div key={index} className="flex items-start">
+                                  <span className="text-gray-500 mr-2">•</span>
+                                  <span className="text-gray-700">{trimmedItem.substring(1).trim()}</span>
+                                </div>
+                              );
+                            }
+                            return trimmedItem ? <p key={index} className="text-gray-700">{trimmedItem}</p> : null;
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 italic">No key competencies specified</p>
+                      )}
                     </div>
+                  </section>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Applications Summary</CardTitle>
+                <CardDescription>Current application statistics</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-muted p-4 rounded-lg text-center">
+                    <p className="text-3xl font-bold">{candidates.length}</p>
+                    <p className="text-sm text-muted-foreground">Total Candidates</p>
                   </div>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Summary</CardTitle>
-                  <CardDescription>Current application statistics</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-muted p-4 rounded-lg text-center">
-                      <p className="text-3xl font-bold">{candidates.length}</p>
-                      <p className="text-sm text-muted-foreground">Total Candidates</p>
-                    </div>
-                    <div className="bg-muted p-4 rounded-lg text-center">
-                      <p className="text-3xl font-bold">{candidates.filter(c => c.status === 'Interviewed').length}</p>
-                      <p className="text-sm text-muted-foreground">Interviewed</p>
-                    </div>
-                    <div className="bg-muted p-4 rounded-lg text-center">
-                      <p className="text-3xl font-bold">{candidates.filter(c => c.matchScore > 85).length}</p>
-                      <p className="text-sm text-muted-foreground">High Match</p>
-                    </div>
+                  <div className="bg-muted p-4 rounded-lg text-center">
+                    <p className="text-3xl font-bold">{candidates.filter(c => c.status === 'Interviewed').length}</p>
+                    <p className="text-sm text-muted-foreground">Interviewed</p>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                  <div className="bg-muted p-4 rounded-lg text-center">
+                    <p className="text-3xl font-bold">{candidates.filter(c => c.matchScore > 85).length}</p>
+                    <p className="text-sm text-muted-foreground">High Match</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="responsibilities" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Key Responsibilities</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="prose prose-gray max-w-none">
+                  {position.key_responsibilities ? (
+                    <div className="space-y-2">
+                      {position.key_responsibilities.split('\n').map((item, index) => {
+                        const trimmedItem = item.trim();
+                        if (trimmedItem.startsWith('•')) {
+                          return (
+                            <div key={index} className="flex items-start">
+                              <span className="text-gray-500 mr-2">•</span>
+                              <span className="text-gray-700">{trimmedItem.substring(1).trim()}</span>
+                            </div>
+                          );
+                        }
+                        return trimmedItem ? <p key={index} className="text-gray-700">{trimmedItem}</p> : null;
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic">No responsibilities specified</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="qualifications" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Qualifications</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-8">
+                  <section>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Required Qualifications</h3>
+                    <div className="prose prose-gray max-w-none">
+                      {position.required_qualifications ? (
+                        <div className="space-y-2">
+                          {position.required_qualifications.split('\n').map((item, index) => {
+                            const trimmedItem = item.trim();
+                            if (trimmedItem.startsWith('•')) {
+                              return (
+                                <div key={index} className="flex items-start">
+                                  <span className="text-gray-500 mr-2">•</span>
+                                  <span className="text-gray-700">{trimmedItem.substring(1).trim()}</span>
+                                </div>
+                              );
+                            }
+                            return trimmedItem ? <p key={index} className="text-gray-700">{trimmedItem}</p> : null;
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 italic">No required qualifications specified</p>
+                      )}
+                    </div>
+                  </section>
+
+                  <section>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Preferred Qualifications</h3>
+                    <div className="prose prose-gray max-w-none">
+                      {position.preferred_qualifications ? (
+                        <div className="space-y-2">
+                          {position.preferred_qualifications.split('\n').map((item, index) => {
+                            const trimmedItem = item.trim();
+                            if (trimmedItem.startsWith('•')) {
+                              return (
+                                <div key={index} className="flex items-start">
+                                  <span className="text-gray-500 mr-2">•</span>
+                                  <span className="text-gray-700">{trimmedItem.substring(1).trim()}</span>
+                                </div>
+                              );
+                            }
+                            return trimmedItem ? <p key={index} className="text-gray-700">{trimmedItem}</p> : null;
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 italic">No preferred qualifications specified</p>
+                      )}
+                    </div>
+                  </section>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="benefits" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Benefits & Perks</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="prose prose-gray max-w-none">
+                  {position.benefits ? (
+                    <div className="space-y-2">
+                      {position.benefits.split('\n').map((item, index) => {
+                        const trimmedItem = item.trim();
+                        if (trimmedItem.startsWith('•')) {
+                          return (
+                            <div key={index} className="flex items-start">
+                              <span className="text-gray-500 mr-2">•</span>
+                              <span className="text-gray-700">{trimmedItem.substring(1).trim()}</span>
+                            </div>
+                          );
+                        }
+                        return trimmedItem ? <p key={index} className="text-gray-700">{trimmedItem}</p> : null;
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic">No benefits information available</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="candidates" className="mt-4">
             <Card>
               <CardHeader>
-                <CardTitle>Ranked Candidates</CardTitle>
-                <CardDescription>Candidates are ordered by their match score</CardDescription>
+                <CardTitle>Candidates</CardTitle>
+                <CardDescription>Candidates who have applied or been interviewed for this position</CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Skills</TableHead>
-                      <TableHead>Experience</TableHead>
-                      <TableHead className="text-center">Match Score</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Last Interview</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {candidates.map((candidate) => (
-                      <TableRow key={candidate.id} className="hover:cursor-pointer">
-                        <TableCell className="font-medium">
-                          <Link to={`/candidate/${candidate.id}`} className="text-primary hover:underline">
-                            {candidate.name}
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {candidate.skills.slice(0, 3).map((skill: string, idx: number) => (
-                              <span 
-                                key={idx} 
-                                className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary"
-                              >
-                                {skill}
-                              </span>
-                            ))}
-                            {candidate.skills.length > 3 && (
-                              <span className="inline-flex items-center text-xs text-muted-foreground">
-                                +{candidate.skills.length - 3} more
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>{candidate.yearsOfExperience} years</TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center">
-                            <span 
-                              className={`font-medium ${candidate.matchScore > 85 ? 'text-green-600' : 
-                                          candidate.matchScore > 75 ? 'text-amber-600' : 
-                                          'text-muted-foreground'}`}
-                            >
-                              {candidate.matchScore}%
-                            </span>
-                            {candidate.matchScore > 85 && <Star size={14} className="ml-1 fill-green-500 text-green-500" />}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span 
-                            className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
-                              ${candidate.status === 'Interviewed' ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20' :
-                                candidate.status === 'Scheduled' ? 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20' :
-                                'bg-yellow-50 text-yellow-700 ring-1 ring-inset ring-yellow-600/20'}`}
-                          >
-                            {candidate.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>{candidate.lastInterviewedAt}</TableCell>
+                {candidates.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Skills</TableHead>
+                        <TableHead>Experience</TableHead>
+                        <TableHead className="text-center">Match Score</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Last Interview</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {candidates.map((candidate) => (
+                        <TableRow key={candidate.id} className="hover:cursor-pointer">
+                          <TableCell className="font-medium">
+                            <Link to={`/candidates/${candidate.id}`} className="text-primary hover:underline">
+                              {candidate.name}
+                            </Link>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {candidate.skills.slice(0, 3).map((skill: string, idx: number) => (
+                                <span 
+                                  key={idx} 
+                                  className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary"
+                                >
+                                  {skill}
+                                </span>
+                              ))}
+                              {candidate.skills.length > 3 && (
+                                <span className="inline-flex items-center text-xs text-muted-foreground">
+                                  +{candidate.skills.length - 3} more
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>{candidate.yearsOfExperience} years</TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center">
+                              <span 
+                                className={`font-medium ${candidate.matchScore > 85 ? 'text-green-600' : 
+                                            candidate.matchScore > 75 ? 'text-amber-600' : 
+                                            'text-muted-foreground'}`}
+                              >
+                                {candidate.matchScore}%
+                              </span>
+                              {candidate.matchScore > 85 && <Star size={14} className="ml-1 fill-green-500 text-green-500" />}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span 
+                              className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium
+                                ${candidate.status === 'Interviewed' ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20' :
+                                  candidate.status === 'Scheduled' ? 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20' :
+                                  'bg-yellow-50 text-yellow-700 ring-1 ring-inset ring-yellow-600/20'}`}
+                            >
+                              {candidate.status}
+                            </span>
+                          </TableCell>
+                          <TableCell>{candidate.lastInterviewedAt}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <p className="text-muted-foreground text-center py-8">No candidates have applied for this position yet.</p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
+
         </Tabs>
       </div>
     </div>
