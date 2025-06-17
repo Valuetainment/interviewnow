@@ -34,6 +34,7 @@ import DiagnosticTest from "./pages/DiagnosticTest";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from './hooks/useAuth';
 import { WebRTCTestPage } from './pages/WebRTCTestPage';
+import Privacy from "./pages/Privacy";
 
 // Import layout components
 import MainLayout from './components/layouts/MainLayout';
@@ -57,6 +58,7 @@ const App = () => (
               {/* Public routes with MainLayout */}
               <Route element={<MainLayout />}>
                 <Route path="/" element={<Index />} />
+                <Route path="/privacy" element={<Privacy />} />
               </Route>
               
               {/* Auth routes with AuthLayout */}

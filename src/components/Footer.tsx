@@ -1,5 +1,5 @@
-
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
   return (
@@ -9,37 +9,37 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4">Product</h3>
             <ul className="space-y-2">
-              <li><a href="#" className="text-muted-foreground hover:text-foreground">Features</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-foreground">Pricing</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-foreground">Integrations</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-foreground">Enterprise</a></li>
+              <li><a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">Features</a></li>
+              <li><a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">Pricing</a></li>
+              <li><a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">Integrations</a></li>
+              <li><a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">Enterprise</a></li>
             </ul>
           </div>
           <div>
             <h3 className="text-lg font-semibold mb-4">Resources</h3>
             <ul className="space-y-2">
-              <li><a href="#" className="text-muted-foreground hover:text-foreground">Documentation</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-foreground">API Reference</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-foreground">Blog</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-foreground">Community</a></li>
+              <li><a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">Documentation</a></li>
+              <li><a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">API Reference</a></li>
+              <li><a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">Blog</a></li>
+              <li><a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">Community</a></li>
             </ul>
           </div>
           <div>
             <h3 className="text-lg font-semibold mb-4">Company</h3>
             <ul className="space-y-2">
-              <li><a href="#" className="text-muted-foreground hover:text-foreground">About</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-foreground">Careers</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-foreground">Contact</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-foreground">Press</a></li>
+              <li><a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">About</a></li>
+              <li><a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">Careers</a></li>
+              <li><a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">Contact</a></li>
+              <li><a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">Press</a></li>
             </ul>
           </div>
           <div>
             <h3 className="text-lg font-semibold mb-4">Legal</h3>
             <ul className="space-y-2">
-              <li><a href="#" className="text-muted-foreground hover:text-foreground">Privacy Policy</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-foreground">Terms of Service</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-foreground">Security</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-foreground">GDPR</a></li>
+              <li><Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">Privacy Policy</Link></li>
+              <li><a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">Terms of Service</a></li>
+              <li><a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">Security</a></li>
+              <li><a href="#" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground">GDPR</a></li>
             </ul>
           </div>
         </div>
