@@ -21,7 +21,7 @@ import InterviewTestSimple from "./pages/InterviewTestSimple";
 import SimpleWebRTCTest from "./pages/SimpleWebRTCTest";
 import BasicWebRTCTest from "./pages/BasicWebRTCTest";
 import Transcripts from "./pages/Transcripts";
-import Positions2 from "./pages/Positions2";
+import Positions from "./pages/Positions";
 import PositionDetail from "./pages/PositionDetail";
 import Dashboard from "./pages/Dashboard";
 import Companies from "./pages/Companies";
@@ -81,7 +81,7 @@ const App = () => (
                 <Route path="/test-interview" element={<TestInterview />} />
                 <Route path="/interview-test-production" element={<InterviewTestProduction />} />
                 <Route path="/transcripts" element={<Transcripts />} />
-                <Route path="/positions" element={<Positions2 />} />
+                <Route path="/positions" element={<Positions />} />
                 <Route path="/positions/:id" element={<PositionDetail />} />
                 <Route path="/companies" element={<Companies />} />
                 <Route path="/companies/new" element={<NewCompany />} />
