@@ -284,7 +284,7 @@ const Transcripts: React.FC = () => {
               <CardHeader>
                 <CardTitle>
                   {selectedSession 
-                    ? `${selectedSession.candidate.full_name} - ${selectedSession.position.title}` 
+                    ? `${formatFullName(selectedSession.candidate.first_name, selectedSession.candidate.last_name)} - ${selectedSession.position.title}` 
                     : 'Transcript Details'}
                 </CardTitle>
                 <CardDescription>
@@ -302,7 +302,7 @@ const Transcripts: React.FC = () => {
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <p className="text-muted-foreground">Candidate:</p>
-                          <p className="font-medium">{selectedSession.candidate.full_name}</p>
+                          <p className="font-medium">{formatFullName(selectedSession.candidate.first_name, selectedSession.candidate.last_name)}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Position:</p>
@@ -342,7 +342,7 @@ const Transcripts: React.FC = () => {
                                 {formatTimestamp(entry.start_ms)}
                             </div>
                             <div className="flex-grow">
-                              <p className={`text-sm font-medium mb-1 ${
+                              <p className={`text-sm font-medium mb-1 capitalize ${
                                   entry.speaker.toLowerCase() === "interviewer" || entry.speaker.toLowerCase() === "assistant"
                                   ? "text-primary" 
                                   : "text-foreground"
