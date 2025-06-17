@@ -216,9 +216,14 @@ const PositionDetail2 = () => {
         </div>
 
         <div className="flex flex-wrap gap-2 mb-6">
-          {position.experienceLevel && (
+          {position.experience_level && (
             <Badge variant="outline" className="bg-purple-50">
-              {position.experienceLevel}
+              {position.experience_level}
+            </Badge>
+          )}
+          {position.employment_type && (
+            <Badge variant="outline" className="bg-indigo-50">
+              {position.employment_type}
             </Badge>
           )}
           {position.department && (
@@ -231,14 +236,24 @@ const PositionDetail2 = () => {
               {position.location}
             </Badge>
           )}
-          {position.company && (
+          {position.companies?.name && (
             <Badge variant="outline" className="bg-amber-50 flex items-center gap-1">
-              <Building className="h-3 w-3" /> {position.company}
+              <Building className="h-3 w-3" /> {position.companies.name}
+            </Badge>
+          )}
+          {position.reference_number && (
+            <Badge variant="outline" className="bg-pink-50">
+              Ref: {position.reference_number}
             </Badge>
           )}
           <Badge variant="outline" className="bg-slate-50 flex items-center gap-1">
-            <Calendar className="h-3 w-3" /> Created {position.createdAt}
+            <Calendar className="h-3 w-3" /> Created {new Date(position.created_at).toLocaleDateString()}
           </Badge>
+          {position.application_deadline && (
+            <Badge variant="outline" className="bg-red-50 flex items-center gap-1">
+              <Calendar className="h-3 w-3" /> Deadline {new Date(position.application_deadline).toLocaleDateString()}
+            </Badge>
+          )}
         </div>
 
         <Tabs defaultValue="overview" className="mb-6" onValueChange={setActiveTab} value={activeTab}>
@@ -260,6 +275,36 @@ const PositionDetail2 = () => {
                 </div>
               </CardContent>
             </Card>
+            
+            {(position.salary_range || position.travel_requirements || position.work_authorization) && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>Position Details</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {position.salary_range && (
+                      <div>
+                        <p className="text-sm text-gray-500">Salary Range</p>
+                        <p className="text-gray-900 font-medium">{position.salary_range}</p>
+                      </div>
+                    )}
+                    {position.travel_requirements && (
+                      <div>
+                        <p className="text-sm text-gray-500">Travel Requirements</p>
+                        <p className="text-gray-900">{position.travel_requirements}</p>
+                      </div>
+                    )}
+                    {position.work_authorization && (
+                      <div className="md:col-span-2">
+                        <p className="text-sm text-gray-500">Work Authorization</p>
+                        <p className="text-gray-900">{position.work_authorization}</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
               <Card>

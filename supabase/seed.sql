@@ -54,7 +54,7 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Create additional test positions for variety
-INSERT INTO public.positions (id, tenant_id, title, description, role_overview, key_responsibilities, required_qualifications, preferred_qualifications, key_competencies_section, company_id, experience_level, created_at, updated_at)
+INSERT INTO public.positions (id, tenant_id, title, description, role_overview, key_responsibilities, required_qualifications, preferred_qualifications, key_competencies_section, company_id, experience_level, department, location, employment_type, salary_range, application_deadline, reference_number, travel_requirements, work_authorization, created_at, updated_at)
 VALUES 
   (
     '33333333-3333-3333-3333-333333333333',
@@ -79,6 +79,14 @@ VALUES
     'Technical skills, UI/UX sensibility, attention to detail, collaboration',
     'c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1',
     'Mid-level',
+    'Engineering',
+    'Remote',
+    'Full-Time',
+    '$100,000 - $130,000',
+    NOW() + INTERVAL '30 days',
+    'FE-2025-001',
+    'No travel required',
+    'Must be authorized to work in the US',
     NOW() - INTERVAL '10 days',
     NOW() - INTERVAL '10 days'
   ),
@@ -105,13 +113,21 @@ VALUES
     'Infrastructure expertise, automation mindset, security awareness, problem-solving',
     'c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1',
     'Senior',
+    'Engineering',
+    'New York, NY',
+    'Full-Time',
+    '$130,000 - $160,000',
+    NOW() + INTERVAL '21 days',
+    'DO-2025-002',
+    'Occasional travel to data centers (10%)',
+    'Must be authorized to work in the US',
     NOW() - INTERVAL '15 days',
     NOW() - INTERVAL '15 days'
   )
 ON CONFLICT (id) DO NOTHING;
 
 -- Create test positions (continuing with original ones)
-INSERT INTO public.positions (id, tenant_id, title, description, role_overview, key_responsibilities, required_qualifications, preferred_qualifications, key_competencies_section, company_id, experience_level, created_at, updated_at)
+INSERT INTO public.positions (id, tenant_id, title, description, role_overview, key_responsibilities, required_qualifications, preferred_qualifications, key_competencies_section, company_id, experience_level, department, location, employment_type, salary_range, application_deadline, reference_number, travel_requirements, work_authorization, created_at, updated_at)
 VALUES 
   (
     '11111111-1111-1111-1111-111111111111',
@@ -149,6 +165,14 @@ VALUES
 • Innovation - Drive technical innovation and best practices',
     'c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1',
     'Senior',
+    'Engineering',
+    'San Francisco, CA (Hybrid)',
+    'Full-Time',
+    '$150,000 - $200,000',
+    NOW() + INTERVAL '45 days',
+    'SSE-2025-003',
+    'No travel required',
+    'Must be authorized to work in the US',
     NOW(),
     NOW()
   ),
@@ -189,6 +213,14 @@ VALUES
 • Leadership - Influence without authority across teams',
     'c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1',
     'Mid-level',
+    'Product',
+    'Remote',
+    'Full-Time',
+    '$120,000 - $150,000',
+    NOW() + INTERVAL '25 days',
+    'PM-2025-004',
+    'Quarterly travel for team meetings (15%)',
+    'Must be authorized to work in the US or EU',
     NOW(),
     NOW()
   )

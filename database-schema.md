@@ -53,6 +53,14 @@ Links Supabase Auth users to tenants with roles.
 - **preferred_qualifications**: text
 - **key_competencies_section**: text
 - **experience_level**: text
+- **department**: text
+- **location**: text
+- **employment_type**: text (Full-Time, Part-Time, Contract, or Internship)
+- **salary_range**: text
+- **application_deadline**: date
+- **reference_number**: text
+- **travel_requirements**: text
+- **work_authorization**: text
 - **created_at**: timestamp
 - **updated_at**: timestamp
 

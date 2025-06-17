@@ -25,6 +25,14 @@ const formSchema = z.object({
   shortDescription: z.string().min(10, 'Description must be at least 10 characters'),
   experienceLevel: z.enum(['entry-level', 'mid-level', 'senior', 'lead']),
   companyId: z.string().optional(),
+  department: z.string().optional(),
+  location: z.string().optional(),
+  employmentType: z.enum(['Full-Time', 'Part-Time', 'Contract', 'Internship']),
+  salaryRange: z.string().optional(),
+  applicationDeadline: z.string().optional(),
+  referenceNumber: z.string().optional(),
+  travelRequirements: z.string().optional(),
+  workAuthorization: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -69,6 +77,14 @@ const CreatePosition = () => {
       shortDescription: '',
       experienceLevel: 'mid-level',
       companyId: '',
+      department: '',
+      location: '',
+      employmentType: 'Full-Time',
+      salaryRange: '',
+      applicationDeadline: '',
+      referenceNumber: '',
+      travelRequirements: '',
+      workAuthorization: '',
     },
   });
 
@@ -251,7 +267,20 @@ const CreatePosition = () => {
       return;
     }
 
-    const { title, shortDescription, experienceLevel, companyId } = form.getValues();
+    const { 
+      title, 
+      shortDescription, 
+      experienceLevel, 
+      companyId,
+      department,
+      location,
+      employmentType,
+      salaryRange,
+      applicationDeadline,
+      referenceNumber,
+      travelRequirements,
+      workAuthorization
+    } = form.getValues();
     
     if (!generatedData || !editedData) {
       toast.error("Please generate a position description first");
@@ -292,6 +321,14 @@ const CreatePosition = () => {
           key_competencies_section: editedData.key_competencies_section,
           experience_level: experienceLevel,
           company_id: companyId || null,
+          department: department || null,
+          location: location || null,
+          employment_type: employmentType,
+          salary_range: salaryRange || null,
+          application_deadline: applicationDeadline || null,
+          reference_number: referenceNumber || null,
+          travel_requirements: travelRequirements || null,
+          work_authorization: workAuthorization || null,
         })
         .select('id')
         .single();
@@ -466,6 +503,142 @@ const CreatePosition = () => {
                           <FormDescription>
                             Just a few sentences to guide the AI in generating a full description
                           </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="department"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Department</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g. Engineering, Marketing" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="location"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Location</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g. Remote, New York, London" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="employmentType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Employment Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="Full-Time">Full-Time</SelectItem>
+                                <SelectItem value="Part-Time">Part-Time</SelectItem>
+                                <SelectItem value="Contract">Contract</SelectItem>
+                                <SelectItem value="Internship">Internship</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="salaryRange"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Salary Range</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g. $80,000 - $100,000" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="applicationDeadline"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Application Deadline</FormLabel>
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="referenceNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Reference Number</FormLabel>
+                            <FormControl>
+                              <Input placeholder="e.g. FE-2025-001" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={form.control}
+                      name="travelRequirements"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Travel Requirements</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="e.g. Occasional travel to client sites (10%), No travel required" 
+                              className="min-h-[80px]"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="workAuthorization"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Work Authorization Requirements</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="e.g. Must be authorized to work in the US, EU work permit required" 
+                              className="min-h-[80px]"
+                              {...field} 
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
