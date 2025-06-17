@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import ReactMarkdown from 'react-markdown';
+import { formatFullName } from '@/lib/utils';
 import { toast } from 'sonner';
 
 const PositionDetail = () => {
@@ -152,7 +153,8 @@ const PositionDetail = () => {
             *,
             candidates (
               id,
-              full_name,
+              first_name,
+              last_name,
               email,
               skills,
               experience
@@ -190,7 +192,7 @@ const PositionDetail = () => {
                 // Add new candidate
                 candidateMap.set(candidateId, {
                   id: session.candidates.id,
-                  name: session.candidates.full_name,
+                  name: formatFullName(session.candidates.first_name, session.candidates.last_name),
                   email: session.candidates.email,
                   skills: session.candidates.skills || [],
                   yearsOfExperience: 0, // Would need to calculate from experience

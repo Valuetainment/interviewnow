@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FileText, MapPin, Mail, Phone, Briefcase, ExternalLink, LinkedinIcon, GithubIcon } from 'lucide-react';
+import { formatFullName } from '@/lib/utils';
 
 interface CandidateCardProps {
   candidate: any; // Candidate type
@@ -27,7 +28,7 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({ candidate, enriche
   const hasEnrichedData = !!enrichedProfile;
   
   // Get name from appropriate source
-  const name = candidate.full_name || '';
+  const name = formatFullName(candidate.first_name, candidate.last_name);
   const avatarInitials = getInitials(name);
   
   // Get location from either enriched data or resume analysis

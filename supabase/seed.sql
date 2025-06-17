@@ -243,12 +243,13 @@ VALUES
 ON CONFLICT (position_id, competency_id) DO NOTHING;
 
 -- Create test candidates
-INSERT INTO public.candidates (id, tenant_id, full_name, email, phone, skills, experience, education, resume_text, resume_analysis, created_at, updated_at)
+INSERT INTO public.candidates (id, tenant_id, first_name, last_name, email, phone, skills, experience, education, resume_text, resume_analysis, created_at, updated_at)
 VALUES 
   (
     '11111111-1111-1111-1111-111111111112',
     'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
-    'John Smith',
+    'John',
+    'Smith',
     'john.smith@example.com',
     '+15551234567',
     ARRAY['JavaScript', 'TypeScript', 'React', 'Node.js', 'PostgreSQL', 'AWS'],
@@ -302,7 +303,8 @@ VALUES
   (
     '22222222-2222-2222-2222-222222222223',
     'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
-    'Sarah Johnson',
+    'Sarah',
+    'Johnson',
     'sarah.johnson@example.com',
     '+15559876543',
     ARRAY['Product Management', 'Agile', 'Data Analysis', 'User Research', 'SQL'],
@@ -349,7 +351,8 @@ VALUES
   (
     '33333333-3333-3333-3333-333333333334',
     'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
-    'Michael Chen',
+    'Michael',
+    'Chen',
     'michael.chen@example.com',
     '+15554567890',
     ARRAY['Python', 'Machine Learning', 'TensorFlow', 'React', 'Docker'],

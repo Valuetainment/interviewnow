@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { supabase, getCurrentTenantId } from '@/integrations/supabase/client';
+import { formatFullName } from '@/lib/utils';
 import {
   Card,
   CardContent,
@@ -40,7 +41,8 @@ import { CalendarIcon, Loader2 } from 'lucide-react';
 // Define proper types for our data
 interface Candidate {
   id: string;
-  full_name: string;
+  first_name: string;
+  last_name: string;
   email: string;
 }
 
@@ -84,7 +86,7 @@ const CreateSession = () => {
         // Fetch candidates
         const { data: candidatesData, error: candidatesError } = await supabase
           .from('candidates')
-          .select('id, full_name, email');
+          .select('id, first_name, last_name, email');
 
         if (candidatesError) throw candidatesError;
         setCandidates(candidatesData || []);
@@ -207,7 +209,7 @@ const CreateSession = () => {
                           <SelectContent>
                             {candidates.map((candidate) => (
                               <SelectItem key={candidate.id} value={candidate.id}>
-                                {candidate.full_name} ({candidate.email})
+                                {formatFullName(candidate.first_name, candidate.last_name)} ({candidate.email})
                               </SelectItem>
                             ))}
                           </SelectContent>

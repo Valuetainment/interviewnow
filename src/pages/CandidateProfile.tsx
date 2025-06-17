@@ -137,7 +137,11 @@ const parseJsonSafely = <T,>(data: string | T | null | undefined): T | null => {
   try {
     return JSON.parse(data) as T;
   } catch (error) {
-    console.error('Error parsing JSON:', error);
+    // Only log error if the string looks like it should be JSON (starts with { or [)
+    const trimmedData = data.trim();
+    if (trimmedData.startsWith('{') || trimmedData.startsWith('[')) {
+      console.error('Error parsing JSON:', error);
+    }
     return null;
   }
 };
@@ -319,8 +323,11 @@ const CandidateProfile = () => {
     }
     
     // 3. Use resume_analysis.experience.positions_held if available
-    if (candidate?.resume_analysis?.experience?.positions_held) {
-      return candidate.resume_analysis.experience.positions_held;
+    if (candidate?.resume_analysis?.experience && 
+        typeof candidate.resume_analysis.experience === 'object' &&
+        'positions_held' in candidate.resume_analysis.experience &&
+        Array.isArray(candidate.resume_analysis.experience.positions_held)) {
+      return candidate.resume_analysis.experience.positions_held as JobPosition[];
     }
     
     // 4. Fallback to empty array
@@ -374,14 +381,20 @@ const CandidateProfile = () => {
   
   // Current position - try enriched profile first, then resume_analysis
   const jobTitle = enrichedProfile?.job_title || 
-                  (candidate.resume_analysis?.experience?.positions_held && 
-                   candidate.resume_analysis?.experience?.positions_held?.length > 0 ? 
-                   candidate.resume_analysis?.experience?.positions_held?.[0]?.title : '');
+                  (candidate.resume_analysis?.experience && 
+                   typeof candidate.resume_analysis.experience === 'object' &&
+                   'positions_held' in candidate.resume_analysis.experience &&
+                   Array.isArray(candidate.resume_analysis.experience.positions_held) &&
+                   candidate.resume_analysis.experience.positions_held.length > 0 ? 
+                   (candidate.resume_analysis.experience.positions_held[0] as JobPosition).title : '');
                    
   const company = enrichedProfile?.job_company_name || 
-                  (candidate.resume_analysis?.experience?.positions_held && 
-                   candidate.resume_analysis?.experience?.positions_held?.length > 0 ? 
-                   candidate.resume_analysis?.experience?.positions_held?.[0]?.company : '');
+                  (candidate.resume_analysis?.experience && 
+                   typeof candidate.resume_analysis.experience === 'object' &&
+                   'positions_held' in candidate.resume_analysis.experience &&
+                   Array.isArray(candidate.resume_analysis.experience.positions_held) &&
+                   candidate.resume_analysis.experience.positions_held.length > 0 ? 
+                   (candidate.resume_analysis.experience.positions_held[0] as JobPosition).company : '');
   
   // Professional summary from resume_analysis
   const summary = candidate.resume_analysis?.professional_summary || '';
@@ -407,24 +420,42 @@ const CandidateProfile = () => {
   const getEducation = (): Education[] => {
     // First try enriched profile
     if (enrichedProfile?.education) {
-      const eduData = parseJsonSafely<Education[]>(
-        typeof enrichedProfile.education === 'string'
-          ? enrichedProfile.education
-          : enrichedProfile.education
-      );
+      // Check if it's a plain string (not JSON)
+      if (typeof enrichedProfile.education === 'string') {
+        // Try to parse as JSON first
+        const eduData = parseJsonSafely<Education[]>(enrichedProfile.education);
+        if (eduData && Array.isArray(eduData)) return eduData;
+        
+        // If JSON parsing failed, treat as plain text education description
+        // Convert plain string to Education object
+        return [{
+          degree: enrichedProfile.education,
+          institution: ''
+        }];
+      }
       
-      if (eduData && Array.isArray(eduData)) return eduData;
+      // If not a string, assume it's already parsed
+      if (Array.isArray(enrichedProfile.education)) return enrichedProfile.education;
     }
     
     // Then try candidate education
     if (candidate?.education) {
-      const eduData = parseJsonSafely<Education[]>(
-        typeof candidate.education === 'string'
-          ? candidate.education
-          : candidate.education
-      );
+      // Check if it's a plain string (not JSON)
+      if (typeof candidate.education === 'string') {
+        // Try to parse as JSON first
+        const eduData = parseJsonSafely<Education[]>(candidate.education);
+        if (eduData && Array.isArray(eduData)) return eduData;
+        
+        // If JSON parsing failed, treat as plain text education description
+        // Convert plain string to Education object
+        return [{
+          degree: candidate.education,
+          institution: ''
+        }];
+      }
       
-      if (eduData && Array.isArray(eduData)) return eduData;
+      // If not a string, assume it's already parsed
+      if (Array.isArray(candidate.education)) return candidate.education;
     }
     
     // Finally try resume_analysis
@@ -624,14 +655,16 @@ const CandidateProfile = () => {
             </Card>
             
             {/* Areas of Specialization */}
-            {candidate.resume_analysis?.areas_specialization && candidate.resume_analysis.areas_specialization.length > 0 && (
+            {candidate.resume_analysis?.areas_specialization && 
+             Array.isArray(candidate.resume_analysis.areas_specialization) && 
+             candidate.resume_analysis.areas_specialization.length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle>Areas of Specialization</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
-                    {candidate.resume_analysis.areas_specialization.map((area: string, index: number) => (
+                    {(candidate.resume_analysis.areas_specialization as string[]).map((area: string, index: number) => (
                       <Badge
                         key={`${area}-${index}`}
                         variant="outline"
@@ -646,14 +679,16 @@ const CandidateProfile = () => {
             )}
             
             {/* Notable Achievements */}
-            {candidate.resume_analysis?.notable_achievements && candidate.resume_analysis.notable_achievements.length > 0 && (
+            {candidate.resume_analysis?.notable_achievements && 
+             Array.isArray(candidate.resume_analysis.notable_achievements) &&
+             candidate.resume_analysis.notable_achievements.length > 0 && (
               <Card className="md:col-span-2">
                 <CardHeader>
                   <CardTitle>Notable Achievements</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ul className="list-disc list-inside space-y-2 pl-2">
-                    {candidate.resume_analysis.notable_achievements.map((achievement: string, index: number) => (
+                    {(candidate.resume_analysis.notable_achievements as string[]).map((achievement: string, index: number) => (
                       <li key={index} className="text-blue-600">{achievement}</li>
                     ))}
                   </ul>

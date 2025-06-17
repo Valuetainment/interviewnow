@@ -69,11 +69,10 @@ Note: Benefits are now stored at the company level in `companies.benefits_data`
 ### candidates
 - **id**: uuid (PK)
 - **tenant_id**: uuid (FK to tenants)
-- **full_name**: text
 - **email**: text (unique per tenant)
 - **phone**: text
-- **first_name**: text
-- **last_name**: text
+- **first_name**: text (required)
+- **last_name**: text (required)
 - **auth_email**: text
 - **auth_id**: uuid (FK to auth.users)
 - **skills**: text[]

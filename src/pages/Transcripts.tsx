@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { FileText, Search, Calendar, Clock, List, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { formatFullName } from '@/lib/utils';
 
 interface TranscriptEntry {
   id: string;
@@ -25,7 +26,8 @@ interface InterviewSession {
   end_time: string | null;
   status: string;
   candidate: {
-    full_name: string;
+    first_name: string;
+    last_name: string;
     email: string;
   };
   position: {
@@ -63,7 +65,8 @@ const Transcripts: React.FC = () => {
             end_time,
             status,
             candidates (
-              full_name,
+              first_name,
+              last_name,
               email
             ),
             positions (
@@ -129,8 +132,9 @@ const Transcripts: React.FC = () => {
   }, [tenantId]);
   
   const filteredSessions = sessions.filter(session => {
+    const fullName = formatFullName(session.candidate.first_name, session.candidate.last_name);
     const matchesSearch = 
-      session.candidate.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
       session.position.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       session.candidate.email.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -245,7 +249,7 @@ const Transcripts: React.FC = () => {
                         }`}
                       >
                         <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-medium">{session.candidate.full_name}</h3>
+                          <h3 className="font-medium">{formatFullName(session.candidate.first_name, session.candidate.last_name)}</h3>
                           {session.transcript_entries.length > 0 && (
                             <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
                               {session.transcript_entries.length} entries

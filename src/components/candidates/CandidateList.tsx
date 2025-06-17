@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Filter } from 'lucide-react';
+import { formatFullName } from '@/lib/utils';
 
 interface CandidateListProps {
   positionId?: string;
@@ -89,8 +90,9 @@ const CandidateList: React.FC<CandidateListProps> = ({ positionId, limit = 20 })
     const searchLower = searchTerm.toLowerCase();
     
     // Search in name, email, and skills
+    const fullName = formatFullName(candidate.first_name, candidate.last_name).toLowerCase();
     return (
-      (candidate.full_name && candidate.full_name.toLowerCase().includes(searchLower)) ||
+      fullName.includes(searchLower) ||
       (candidate.email && candidate.email.toLowerCase().includes(searchLower)) ||
       (candidate.resume_analysis?.professional_summary && 
         candidate.resume_analysis.professional_summary.toLowerCase().includes(searchLower)) ||
@@ -130,8 +132,8 @@ const CandidateList: React.FC<CandidateListProps> = ({ positionId, limit = 20 })
           <SelectContent>
             <SelectItem value="created_at:desc">Newest first</SelectItem>
             <SelectItem value="created_at:asc">Oldest first</SelectItem>
-            <SelectItem value="full_name:asc">Name (A-Z)</SelectItem>
-            <SelectItem value="full_name:desc">Name (Z-A)</SelectItem>
+            <SelectItem value="first_name:asc">Name (A-Z)</SelectItem>
+            <SelectItem value="first_name:desc">Name (Z-A)</SelectItem>
           </SelectContent>
         </Select>
       </div>
