@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, formatFullName } from '@/lib/utils';
 
 interface SearchResult {
   id: string;
@@ -94,12 +94,30 @@ const GlobalSearch: React.FC = () => {
       }
 
       // Search candidates
-      const { data: candidates, error: candidatesError } = await supabase
+      // Handle full name searches by splitting the query
+      const queryParts = query.trim().split(/\s+/);
+      let candidateQuery = supabase
         .from('candidates')
-        .select('id, first_name, last_name, email, full_name')
-        .eq('tenant_id', tenantId)
-        .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,full_name.ilike.%${query}%`)
-        .limit(5);
+        .select('id, first_name, last_name, email')
+        .eq('tenant_id', tenantId);
+
+      // If query has multiple parts, search for combinations
+      if (queryParts.length >= 2) {
+        const [firstName, ...lastNameParts] = queryParts;
+        const lastName = lastNameParts.join(' ');
+        
+        candidateQuery = candidateQuery.or(
+          `first_name.ilike.%${firstName}%,last_name.ilike.%${lastName}%,` +
+          `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%`
+        );
+      } else {
+        // Single word query - search all fields
+        candidateQuery = candidateQuery.or(
+          `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%`
+        );
+      }
+
+      const { data: candidates, error: candidatesError } = await candidateQuery.limit(5);
 
       console.log('Candidates search result:', candidates, 'Error:', candidatesError);
 
@@ -107,9 +125,7 @@ const GlobalSearch: React.FC = () => {
         allResults.push(...candidates.map(candidate => ({
           id: candidate.id,
           type: 'candidate' as const,
-          title: candidate.first_name && candidate.last_name 
-            ? `${candidate.first_name} ${candidate.last_name}` 
-            : candidate.full_name || 'Unknown Candidate',
+          title: formatFullName(candidate.first_name, candidate.last_name),
           subtitle: candidate.email,
           metadata: undefined,
           route: `/candidates/${candidate.id}`
@@ -152,7 +168,7 @@ const GlobalSearch: React.FC = () => {
           status,
           candidate_id,
           position_id,
-          candidates(id, first_name, last_name, full_name),
+          candidates(id, first_name, last_name),
           positions(id, title)
         `)
         .eq('tenant_id', tenantId)
@@ -168,7 +184,6 @@ const GlobalSearch: React.FC = () => {
           return (
             candidate?.first_name?.toLowerCase().includes(searchLower) ||
             candidate?.last_name?.toLowerCase().includes(searchLower) ||
-            candidate?.full_name?.toLowerCase().includes(searchLower) ||
             position?.title?.toLowerCase().includes(searchLower)
           );
         });
@@ -176,9 +191,7 @@ const GlobalSearch: React.FC = () => {
         allResults.push(...filteredInterviews.slice(0, 5).map(interview => {
           const candidate = (interview as any).candidates;
           const position = (interview as any).positions;
-          const candidateName = candidate?.first_name && candidate?.last_name
-            ? `${candidate.first_name} ${candidate.last_name}`
-            : candidate?.full_name || 'Unknown Candidate';
+          const candidateName = formatFullName(candidate?.first_name, candidate?.last_name);
             
           return {
             id: interview.id,
@@ -202,7 +215,7 @@ const GlobalSearch: React.FC = () => {
             id,
             candidate_id,
             position_id,
-            candidates(id, first_name, last_name, full_name),
+            candidates(id, first_name, last_name),
             positions(id, title)
           )
         `)
@@ -221,9 +234,7 @@ const GlobalSearch: React.FC = () => {
         
         const uniqueSessions = Array.from(sessionMap.values());
         allResults.push(...uniqueSessions.slice(0, 5).map(session => {
-          const candidateName = session.candidates?.first_name && session.candidates?.last_name
-            ? `${session.candidates.first_name} ${session.candidates.last_name}`
-            : session.candidates?.full_name || 'Unknown Candidate';
+          const candidateName = formatFullName(session.candidates?.first_name, session.candidates?.last_name);
           
           return {
             id: session.id,
