@@ -8,8 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MapPin, Mail, Phone, Briefcase, FileText, ExternalLink, LinkedinIcon, GithubIcon, AlertCircle } from 'lucide-react';
+import { MapPin, Mail, Phone, Briefcase, FileText, ExternalLink, LinkedinIcon, GithubIcon, AlertCircle, GraduationCap, User, Code, Target, Trophy, Database, ClipboardList } from 'lucide-react';
 import { Json } from '@/integrations/supabase/types';
+import { formatFullName } from '@/lib/utils';
 
 // Define types for better type safety
 interface JobPosition {
@@ -27,6 +28,12 @@ interface Education {
   institution: string;
   start_date?: string;
   end_date?: string;
+  field?: string;
+  graduation_year?: string;
+  gpa?: string;
+  description?: string;
+  activities?: string[];
+  honors?: string[];
 }
 
 // Add type for raw education string format from OpenAI
@@ -59,7 +66,8 @@ type EducationData = Education[] | string;
 interface Candidate {
   id: string;
   tenant_id: string;
-  full_name: string;
+  first_name?: string | null;
+  last_name?: string | null;
   email: string;
   phone?: string | null;
   resume_url?: string | null;
@@ -366,7 +374,7 @@ const CandidateProfile = () => {
 
   // Extract data from candidate and enriched profile (if available)
   const hasEnrichedData = !!enrichedProfile;
-  const name = candidate.full_name || '';
+  const name = formatFullName(candidate.first_name, candidate.last_name);
   const avatarInitials = getInitials(name);
   
   // Location - try enriched profile first, then resume_analysis
@@ -418,56 +426,29 @@ const CandidateProfile = () => {
   
   // Education data - similar approach as experience
   const getEducation = (): Education[] => {
-    // First try enriched profile
-    if (enrichedProfile?.education) {
-      // Check if it's a plain string (not JSON)
-      if (typeof enrichedProfile.education === 'string') {
-        // Try to parse as JSON first
-        const eduData = parseJsonSafely<Education[]>(enrichedProfile.education);
-        if (eduData && Array.isArray(eduData)) return eduData;
-        
-        // If JSON parsing failed, treat as plain text education description
-        // Convert plain string to Education object
-        return [{
-          degree: enrichedProfile.education,
-          institution: ''
-        }];
-      }
-      
-      // If not a string, assume it's already parsed
-      if (Array.isArray(enrichedProfile.education)) return enrichedProfile.education;
-    }
-    
-    // Then try candidate education
-    if (candidate?.education) {
-      // Check if it's a plain string (not JSON)
-      if (typeof candidate.education === 'string') {
-        // Try to parse as JSON first
-        const eduData = parseJsonSafely<Education[]>(candidate.education);
-        if (eduData && Array.isArray(eduData)) return eduData;
-        
-        // If JSON parsing failed, treat as plain text education description
-        // Convert plain string to Education object
-        return [{
-          degree: candidate.education,
-          institution: ''
-        }];
-      }
-      
-      // If not a string, assume it's already parsed
-      if (Array.isArray(candidate.education)) return candidate.education;
-    }
-    
-    // Finally try resume_analysis
+    // First check resume_analysis for most detailed data
     if (candidate?.resume_analysis?.education) {
       // Check if it's already structured data
       if (Array.isArray(candidate.resume_analysis.education) && 
-          typeof candidate.resume_analysis.education[0] === 'object') {
-        return candidate.resume_analysis.education as Education[];
-      }
-      
-      // Handle array of strings case (e.g., ["Degree, Institution", ...])
-      if (Array.isArray(candidate.resume_analysis.education)) {
+          candidate.resume_analysis.education.length > 0) {
+        
+        // If first element is an object, it's structured data
+        if (typeof candidate.resume_analysis.education[0] === 'object') {
+          return candidate.resume_analysis.education.map((edu: any) => ({
+            degree: edu.degree || '',
+            institution: edu.institution || '',
+            start_date: edu.start_date,
+            end_date: edu.end_date,
+            field: edu.field,
+            graduation_year: edu.graduation_year,
+            gpa: edu.gpa,
+            description: edu.description,
+            activities: edu.activities,
+            honors: edu.honors
+          }));
+        }
+        
+        // Handle array of strings case
         return candidate.resume_analysis.education.map((edu: RawEducation) => {
           if (typeof edu !== 'string') {
             return edu; // Already an Education object
@@ -479,10 +460,9 @@ const CandidateProfile = () => {
           if (parts.length >= 2) {
             return {
               degree: parts[0],
-              institution: parts.slice(1).join(', ') // Combine the rest in case there are multiple commas
+              institution: parts.slice(1).join(', ')
             };
           } else {
-            // If no comma, just use the whole string as the degree
             return {
               degree: edu,
               institution: ''
@@ -490,6 +470,49 @@ const CandidateProfile = () => {
           }
         });
       }
+    }
+    
+    // Then try enriched profile
+    if (enrichedProfile?.education) {
+      if (typeof enrichedProfile.education === 'string') {
+        const eduData = parseJsonSafely<Education[]>(enrichedProfile.education);
+        if (eduData && Array.isArray(eduData)) return eduData;
+        
+        return [{
+          degree: enrichedProfile.education,
+          institution: ''
+        }];
+      }
+      
+      if (Array.isArray(enrichedProfile.education)) return enrichedProfile.education;
+    }
+    
+    // Finally try candidate education field (plain text fallback)
+    if (candidate?.education) {
+      if (typeof candidate.education === 'string') {
+        const eduData = parseJsonSafely<Education[]>(candidate.education);
+        if (eduData && Array.isArray(eduData)) return eduData;
+        
+        // Plain text education - try to extract institution if present
+        const educationText = candidate.education;
+        
+        // Try to parse patterns like "Bachelor of Science in Computer Science, State University"
+        const commaIndex = educationText.lastIndexOf(',');
+        if (commaIndex !== -1) {
+          return [{
+            degree: educationText.substring(0, commaIndex).trim(),
+            institution: educationText.substring(commaIndex + 1).trim()
+          }];
+        }
+        
+        // No comma found, just use as degree
+        return [{
+          degree: educationText,
+          institution: ''
+        }];
+      }
+      
+      if (Array.isArray(candidate.education)) return candidate.education;
     }
     
     return [];
@@ -621,7 +644,10 @@ const CandidateProfile = () => {
             {/* Professional Summary */}
             <Card>
               <CardHeader>
-                <CardTitle>Professional Summary</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Professional Summary
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
@@ -633,7 +659,10 @@ const CandidateProfile = () => {
             {/* Skills */}
             <Card>
               <CardHeader>
-                <CardTitle>Skills</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Code className="h-5 w-5" />
+                  Skills
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {skills.length > 0 ? (
@@ -660,7 +689,10 @@ const CandidateProfile = () => {
              candidate.resume_analysis.areas_specialization.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Areas of Specialization</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5" />
+                    Areas of Specialization
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
@@ -684,7 +716,10 @@ const CandidateProfile = () => {
              candidate.resume_analysis.notable_achievements.length > 0 && (
               <Card className="md:col-span-2">
                 <CardHeader>
-                  <CardTitle>Notable Achievements</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Trophy className="h-5 w-5" />
+                    Notable Achievements
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ul className="list-disc list-inside space-y-2 pl-2">
@@ -699,7 +734,10 @@ const CandidateProfile = () => {
             {/* Experience */}
             <Card className="md:col-span-2">
               <CardHeader>
-                <CardTitle>Experience</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Briefcase className="h-5 w-5" />
+                  Experience
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {experience.length > 0 ? (
@@ -754,32 +792,116 @@ const CandidateProfile = () => {
             {/* Education */}
             <Card className="md:col-span-2">
               <CardHeader>
-                <CardTitle>Education</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <GraduationCap className="h-5 w-5" />
+                  Education
+                  {candidate?.resume_analysis?.education && Array.isArray(candidate.resume_analysis.education) && 
+                   candidate.resume_analysis.education.some((edu: any) => edu.field || edu.graduation_year) && (
+                    <Badge variant="outline" className="ml-2 text-xs border-blue-500 text-blue-600">
+                      Verified
+                    </Badge>
+                  )}
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {education.length > 0 ? (
                   <div className="space-y-4">
-                    {education.map((edu: Education, index: number) => (
-                      <div key={index} className="border-b pb-3 last:border-0">
-                        <h3 className="font-medium text-lg">{edu.degree}</h3>
-                        <p className="text-blue-600 font-medium">{edu.institution}</p>
-                        {(edu.start_date || edu.end_date) && (
-                          <div className="flex items-center mt-1">
-                            <span className="inline-block mr-1">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar">
-                                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
-                                <line x1="16" x2="16" y1="2" y2="6"></line>
-                                <line x1="8" x2="8" y1="2" y2="6"></line>
-                                <line x1="3" x2="21" y1="10" y2="10"></line>
-                              </svg>
-                            </span>
-                            <p className="text-sm text-muted-foreground">
-                              {edu.start_date || ''} {edu.end_date ? `- ${edu.end_date}` : edu.start_date ? '- Present' : ''}
-                            </p>
+                    {education.map((edu: Education, index: number) => {
+                      // Extract all available education data
+                      const eduData = (() => {
+                        // Check if this education item came from resume_analysis
+                        if (candidate?.resume_analysis?.education && 
+                            Array.isArray(candidate.resume_analysis.education) &&
+                            candidate.resume_analysis.education[index] &&
+                            typeof candidate.resume_analysis.education[index] === 'object') {
+                          const resumeEdu = candidate.resume_analysis.education[index] as any;
+                          return {
+                            ...edu,
+                            field: resumeEdu.field || edu.field,
+                            graduation_year: resumeEdu.graduation_year || edu.graduation_year,
+                            gpa: resumeEdu.gpa || edu.gpa,
+                            description: resumeEdu.description || edu.description,
+                            activities: resumeEdu.activities || edu.activities,
+                            honors: resumeEdu.honors || edu.honors
+                          };
+                        }
+                        return edu;
+                      })();
+                      
+                      return (
+                        <div key={index} className="border-b pb-3 last:border-0">
+                          <h3 className="font-medium text-lg">
+                            {eduData.degree}
+                            {eduData.field && <span className="text-base"> in {eduData.field}</span>}
+                          </h3>
+                          {eduData.institution && (
+                            <p className="text-blue-600 font-medium">{eduData.institution}</p>
+                          )}
+                          
+                          <div className="mt-1 space-y-1">
+                            {/* Date information */}
+                            {(eduData.start_date || eduData.end_date || eduData.graduation_year) && (
+                              <div className="flex items-center">
+                                <span className="inline-block mr-1">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar">
+                                    <rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect>
+                                    <line x1="16" x2="16" y1="2" y2="6"></line>
+                                    <line x1="8" x2="8" y1="2" y2="6"></line>
+                                    <line x1="3" x2="21" y1="10" y2="10"></line>
+                                  </svg>
+                                </span>
+                                <p className="text-sm text-muted-foreground">
+                                  {eduData.graduation_year ? (
+                                    `Graduated ${eduData.graduation_year}`
+                                  ) : (
+                                    <>
+                                      {eduData.start_date || ''} 
+                                      {eduData.end_date ? ` - ${eduData.end_date}` : eduData.start_date ? ' - Present' : ''}
+                                    </>
+                                  )}
+                                </p>
+                              </div>
+                            )}
+                            
+                            {/* GPA */}
+                            {eduData.gpa && (
+                              <p className="text-sm">
+                                <span className="font-medium">GPA:</span> {eduData.gpa}
+                              </p>
+                            )}
+                            
+                            {/* Description */}
+                            {eduData.description && (
+                              <p className="text-sm text-muted-foreground mt-2">{eduData.description}</p>
+                            )}
+                            
+                            {/* Honors */}
+                            {eduData.honors && eduData.honors.length > 0 && (
+                              <div className="mt-2">
+                                <p className="text-sm font-medium">Honors & Awards:</p>
+                                <ul className="list-disc list-inside text-sm space-y-1 pl-2">
+                                  {eduData.honors.map((honor: string, idx: number) => (
+                                    <li key={idx} className="text-blue-600">{honor}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            
+                            {/* Activities */}
+                            {eduData.activities && eduData.activities.length > 0 && (
+                              <div className="mt-2">
+                                <p className="text-sm font-medium">Activities:</p>
+                                <ul className="list-disc list-inside text-sm space-y-1 pl-2">
+                                  {eduData.activities.map((activity: string, idx: number) => (
+                                    <li key={idx}>{activity}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    ))}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">No education listed</p>
@@ -791,7 +913,8 @@ const CandidateProfile = () => {
             {hasEnrichedData && (
               <Card className="md:col-span-2">
                 <CardHeader>
-                  <CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Database className="h-5 w-5" />
                     <span className="text-blue-500">Enhanced Profile Data</span>
                   </CardTitle>
                   <CardDescription>Additional data from People Data Labs</CardDescription>
@@ -920,6 +1043,7 @@ const CandidateProfile = () => {
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">No assessments available yet</p>
               <Button className="mt-4" variant="outline">
+                <ClipboardList className="mr-2 h-4 w-4" />
                 Create Assessment
               </Button>
             </CardContent>
