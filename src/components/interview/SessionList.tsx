@@ -90,7 +90,7 @@ const SessionList: React.FC<SessionListProps> = ({ filterStatus }) => {
       setStatusFilter(filterStatus);
     }
   }, [filterStatus]);
-
+  
   // Fetch sessions on component mount
   useEffect(() => {
     fetchSessions();
@@ -244,10 +244,10 @@ const SessionList: React.FC<SessionListProps> = ({ filterStatus }) => {
             </CardDescription>
           </div>
           {(statusFilter === 'scheduled' || statusFilter === 'all') && (
-            <Button onClick={handleCreateSession} className="mt-4 md:mt-0">
-              <Plus className="mr-2 h-4 w-4" />
-              New Session
-            </Button>
+          <Button onClick={handleCreateSession} className="mt-4 md:mt-0">
+            <Plus className="mr-2 h-4 w-4" />
+            New Session
+          </Button>
           )}
         </div>
       </CardHeader>
@@ -263,24 +263,24 @@ const SessionList: React.FC<SessionListProps> = ({ filterStatus }) => {
             />
           </div>
           {!filterStatus && (
-            <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select
-                value={statusFilter}
-                onValueChange={setStatusFilter}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="flex items-center space-x-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Select
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="scheduled">Scheduled</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           )}
         </div>
         

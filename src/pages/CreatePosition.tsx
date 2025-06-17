@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Info } from 'lucide-react';
 import { toast } from "sonner";
 
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,7 @@ const CreatePosition = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
   const [generatedData, setGeneratedData] = useState<any>(null);
+  const [editedData, setEditedData] = useState<any>(null);
   const [suggestedCompetencies, setSuggestedCompetencies] = useState<Competency[]>([
     { id: 'comp-1', name: 'Technical Knowledge', description: 'Depth of technical skills and expertise related to the role', suggested_weight: 0 },
     { id: 'comp-2', name: 'Problem Solving', description: 'Ability to identify, analyze, and solve complex problems', suggested_weight: 0 },
@@ -56,9 +57,10 @@ const CreatePosition = () => {
     { id: 'comp-9', name: 'Creativity', description: 'Ability to generate innovative solutions and ideas', suggested_weight: 0 },
     { id: 'comp-10', name: 'Project Management', description: 'Skill in planning, executing, and closing projects effectively', suggested_weight: 0 },
   ]);
+  // Start with empty competency weights - user will select them
   const [competencyWeights, setCompetencyWeights] = useState<Record<string, number>>({});
   const [weightsValid, setWeightsValid] = useState(false);
-  const [exactlyFiveSelected, setExactlyFiveSelected] = useState(false);
+  const [hasCompetencies, setHasCompetencies] = useState(false);
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -70,11 +72,81 @@ const CreatePosition = () => {
     },
   });
 
-  // Check if exactly 5 competencies are selected
+  // Check if at least one competency is selected
   useEffect(() => {
     const selectedCompetencies = Object.entries(competencyWeights).filter(([_, weight]) => weight > 0);
-    setExactlyFiveSelected(selectedCompetencies.length === 5);
+    setHasCompetencies(selectedCompetencies.length > 0);
   }, [competencyWeights]);
+  
+  // Get the list of selected competency IDs
+  const selectedCompetencies = Object.keys(competencyWeights).filter(id => competencyWeights[id] > 0);
+
+  // Function to format bullet points and lists in generated content
+  const formatGeneratedContent = (content: any): string => {
+    // Ensure content is a string
+    if (!content || typeof content !== 'string') {
+      console.log('Content is not a string:', content);
+      return '';
+    }
+    
+    let formattedContent = content;
+    
+    // Check if it looks like a comma-separated list of sentences (common AI output)
+    // Look for pattern: "Sentence ending with period.,Another sentence.,etc."
+    const sentencePattern = /\.[,]\s*[A-Z]/;
+    
+    if (sentencePattern.test(formattedContent) || 
+        (formattedContent.includes('.,') && !formattedContent.includes('\n'))) {
+      // Split by period-comma combination
+      formattedContent = formattedContent
+        .split(/\.,(?=\s*[A-Z])/)
+        .map(item => {
+          // Clean up the item and add bullet
+          const cleanItem = item.trim();
+          // Add period back if it's missing
+          const itemWithPeriod = cleanItem.endsWith('.') ? cleanItem : cleanItem + '.';
+          return `• ${itemWithPeriod}`;
+        })
+        .join('\n');
+    }
+    // Handle the comma-separated format with asterisks (e.g., "* item1.,* item2.,* item3.")
+    else if (formattedContent.includes('.,* ')) {
+      formattedContent = formattedContent
+        .split('.,* ')
+        .map((item, index) => {
+          // First item might have the initial asterisk
+          const cleanItem = index === 0 ? item.replace(/^\*\s*/, '') : item;
+          // Remove trailing period if it exists
+          return `• ${cleanItem.trim().replace(/\.$/, '')}`;
+        })
+        .join('\n');
+    }
+    // Handle comma-separated bullet points (e.g., "* item1,* item2,* item3")
+    else if (formattedContent.includes(',* ')) {
+      formattedContent = formattedContent
+        .split(',* ')
+        .map((item, index) => {
+          // First item might have the initial asterisk
+          const cleanItem = index === 0 ? item.replace(/^\*\s*/, '') : item;
+          return `• ${cleanItem.trim()}`;
+        })
+        .join('\n');
+    }
+    // Handle markdown-style bullets (- item or * item)
+    else if (formattedContent.includes('\n- ') || formattedContent.includes('\n* ')) {
+      formattedContent = formattedContent
+        .split('\n')
+        .map(line => {
+          if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+            return line.replace(/^(\s*)([-*])\s*/, '$1• ');
+          }
+          return line;
+        })
+        .join('\n');
+    }
+    
+    return formattedContent;
+  };
 
   const onSubmit = async (data: FormData) => {
     if (!tenantId) {
@@ -88,9 +160,9 @@ const CreatePosition = () => {
       return;
     }
 
-    // Validate that exactly 5 competencies are selected
-    if (!exactlyFiveSelected) {
-      toast.error("Please select exactly 5 competencies for this position");
+    // Validate that at least one competency is selected
+    if (!hasCompetencies) {
+      toast.error("Please select at least one competency for this position");
       return;
     }
 
@@ -123,8 +195,32 @@ const CreatePosition = () => {
         throw new Error("Failed to generate position description");
       }
       
+      // Log the generated data structure for debugging
+      console.log("Generated data structure:", genData);
+      console.log("Raw data fields:", {
+        role_overview: genData.role_overview,
+        key_responsibilities: genData.key_responsibilities,
+        required_qualifications: genData.required_qualifications,
+        preferred_qualifications: genData.preferred_qualifications,
+        benefits: genData.benefits,
+      });
+      
       // Set the generated data
       setGeneratedData(genData);
+      
+      // Format and set the edited data  
+      const formattedData = {
+        description: genData.description || '',
+        role_overview: formatGeneratedContent(genData.role_overview) || genData.role_overview || '',
+        key_responsibilities: formatGeneratedContent(genData.key_responsibilities) || genData.key_responsibilities || '',
+        required_qualifications: formatGeneratedContent(genData.required_qualifications) || genData.required_qualifications || '',
+        preferred_qualifications: formatGeneratedContent(genData.preferred_qualifications) || genData.preferred_qualifications || '',
+        benefits: formatGeneratedContent(genData.benefits) || genData.benefits || '',
+        key_competencies_section: genData.key_competencies_section || '',
+      };
+      
+      console.log("Formatted data:", formattedData);
+      setEditedData(formattedData);
       
       // Switch to the description tab
       setActiveTab('description');
@@ -150,15 +246,15 @@ const CreatePosition = () => {
       return;
     }
 
-    // Validate that exactly 5 competencies are selected
-    if (!exactlyFiveSelected) {
-      toast.error("Please select exactly 5 competencies for this position");
+    // Validate that at least one competency is selected
+    if (!hasCompetencies) {
+      toast.error("Please select at least one competency for this position");
       return;
     }
 
     const { title, shortDescription, experienceLevel, companyId } = form.getValues();
     
-    if (!generatedData) {
+    if (!generatedData || !editedData) {
       toast.error("Please generate a position description first");
       return;
     }
@@ -178,24 +274,24 @@ const CreatePosition = () => {
       console.log("Starting position save with:", { 
         tenantId, 
         title, 
-        description: generatedData.description?.substring(0, 20) + "...",
+        description: editedData.description?.substring(0, 20) + "...",
         companyId 
       });
       
-      // 1. Create the position with enhanced fields
+      // 1. Create the position with enhanced fields (use edited data)
       // @ts-ignore - Database type definition might not include all fields
       const { data: position, error: positionError } = await supabase
         .from('positions')
         .insert({
           tenant_id: tenantId,
           title: title,
-          description: generatedData.description,
-          role_overview: generatedData.role_overview,
-          key_responsibilities: generatedData.key_responsibilities,
-          required_qualifications: generatedData.required_qualifications, 
-          preferred_qualifications: generatedData.preferred_qualifications,
-          benefits: generatedData.benefits,
-          key_competencies_section: generatedData.key_competencies_section,
+          description: editedData.description,
+          role_overview: editedData.role_overview,
+          key_responsibilities: editedData.key_responsibilities,
+          required_qualifications: editedData.required_qualifications, 
+          preferred_qualifications: editedData.preferred_qualifications,
+          benefits: editedData.benefits,
+          key_competencies_section: editedData.key_competencies_section,
           experience_level: experienceLevel,
           company_id: companyId || null,
         })
@@ -383,7 +479,7 @@ const CreatePosition = () => {
                   <CardHeader>
                     <CardTitle>Key Competencies</CardTitle>
                     <CardDescription>
-                      Select exactly 5 competencies and distribute importance (%) across them. Total must equal 100%.
+                      Define the most important competencies for this role. These will be used to evaluate candidates during interviews.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -397,7 +493,8 @@ const CreatePosition = () => {
                     />
                   </CardContent>
                   <CardFooter className="flex flex-col space-y-4">
-                    {!weightsValid && (
+                    {/* Only show error alert if user has started selecting competencies */}
+                    {selectedCompetencies.length > 0 && !weightsValid && (
                       <Alert variant="destructive" className="w-full">
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Invalid weights</AlertTitle>
@@ -406,22 +503,12 @@ const CreatePosition = () => {
                         </AlertDescription>
                       </Alert>
                     )}
-                    
-                    {!exactlyFiveSelected && (
-                      <Alert variant="destructive" className="w-full">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Incorrect number of competencies</AlertTitle>
-                        <AlertDescription>
-                          Please select exactly 5 competencies for this position.
-                        </AlertDescription>
-                      </Alert>
-                    )}
                   </CardFooter>
                 </Card>
                 
                 <Button 
                   type="submit" 
-                  disabled={isGenerating || !weightsValid || !exactlyFiveSelected}
+                  disabled={isGenerating || !weightsValid || !hasCompetencies}
                   className="w-full"
                 >
                   {isGenerating ? (
@@ -440,14 +527,24 @@ const CreatePosition = () => {
           <TabsContent value="description">
             {generatedData ? (
               <div className="space-y-6">
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    Review and edit the generated content below. You can modify any section before saving the position.
+                  </AlertDescription>
+                </Alert>
+                
                 <Card>
                   <CardHeader>
                     <CardTitle>Role Overview</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="prose prose-sm max-w-none">
-                      <div className="whitespace-pre-wrap">{generatedData.role_overview}</div>
-                    </div>
+                    <Textarea
+                      value={editedData?.role_overview || ''}
+                      onChange={(e) => setEditedData({ ...editedData, role_overview: e.target.value })}
+                      className="min-h-[150px] text-base text-foreground whitespace-pre-wrap"
+                      placeholder="Enter role overview..."
+                    />
                   </CardContent>
                 </Card>
                 
@@ -456,9 +553,12 @@ const CreatePosition = () => {
                     <CardTitle>Key Responsibilities</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="prose prose-sm max-w-none">
-                      <div className="whitespace-pre-wrap">{generatedData.key_responsibilities}</div>
-                    </div>
+                    <Textarea
+                      value={editedData?.key_responsibilities || ''}
+                      onChange={(e) => setEditedData({ ...editedData, key_responsibilities: e.target.value })}
+                      className="min-h-[250px] text-base text-foreground whitespace-pre-wrap"
+                      placeholder="Enter key responsibilities..."
+                    />
                   </CardContent>
                 </Card>
                 
@@ -467,9 +567,12 @@ const CreatePosition = () => {
                     <CardTitle>Required Qualifications</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="prose prose-sm max-w-none">
-                      <div className="whitespace-pre-wrap">{generatedData.required_qualifications}</div>
-                    </div>
+                    <Textarea
+                      value={editedData?.required_qualifications || ''}
+                      onChange={(e) => setEditedData({ ...editedData, required_qualifications: e.target.value })}
+                      className="min-h-[250px] text-base text-foreground whitespace-pre-wrap"
+                      placeholder="Enter required qualifications..."
+                    />
                   </CardContent>
                 </Card>
                 
@@ -478,9 +581,12 @@ const CreatePosition = () => {
                     <CardTitle>Preferred Qualifications</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="prose prose-sm max-w-none">
-                      <div className="whitespace-pre-wrap">{generatedData.preferred_qualifications}</div>
-                    </div>
+                    <Textarea
+                      value={editedData?.preferred_qualifications || ''}
+                      onChange={(e) => setEditedData({ ...editedData, preferred_qualifications: e.target.value })}
+                      className="min-h-[200px] text-base text-foreground whitespace-pre-wrap"
+                      placeholder="Enter preferred qualifications..."
+                    />
                   </CardContent>
                 </Card>
                 
@@ -489,9 +595,12 @@ const CreatePosition = () => {
                     <CardTitle>Benefits</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="prose prose-sm max-w-none">
-                      <div className="whitespace-pre-wrap">{generatedData.benefits}</div>
-                    </div>
+                    <Textarea
+                      value={editedData?.benefits || ''}
+                      onChange={(e) => setEditedData({ ...editedData, benefits: e.target.value })}
+                      className="min-h-[200px] text-base text-foreground whitespace-pre-wrap"
+                      placeholder="Enter benefits..."
+                    />
                   </CardContent>
                 </Card>
                 

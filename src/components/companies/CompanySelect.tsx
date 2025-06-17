@@ -9,9 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { Building, Plus } from "lucide-react";
+import { Building } from "lucide-react";
 
 interface CompanySelectProps {
   value: string;
@@ -39,42 +37,29 @@ const CompanySelect: React.FC<CompanySelectProps> = ({
   });
 
   return (
-    <div className="flex gap-2 items-start">
-      <div className="relative flex-1">
-        <Select
-          value={value}
-          onValueChange={onChange}
-          disabled={disabled || isLoading}
-        >
-          <SelectTrigger className="w-full pl-9">
-            <Building className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <SelectValue placeholder="Select a company" />
-          </SelectTrigger>
-          <SelectContent className="max-h-[300px]">
-            {companies?.map((company) => (
-              <SelectItem key={company.id} value={company.id}>
-                {company.name}
-              </SelectItem>
-            ))}
-            {companies?.length === 0 && (
-              <div className="text-sm p-2 text-center text-muted-foreground">
-                No companies found
-              </div>
-            )}
-          </SelectContent>
-        </Select>
-      </div>
-      <Link to="/companies/new" tabIndex={-1}>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="h-10 w-10"
-        >
-          <Plus className="h-4 w-4" />
-          <span className="sr-only">New Company</span>
-        </Button>
-      </Link>
+    <div className="relative">
+      <Select
+        value={value}
+        onValueChange={onChange}
+        disabled={disabled || isLoading}
+      >
+        <SelectTrigger className="w-full pl-9">
+          <Building className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <SelectValue placeholder="Select a company" />
+        </SelectTrigger>
+        <SelectContent className="max-h-[300px]">
+          {companies?.map((company) => (
+            <SelectItem key={company.id} value={company.id}>
+              {company.name}
+            </SelectItem>
+          ))}
+          {companies?.length === 0 && (
+            <div className="text-sm p-2 text-center text-muted-foreground">
+              No companies found
+            </div>
+          )}
+        </SelectContent>
+      </Select>
     </div>
   );
 };

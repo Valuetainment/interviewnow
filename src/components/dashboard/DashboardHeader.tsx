@@ -255,11 +255,11 @@ const DashboardHeader: React.FC = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative h-8 w-8">
-                <Bell className="h-4 w-4" />
+              <Bell className="h-4 w-4" />
                 {unreadCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
                     {unreadCount}
-                  </span>
+              </span>
                 )}
               </Button>
             </DropdownMenuTrigger>
@@ -312,14 +312,14 @@ const DashboardHeader: React.FC = () => {
                         }}
                       >
                         <Check className="h-3 w-3" />
-                      </Button>
+            </Button>
                     </DropdownMenuItem>
                   ))}
                 </>
               ) : (
                 <div className="p-4 text-center text-sm text-muted-foreground">
                   No new notifications
-                </div>
+          </div>
               )}
             </DropdownMenuContent>
           </DropdownMenu>

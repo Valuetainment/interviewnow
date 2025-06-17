@@ -70,8 +70,8 @@ const CompetencySelector: React.FC<CompetencySelectorProps> = ({
             onChange={(e) => setCustomDescription(e.target.value)}
           />
           <div className="flex gap-2">
-            <Button onClick={handleAddCustom} size="sm">Add</Button>
-            <Button onClick={() => setIsAddingCustom(false)} variant="outline" size="sm">Cancel</Button>
+            <Button type="button" onClick={handleAddCustom} size="sm">Add</Button>
+            <Button type="button" onClick={() => setIsAddingCustom(false)} variant="outline" size="sm">Cancel</Button>
           </div>
         </div>
       </div>
