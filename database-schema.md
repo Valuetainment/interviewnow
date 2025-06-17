@@ -51,11 +51,12 @@ Links Supabase Auth users to tenants with roles.
 - **key_responsibilities**: text
 - **required_qualifications**: text
 - **preferred_qualifications**: text
-- **benefits**: text
 - **key_competencies_section**: text
 - **experience_level**: text
 - **created_at**: timestamp
 - **updated_at**: timestamp
+
+Note: Benefits are now stored at the company level in `companies.benefits_data`
 
 ### candidates
 - **id**: uuid (PK)

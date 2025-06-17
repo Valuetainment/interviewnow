@@ -104,10 +104,17 @@ const PositionDetail2 = () => {
         
         console.log("Fetching position with ID:", id);
         
-        // Fetch the position from the database
+        // Fetch the position from the database with company info
         const { data: positionData, error: positionError } = await supabase
           .from('positions')
-          .select('*')
+          .select(`
+            *,
+            companies (
+              id,
+              name,
+              benefits_data
+            )
+          `)
           .eq('id', id)
           .single();
           
@@ -318,10 +325,31 @@ const PositionDetail2 = () => {
               <Card>
                 <CardHeader>
                   <CardTitle>Benefits & Perks</CardTitle>
+                  {position.companies?.name && (
+                    <CardDescription>Benefits offered by {position.companies.name}</CardDescription>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="prose prose-sm max-w-none">
-                    <div className="whitespace-pre-wrap">{position.benefits}</div>
+                    {position.companies?.benefits_data ? (
+                      <div className="space-y-4">
+                        {position.companies.benefits_data.description && (
+                          <p className="text-gray-700">{position.companies.benefits_data.description}</p>
+                        )}
+                        {position.companies.benefits_data.items && position.companies.benefits_data.items.length > 0 && (
+                          <div className="space-y-2">
+                            {position.companies.benefits_data.items.map((item, index) => (
+                              <div key={index} className="flex items-start">
+                                <span className="text-gray-500 mr-2">•</span>
+                                <span className="text-gray-700">{item}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 italic">No company benefits information available</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>

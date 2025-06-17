@@ -94,7 +94,8 @@ const PositionDetail = () => {
             *,
             companies (
               id,
-              name
+              name,
+              benefits_data
             )
           `)
           .eq('id', id)
@@ -462,26 +463,30 @@ const PositionDetail = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Benefits & Perks</CardTitle>
+                {position.companies?.name && (
+                  <CardDescription>Benefits offered by {position.companies.name}</CardDescription>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="prose prose-gray max-w-none">
-                  {position.benefits ? (
-                    <div className="space-y-2">
-                      {position.benefits.split('\n').map((item, index) => {
-                        const trimmedItem = item.trim();
-                        if (trimmedItem.startsWith('•')) {
-                          return (
+                  {position.companies?.benefits_data ? (
+                    <div className="space-y-4">
+                      {position.companies.benefits_data.description && (
+                        <p className="text-gray-700">{position.companies.benefits_data.description}</p>
+                      )}
+                      {position.companies.benefits_data.items && position.companies.benefits_data.items.length > 0 && (
+                        <div className="space-y-2">
+                          {position.companies.benefits_data.items.map((item, index) => (
                             <div key={index} className="flex items-start">
                               <span className="text-gray-500 mr-2">•</span>
-                              <span className="text-gray-700">{trimmedItem.substring(1).trim()}</span>
+                              <span className="text-gray-700">{item}</span>
                             </div>
-                          );
-                        }
-                        return trimmedItem ? <p key={index} className="text-gray-700">{trimmedItem}</p> : null;
-                      })}
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <p className="text-gray-500 italic">No benefits information available</p>
+                    <p className="text-gray-500 italic">No company benefits information available</p>
                   )}
                 </div>
               </CardContent>

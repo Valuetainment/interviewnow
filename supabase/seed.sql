@@ -54,7 +54,7 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Create additional test positions for variety
-INSERT INTO public.positions (id, tenant_id, title, description, role_overview, key_responsibilities, required_qualifications, preferred_qualifications, benefits, key_competencies_section, company_id, experience_level, created_at, updated_at)
+INSERT INTO public.positions (id, tenant_id, title, description, role_overview, key_responsibilities, required_qualifications, preferred_qualifications, key_competencies_section, company_id, experience_level, created_at, updated_at)
 VALUES 
   (
     '33333333-3333-3333-3333-333333333333',
@@ -76,7 +76,6 @@ VALUES
 • Knowledge of design systems
 • Experience with animation libraries
 • Contributions to open source projects',
-    'Competitive salary, health benefits, remote work options, learning budget',
     'Technical skills, UI/UX sensibility, attention to detail, collaboration',
     'c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1',
     'Mid-level',
@@ -103,7 +102,6 @@ VALUES
 • Experience with Terraform
 • Knowledge of GitOps practices
 • Experience with service mesh technologies',
-    'Full benefits package, equity options, flexible hours, professional development',
     'Infrastructure expertise, automation mindset, security awareness, problem-solving',
     'c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1',
     'Senior',
@@ -113,7 +111,7 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- Create test positions (continuing with original ones)
-INSERT INTO public.positions (id, tenant_id, title, description, role_overview, key_responsibilities, required_qualifications, preferred_qualifications, benefits, key_competencies_section, company_id, experience_level, created_at, updated_at)
+INSERT INTO public.positions (id, tenant_id, title, description, role_overview, key_responsibilities, required_qualifications, preferred_qualifications, key_competencies_section, company_id, experience_level, created_at, updated_at)
 VALUES 
   (
     '11111111-1111-1111-1111-111111111111',
@@ -143,15 +141,6 @@ VALUES
 • Familiarity with containerization (Docker/Kubernetes)
 • Experience with GraphQL
 • Knowledge of CI/CD pipelines',
-    'At TechCorp Solutions, we offer:
-• Comprehensive health, dental, and vision insurance
-• 401(k) with 6% company match
-• Flexible work arrangements (remote/hybrid)
-• Unlimited PTO policy
-• $2,000 annual professional development budget
-• Stock options
-• Modern equipment and tools
-• Wellness programs and gym membership',
     'For this role, we value:
 • Technical Excellence - Deep expertise in modern web technologies
 • Problem Solving - Ability to tackle complex technical challenges
@@ -192,15 +181,6 @@ VALUES
 • Knowledge of user research methodologies
 • Experience with A/B testing and experimentation
 • Public speaking or thought leadership experience',
-    'We offer competitive benefits including:
-• Full medical, dental, and vision coverage
-• 401(k) with company matching
-• Flexible work location and hours
-• Generous PTO and parental leave
-• Learning and development stipend
-• Equity compensation
-• Annual company retreats
-• Home office setup allowance',
     'Key competencies for success:
 • Strategic Thinking - Develop long-term product vision
 • User Empathy - Deep understanding of customer needs

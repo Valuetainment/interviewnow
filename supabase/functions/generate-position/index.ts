@@ -62,7 +62,6 @@ Return a JSON object with the following structure:
   "key_responsibilities": "A bullet-pointed list of 5-7 specific responsibilities",
   "required_qualifications": "A bullet-pointed list of required skills and qualifications",
   "preferred_qualifications": "A bullet-pointed list of preferred (but not required) skills",
-  "benefits": "A bullet-pointed list of compelling benefits and opportunities", 
   "key_competencies_section": "A paragraph that highlights how the key competencies relate to success in this role"${!competencies ? ',\n  "competencies": [\n    {\n      "name": "Technical Knowledge",\n      "description": "Competency description",\n      "suggested_weight": 30\n    },\n    ...\n  ]' : ''}
 }
 
@@ -155,9 +154,6 @@ ${generatedData.required_qualifications || ''}
 
 ## Preferred Qualifications
 ${generatedData.preferred_qualifications || ''}
-
-## Benefits
-${generatedData.benefits || ''}
 
 ## Key Competencies
 ${generatedData.key_competencies_section || ''}`;

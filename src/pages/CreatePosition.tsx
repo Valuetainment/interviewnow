@@ -215,7 +215,6 @@ const CreatePosition = () => {
         key_responsibilities: formatGeneratedContent(genData.key_responsibilities) || genData.key_responsibilities || '',
         required_qualifications: formatGeneratedContent(genData.required_qualifications) || genData.required_qualifications || '',
         preferred_qualifications: formatGeneratedContent(genData.preferred_qualifications) || genData.preferred_qualifications || '',
-        benefits: formatGeneratedContent(genData.benefits) || genData.benefits || '',
         key_competencies_section: genData.key_competencies_section || '',
       };
       
@@ -290,7 +289,6 @@ const CreatePosition = () => {
           key_responsibilities: editedData.key_responsibilities,
           required_qualifications: editedData.required_qualifications, 
           preferred_qualifications: editedData.preferred_qualifications,
-          benefits: editedData.benefits,
           key_competencies_section: editedData.key_competencies_section,
           experience_level: experienceLevel,
           company_id: companyId || null,
@@ -586,20 +584,6 @@ const CreatePosition = () => {
                       onChange={(e) => setEditedData({ ...editedData, preferred_qualifications: e.target.value })}
                       className="min-h-[200px] text-base text-foreground whitespace-pre-wrap"
                       placeholder="Enter preferred qualifications..."
-                    />
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Benefits</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Textarea
-                      value={editedData?.benefits || ''}
-                      onChange={(e) => setEditedData({ ...editedData, benefits: e.target.value })}
-                      className="min-h-[200px] text-base text-foreground whitespace-pre-wrap"
-                      placeholder="Enter benefits..."
                     />
                   </CardContent>
                 </Card>

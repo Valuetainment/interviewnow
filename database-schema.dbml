@@ -39,7 +39,6 @@ Table positions {
   key_responsibilities text
   required_qualifications text
   preferred_qualifications text
-  benefits text
   key_competencies_section text
   experience_level text
   created_at timestamp
