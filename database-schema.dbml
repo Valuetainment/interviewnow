@@ -1,0 +1,199 @@
+// InterviewNow Database Schema
+// Use this file at https://dbdiagram.io/d
+
+Table tenants {
+  id uuid [pk]
+  name text
+  industry text
+  settings jsonb
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table users {
+  id uuid [pk, note: 'References auth.users in Supabase']
+  tenant_id uuid [ref: > tenants.id]
+  role text
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table companies {
+  id uuid [pk]
+  tenant_id uuid [ref: > tenants.id]
+  name text
+  website text
+  description text
+  industry text
+  size text
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table positions {
+  id uuid [pk]
+  tenant_id uuid [ref: > tenants.id]
+  company_id uuid [ref: > companies.id]
+  title text
+  description text
+  requirements text
+  experience_level text
+  location text
+  employment_type text
+  is_active boolean
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table candidates {
+  id uuid [pk]
+  tenant_id uuid [ref: > tenants.id]
+  full_name text
+  email text
+  phone text
+  skills text[]
+  experience jsonb
+  education text
+  resume_text text
+  resume_analysis jsonb
+  resume_url text
+  linkedin_url text
+  current_title text
+  current_company text
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table candidate_profiles {
+  id uuid [pk]
+  tenant_id uuid [ref: > tenants.id]
+  candidate_id uuid [ref: - candidates.id]
+  profile_data jsonb
+  pdl_id text
+  pdl_likelihood numeric
+  last_enriched_at timestamp
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table competencies {
+  id uuid [pk]
+  tenant_id uuid [ref: > tenants.id]
+  name text
+  description text
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table position_competencies {
+  id uuid [pk]
+  tenant_id uuid [ref: > tenants.id]
+  position_id uuid [ref: > positions.id]
+  competency_id uuid [ref: > competencies.id]
+  weight integer
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table interview_sessions {
+  id uuid [pk]
+  tenant_id uuid [ref: > tenants.id]
+  position_id uuid [ref: > positions.id]
+  candidate_id uuid [ref: > candidates.id]
+  company_id uuid [ref: > companies.id]
+  title text
+  description text
+  scheduled_time timestamp
+  start_time timestamp
+  end_time timestamp
+  status text [note: 'scheduled, in_progress, completed, cancelled']
+  webrtc_status text
+  webrtc_server_url text
+  webrtc_session_id text
+  webrtc_architecture text
+  webrtc_connection_time timestamp
+  webrtc_operation_id text
+  ice_candidates jsonb
+  sdp_offers jsonb
+  sdp_answers jsonb
+  avatar_enabled boolean
+  avatar_session_id text
+  avatar_provider text
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table transcript_entries {
+  id uuid [pk]
+  tenant_id uuid [ref: > tenants.id]
+  session_id uuid [ref: > interview_sessions.id]
+  speaker text
+  text text
+  start_ms integer
+  end_ms integer
+  confidence numeric
+  created_at timestamp
+}
+
+Table video_segments {
+  id uuid [pk]
+  tenant_id uuid [ref: > tenants.id]
+  session_id uuid [ref: > interview_sessions.id]
+  segment_url text
+  start_ms integer
+  end_ms integer
+  created_at timestamp
+}
+
+Table interview_invitations {
+  token text [pk]
+  tenant_id uuid [ref: > tenants.id]
+  session_id uuid [ref: > interview_sessions.id]
+  candidate_id uuid [ref: > candidates.id]
+  expires_at timestamp
+  status text [note: 'pending, sent, accepted, expired']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table candidate_assessments {
+  id uuid [pk]
+  tenant_id uuid [ref: > tenants.id]
+  session_id uuid [ref: > interview_sessions.id]
+  candidate_id uuid [ref: > candidates.id]
+  overall_score numeric
+  competency_scores jsonb
+  summary text
+  transcript_analysis jsonb
+  created_at timestamp
+}
+
+Table notifications {
+  id uuid [pk]
+  user_id uuid [ref: > users.id]
+  tenant_id uuid [ref: > tenants.id]
+  interview_session_id uuid [ref: > interview_sessions.id]
+  type text [note: 'interview_completed, interview_scheduled, interview_cancelled, assessment_ready']
+  title text
+  message text
+  is_read boolean
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table tenant_preferences {
+  id uuid [pk]
+  tenant_id uuid [ref: > tenants.id]
+  preferences jsonb
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table usage_events {
+  id uuid [pk]
+  tenant_id uuid [ref: > tenants.id]
+  event_type text
+  metadata jsonb
+  quantity integer
+  created_at timestamp
+} 
