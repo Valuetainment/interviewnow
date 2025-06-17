@@ -1,11 +1,10 @@
-
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import CompanyForm from "@/components/companies/CompanyForm";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { type Company } from "@/pages/Companies";
+import { Company } from "@/types/company";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,57 +18,74 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
-const EditCompany = () => {
+const EditCompany: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
   const { data: company, isLoading } = useQuery({
     queryKey: ["company", id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("companies" as any)
+        .from("companies")
         .select("*")
         .eq("id", id)
         .single();
 
       if (error) throw error;
-      return data as Company;
+      
+      // Transform the data to match the new structure if needed
+      return {
+        ...data,
+        benefits_data: data.benefits_data || {
+          description: data.benefits || "",
+          items: data.benefits_list || []
+        },
+        values_data: data.values_data || {
+          description: data.values || "",
+          items: data.core_values || []
+        }
+      } as Company;
     },
   });
 
-  const updateCompany = useMutation({
-    mutationFn: async (data: any) => {
-      const { data: result, error } = await supabase
-        .from("companies" as any)
-        .update(data as any)
-        .eq("id", id)
-        .select()
-        .single();
+  const handleSubmit = async (data: Omit<Company, 'id' | 'tenant_id' | 'created_at' | 'updated_at'>) => {
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from("companies")
+        .update({
+          name: data.name,
+          culture: data.culture,
+          story: data.story,
+          benefits_data: data.benefits_data,
+          values_data: data.values_data,
+        })
+        .eq("id", id);
 
       if (error) throw error;
-      return result;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["companies"] });
-      queryClient.invalidateQueries({ queryKey: ["company", id] });
+
       toast({
-        title: "Company updated",
-        description: "Company has been successfully updated.",
+        title: "Success",
+        description: "Company updated successfully",
       });
+      
       navigate("/companies");
-    },
-    onError: (error) => {
+    } catch (error) {
       console.error("Error updating company:", error);
       toast({
-        title: "Error updating company",
-        description: "There was an error updating the company. Please try again.",
+        title: "Error",
+        description: "Failed to update company",
         variant: "destructive",
       });
-    },
-  });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const deleteCompany = useMutation({
     mutationFn: async () => {
@@ -100,15 +116,16 @@ const EditCompany = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-24">
-        <div className="max-w-3xl mx-auto">
-          <div className="h-8 bg-muted rounded w-1/3 animate-pulse mb-8"></div>
-          <div className="space-y-6">
-            <div className="h-10 bg-muted rounded w-full animate-pulse"></div>
-            <div className="h-10 bg-muted rounded w-full animate-pulse"></div>
-            <div className="h-32 bg-muted rounded w-full animate-pulse"></div>
-          </div>
-        </div>
+      <div className="container max-w-4xl py-8 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!company) {
+    return (
+      <div className="container max-w-4xl py-8">
+        <p>Company not found</p>
       </div>
     );
   }
@@ -147,13 +164,17 @@ const EditCompany = () => {
           </AlertDialog>
         </div>
         
-        {company && (
-          <CompanyForm 
-            initialData={company}
-            onSubmit={(data) => updateCompany.mutate(data)}
-            isSubmitting={updateCompany.isPending}
-          />
-        )}
+        <CompanyForm 
+          initialData={{
+            name: company.name,
+            culture: company.culture,
+            story: company.story,
+            benefits_data: company.benefits_data,
+            values_data: company.values_data,
+          }}
+          onSubmit={handleSubmit} 
+          isSubmitting={isSubmitting} 
+        />
       </div>
     </div>
   );

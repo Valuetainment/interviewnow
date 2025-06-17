@@ -1,8 +1,7 @@
-
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { type Company } from "@/pages/Companies";
+import { type Company } from "@/types/company";
 import {
   Select,
   SelectContent,

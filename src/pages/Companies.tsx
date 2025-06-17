@@ -1,40 +1,42 @@
-
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Building, Plus, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link, useNavigate } from "react-router-dom";
+import { Plus, Search } from "lucide-react";
 import CompanyList from "@/components/companies/CompanyList";
 import { Input } from "@/components/ui/input";
-
-export type Company = {
-  id: string;
-  name: string;
-  culture: string | null;
-  story: string | null;
-  values: string | null;
-  benefits: string | null;
-  core_values: string[] | null;
-  benefits_list: string[] | null;
-  created_at: string;
-  updated_at: string;
-};
+import { Card } from "@/components/ui/card";
+import CompanyCard from "@/components/companies/CompanyCard";
+import { Company } from "@/types/company";
 
 const Companies = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
   
   const { data: companies, isLoading } = useQuery({
     queryKey: ["companies"],
     queryFn: async () => {
-      // Use type assertion since we're mocking the DB call for now
       const { data, error } = await supabase
-        .from("companies" as any)
+        .from("companies")
         .select("*")
-        .order("name", { ascending: true });
-
+        .order("created_at", { ascending: false });
+      
       if (error) throw error;
-      return data as Company[];
+      
+      // Transform the data to match the new structure if needed
+      // This handles backward compatibility for data that hasn't been migrated yet
+      return (data || []).map(company => ({
+        ...company,
+        benefits_data: company.benefits_data || {
+          description: company.benefits || "",
+          items: company.benefits_list || []
+        },
+        values_data: company.values_data || {
+          description: company.values || "",
+          items: company.core_values || []
+        }
+      })) as Company[];
     },
   });
 
@@ -52,12 +54,10 @@ const Companies = () => {
               Manage your organization profiles
             </p>
           </div>
-          <Link to="/companies/new">
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              New Company
-            </Button>
-          </Link>
+          <Button onClick={() => navigate("/companies/new")}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Company
+          </Button>
         </div>
 
         <div className="mb-8 relative">

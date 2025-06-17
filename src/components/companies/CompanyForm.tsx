@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -19,16 +18,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { X, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
+import { CompanyBenefitsData, CompanyValuesData } from "@/types/company";
 
 // Form validation schema
 const formSchema = z.object({
   name: z.string().min(1, { message: "Company name is required" }),
   culture: z.string().optional().nullable(),
   story: z.string().optional().nullable(),
-  values: z.string().optional().nullable(),
-  benefits: z.string().optional().nullable(),
-  core_values: z.array(z.string()).optional().nullable(),
-  benefits_list: z.array(z.string()).optional().nullable(),
+  benefits_data: z.object({
+    description: z.string(),
+    items: z.array(z.string()),
+  }),
+  values_data: z.object({
+    description: z.string(),
+    items: z.array(z.string()),
+  }),
 });
 
 interface CompanyFormProps {
@@ -51,43 +55,53 @@ const CompanyForm: React.FC<CompanyFormProps> = ({
       name: "",
       culture: "",
       story: "",
-      values: "",
-      benefits: "",
-      core_values: [],
-      benefits_list: [],
+      benefits_data: {
+        description: "",
+        items: [],
+      },
+      values_data: {
+        description: "",
+        items: [],
+      },
     },
   });
 
   const handleAddCoreValue = () => {
     if (!newCoreValue.trim()) return;
     
-    const currentValues = form.getValues("core_values") || [];
-    form.setValue("core_values", [...currentValues, newCoreValue.trim()]);
+    const currentData = form.getValues("values_data");
+    form.setValue("values_data", {
+      ...currentData,
+      items: [...currentData.items, newCoreValue.trim()],
+    });
     setNewCoreValue("");
   };
 
   const handleRemoveCoreValue = (index: number) => {
-    const currentValues = form.getValues("core_values") || [];
-    form.setValue(
-      "core_values",
-      currentValues.filter((_, i) => i !== index)
-    );
+    const currentData = form.getValues("values_data");
+    form.setValue("values_data", {
+      ...currentData,
+      items: currentData.items.filter((_, i) => i !== index),
+    });
   };
 
   const handleAddBenefit = () => {
     if (!newBenefit.trim()) return;
     
-    const currentBenefits = form.getValues("benefits_list") || [];
-    form.setValue("benefits_list", [...currentBenefits, newBenefit.trim()]);
+    const currentData = form.getValues("benefits_data");
+    form.setValue("benefits_data", {
+      ...currentData,
+      items: [...currentData.items, newBenefit.trim()],
+    });
     setNewBenefit("");
   };
 
   const handleRemoveBenefit = (index: number) => {
-    const currentBenefits = form.getValues("benefits_list") || [];
-    form.setValue(
-      "benefits_list",
-      currentBenefits.filter((_, i) => i !== index)
-    );
+    const currentData = form.getValues("benefits_data");
+    form.setValue("benefits_data", {
+      ...currentData,
+      items: currentData.items.filter((_, i) => i !== index),
+    });
   };
 
   return (
@@ -159,16 +173,15 @@ const CompanyForm: React.FC<CompanyFormProps> = ({
 
               <FormField
                 control={form.control}
-                name="values"
+                name="values_data.description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Company Values</FormLabel>
+                    <FormLabel>Company Values Overview</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Describe the company's values"
+                        placeholder="Describe the company's values and principles"
                         className="min-h-[100px]"
                         {...field}
-                        value={field.value || ""}
                       />
                     </FormControl>
                     <FormDescription>
@@ -181,29 +194,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({
 
               <FormField
                 control={form.control}
-                name="benefits"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>General Benefits</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Describe the general benefits package"
-                        className="min-h-[100px]"
-                        {...field}
-                        value={field.value || ""}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Give an overview of the company's benefits package
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="core_values"
+                name="values_data.items"
                 render={() => (
                   <FormItem>
                     <FormLabel>Core Values List</FormLabel>
@@ -228,7 +219,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({
                       </Button>
                     </div>
                     <div className="flex flex-wrap gap-2 mt-3">
-                      {form.watch("core_values")?.map((value, index) => (
+                      {form.watch("values_data.items")?.map((value, index) => (
                         <Badge
                           key={`${value}-${index}`}
                           className="flex items-center gap-1 py-1.5"
@@ -257,7 +248,28 @@ const CompanyForm: React.FC<CompanyFormProps> = ({
 
               <FormField
                 control={form.control}
-                name="benefits_list"
+                name="benefits_data.description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Benefits Overview</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Describe the general benefits package"
+                        className="min-h-[100px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Give an overview of the company's benefits package
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="benefits_data.items"
                 render={() => (
                   <FormItem>
                     <FormLabel>Benefits List</FormLabel>
@@ -282,7 +294,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({
                       </Button>
                     </div>
                     <div className="flex flex-wrap gap-2 mt-3">
-                      {form.watch("benefits_list")?.map((benefit, index) => (
+                      {form.watch("benefits_data.items")?.map((benefit, index) => (
                         <Badge
                           key={`${benefit}-${index}`}
                           className="flex items-center gap-1 py-1.5"
