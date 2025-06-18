@@ -54,6 +54,10 @@ create_user "user@testcompany.com" "TestPassword123!" "regular user"
 create_user "john.smith@example.com" "TestPassword123!" "John Smith"
 create_user "sarah.johnson@example.com" "TestPassword123!" "Sarah Johnson"
 create_user "michael.chen@example.com" "TestPassword123!" "Michael Chen"
+# InnovateTech Labs candidates
+create_user "emily.rodriguez@example.com" "TestPassword123!" "Emily Rodriguez"
+create_user "david.park@example.com" "TestPassword123!" "David Park"
+create_user "sophia.zhang@example.com" "TestPassword123!" "Dr. Sophia Zhang"
 
 echo ""
 echo "Step 2: Ensuring all auth users are linked to public.users..."
@@ -74,14 +78,14 @@ SELECT
 FROM auth.users au
 LEFT JOIN public.users pu ON au.id = pu.id
 WHERE pu.id IS NULL
-AND au.email IN ('admin@testcompany.com', 'user@testcompany.com', 'john.smith@example.com', 'sarah.johnson@example.com', 'michael.chen@example.com');
+AND au.email IN ('admin@testcompany.com', 'user@testcompany.com', 'john.smith@example.com', 'sarah.johnson@example.com', 'michael.chen@example.com', 'emily.rodriguez@example.com', 'david.park@example.com', 'sophia.zhang@example.com');
 
 -- Update any existing records to ensure they have the correct tenant_id
 UPDATE public.users 
 SET tenant_id = 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0'::uuid
 WHERE id IN (
     SELECT id FROM auth.users 
-    WHERE email IN ('admin@testcompany.com', 'user@testcompany.com', 'john.smith@example.com', 'sarah.johnson@example.com', 'michael.chen@example.com')
+    WHERE email IN ('admin@testcompany.com', 'user@testcompany.com', 'john.smith@example.com', 'sarah.johnson@example.com', 'michael.chen@example.com', 'emily.rodriguez@example.com', 'david.park@example.com', 'sophia.zhang@example.com')
 );
 EOF
 
@@ -214,7 +218,7 @@ PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres -t -c \
      FROM auth.users u 
      LEFT JOIN public.users pu ON u.id = pu.id 
      LEFT JOIN public.tenants t ON pu.tenant_id = t.id 
-     WHERE u.email IN ('admin@testcompany.com', 'user@testcompany.com', 'john.smith@example.com', 'sarah.johnson@example.com', 'michael.chen@example.com')
+     WHERE u.email IN ('admin@testcompany.com', 'user@testcompany.com', 'john.smith@example.com', 'sarah.johnson@example.com', 'michael.chen@example.com', 'emily.rodriguez@example.com', 'david.park@example.com', 'sophia.zhang@example.com')
      ORDER BY u.email;" | sed 's/^[ \t]*/  /'
 
 echo ""
@@ -226,6 +230,9 @@ echo "  - user@testcompany.com (password: TestPassword123!)"
 echo "  - john.smith@example.com (password: TestPassword123!)"
 echo "  - sarah.johnson@example.com (password: TestPassword123!)"
 echo "  - michael.chen@example.com (password: TestPassword123!)"
+echo "  - emily.rodriguez@example.com (password: TestPassword123!)"
+echo "  - david.park@example.com (password: TestPassword123!)"
+echo "  - sophia.zhang@example.com (password: TestPassword123!)"
 echo ""
 echo "All users are now properly linked to the test tenant."
 echo "You can now log in with any of these users to test the application." 

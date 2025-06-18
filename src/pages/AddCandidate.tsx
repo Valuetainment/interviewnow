@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import {
   Globe,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import CompanySelect from "@/components/companies/CompanySelect";
 
 // Helper function to format phone number to E.164 format
 const formatPhoneToE164 = (phone: string | null | undefined): string | null => {
@@ -67,6 +68,7 @@ const formatPhoneToE164 = (phone: string | null | undefined): string | null => {
 
 // Form validation schema
 const candidateSchema = z.object({
+  company_id: z.string().min(1, "Company is required"),
   email: z.string().email("Invalid email address"),
   phone: z
     .string()
@@ -98,6 +100,7 @@ const AddCandidate = () => {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<CandidateFormData>({
     resolver: zodResolver(candidateSchema),
@@ -141,6 +144,7 @@ const AddCandidate = () => {
       // Prepare the candidate data
       const candidateData = {
         tenant_id: tenantId,
+        company_id: data.company_id,
         email: data.email,
         phone: formattedPhone,
         first_name: data.first_name,
@@ -201,6 +205,26 @@ const AddCandidate = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Company Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="company_id">Company *</Label>
+              <Controller
+                name="company_id"
+                control={control}
+                render={({ field }) => (
+                  <CompanySelect
+                    value={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
+              {errors.company_id && (
+                <p className="text-sm text-red-500">
+                  {errors.company_id.message}
+                </p>
+              )}
+            </div>
+
             {/* Personal Information Section */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-lg font-semibold">

@@ -56,6 +56,7 @@ Table positions {
 Table candidates {
   id uuid [pk]
   tenant_id uuid [ref: > tenants.id]
+  company_id uuid [ref: > companies.id, not null, note: 'CASCADE DELETE']
   email text [note: 'unique per tenant']
   phone text
   first_name text [not null]

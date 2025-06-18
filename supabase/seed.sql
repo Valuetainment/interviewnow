@@ -40,6 +40,23 @@ VALUES
     }'::jsonb,
     NOW(),
     NOW()
+  ),
+  (
+    'c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    'InnovateTech Labs',
+    'At InnovateTech Labs, we believe in pushing boundaries and creating the future. Our diverse team thrives in an environment that values creativity, autonomy, and continuous experimentation.',
+    'Started in 2018 as a small R&D lab, InnovateTech Labs has grown into a cutting-edge technology company specializing in emerging technologies like blockchain, IoT, and quantum computing. We partner with startups and enterprises to bring revolutionary ideas to life.',
+    '{
+      "description": "Curiosity, Collaboration, Courage, Customer-First",
+      "items": ["Curiosity", "Collaboration", "Courage", "Customer-First", "Radical Transparency"]
+    }'::jsonb,
+    '{
+      "description": "Full medical coverage, equity participation, flexible hours, remote-first culture, annual tech budget",
+      "items": ["Medical & Dental", "Equity Options", "Fully Remote", "Flexible Hours", "$5000 Tech Budget", "Conference Allowance"]
+    }'::jsonb,
+    NOW() - INTERVAL '5 days',
+    NOW() - INTERVAL '5 days'
   )
 ON CONFLICT (id) DO NOTHING;
 
@@ -242,12 +259,160 @@ VALUES
   ('22222222-2222-2222-2222-222222222222', '55555555-5555-5555-5555-555555555555', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 20, NOW(), NOW())
 ON CONFLICT (position_id, competency_id) DO NOTHING;
 
+-- Create positions for InnovateTech Labs
+INSERT INTO public.positions (id, tenant_id, title, description, role_overview, key_responsibilities, required_qualifications, preferred_qualifications, key_competencies_section, company_id, experience_level, department, location, employment_type, salary_range, application_deadline, reference_number, travel_requirements, work_authorization, created_at, updated_at)
+VALUES 
+  (
+    '55555555-5555-5555-5555-555555555555',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    'Blockchain Developer',
+    'Join our blockchain team to build decentralized applications and smart contracts.',
+    'As a Blockchain Developer at InnovateTech Labs, you will design and implement blockchain solutions for our clients, working with cutting-edge technologies in the Web3 space.',
+    '• Design and develop smart contracts on Ethereum and other blockchains
+• Build decentralized applications (DApps) using Web3 technologies
+• Implement blockchain integration solutions for enterprise clients
+• Conduct security audits and optimize gas efficiency
+• Research and evaluate new blockchain protocols
+• Collaborate with cross-functional teams on blockchain strategy',
+    '• 3+ years of blockchain development experience
+• Proficiency in Solidity and smart contract development
+• Experience with Web3.js, Ethers.js, or similar libraries
+• Understanding of blockchain architecture and consensus mechanisms
+• Strong knowledge of cryptography and security best practices
+• Experience with at least one major blockchain platform
+• Bachelor''s degree in Computer Science or equivalent',
+    '• Experience with Layer 2 solutions (Polygon, Arbitrum, Optimism)
+• Knowledge of DeFi protocols and yield farming strategies
+• Contributions to blockchain open source projects
+• Experience with IPFS and decentralized storage
+• Understanding of MEV and blockchain economics
+• Security audit experience
+• Rust or Move programming language experience',
+    'Technical blockchain expertise, security mindset, innovation, problem-solving, adaptability to emerging tech',
+    'c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2',
+    'Mid-level',
+    'Engineering',
+    'Remote (Global)',
+    'Full-Time',
+    '$120,000 - $180,000',
+    NOW() + INTERVAL '35 days',
+    'BC-2025-001',
+    'Occasional travel for conferences (5%)',
+    'Must be authorized to work remotely',
+    NOW() - INTERVAL '7 days',
+    NOW() - INTERVAL '7 days'
+  ),
+  (
+    '66666666-6666-6666-6666-666666666666',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    'IoT Solutions Architect',
+    'Lead the design and implementation of innovative IoT solutions for our enterprise clients.',
+    'We are seeking an IoT Solutions Architect to drive our Internet of Things initiatives, designing scalable and secure IoT ecosystems for various industries.',
+    '• Design end-to-end IoT architectures for client projects
+• Select appropriate sensors, gateways, and cloud platforms
+• Implement edge computing solutions for real-time processing
+• Ensure IoT security and data privacy compliance
+• Create technical documentation and architecture diagrams
+• Present solutions to technical and non-technical stakeholders
+• Lead IoT proof-of-concepts and pilot implementations',
+    '• 5+ years of experience in IoT solution development
+• Strong knowledge of IoT protocols (MQTT, CoAP, LoRaWAN)
+• Experience with major IoT platforms (AWS IoT, Azure IoT, Google Cloud IoT)
+• Proficiency in embedded systems programming (C/C++, Python)
+• Understanding of networking, security, and data analytics
+• Experience with time-series databases and stream processing
+• Bachelor''s degree in Engineering or Computer Science',
+    '• Certifications in AWS/Azure/GCP IoT services
+• Experience with industrial IoT and SCADA systems
+• Knowledge of 5G and edge computing technologies
+• Familiarity with digital twin concepts
+• Experience with computer vision and AI at the edge
+• Hardware design and prototyping skills
+• Master''s degree in relevant field',
+    'System design thinking, IoT expertise, security awareness, client communication, innovation',
+    'c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2',
+    'Senior',
+    'Engineering',
+    'Austin, TX (Hybrid)',
+    'Full-Time',
+    '$140,000 - $190,000',
+    NOW() + INTERVAL '28 days',
+    'IOT-2025-002',
+    'Regular travel to client sites (25%)',
+    'Must be authorized to work in the US',
+    NOW() - INTERVAL '10 days',
+    NOW() - INTERVAL '10 days'
+  ),
+  (
+    '77777777-7777-7777-7777-777777777777',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    'Quantum Computing Researcher',
+    'Pioneer the future of computing with our quantum research team.',
+    'Join our quantum computing division to work on groundbreaking research in quantum algorithms, error correction, and practical quantum applications.',
+    '• Research and develop quantum algorithms for optimization problems
+• Implement quantum circuits using Qiskit, Cirq, or similar frameworks
+• Collaborate with academic partners on quantum research papers
+• Explore quantum machine learning applications
+• Contribute to quantum error correction research
+• Present findings at conferences and publish papers
+• Mentor junior researchers and interns',
+    '• PhD in Physics, Computer Science, or related quantum field
+• Strong mathematical background in linear algebra and quantum mechanics
+• Experience with quantum computing frameworks and simulators
+• Published research in quantum computing or related fields
+• Programming skills in Python and quantum assembly languages
+• Understanding of NISQ devices and their limitations
+• Excellent research and analytical skills',
+    '• Postdoctoral experience in quantum computing
+• Access to quantum hardware (IBM Q, Google Sycamore, etc.)
+• Experience with variational quantum algorithms
+• Knowledge of quantum cryptography
+• Industry collaboration experience
+• Grant writing experience
+• Teaching or mentoring experience',
+    'Research excellence, quantum expertise, mathematical rigor, innovation, collaboration',
+    'c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2',
+    'Senior',
+    'Research',
+    'Boston, MA',
+    'Full-Time',
+    '$150,000 - $220,000',
+    NOW() + INTERVAL '40 days',
+    'QC-2025-003',
+    'Conference travel (20%)',
+    'Must be authorized to work in the US',
+    NOW() - INTERVAL '12 days',
+    NOW() - INTERVAL '12 days'
+  )
+ON CONFLICT (id) DO NOTHING;
+
+-- Link InnovateTech Labs positions with competencies
+INSERT INTO public.position_competencies (position_id, competency_id, tenant_id, weight, created_at, updated_at)
+VALUES 
+  -- Blockchain Developer competencies
+  ('55555555-5555-5555-5555-555555555555', '11111111-1111-1111-1111-111111111111', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 40, NOW(), NOW()),
+  ('55555555-5555-5555-5555-555555555555', '22222222-2222-2222-2222-222222222222', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 30, NOW(), NOW()),
+  ('55555555-5555-5555-5555-555555555555', '33333333-3333-3333-3333-333333333333', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 15, NOW(), NOW()),
+  ('55555555-5555-5555-5555-555555555555', '44444444-4444-4444-4444-444444444444', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 15, NOW(), NOW()),
+  -- IoT Solutions Architect competencies
+  ('66666666-6666-6666-6666-666666666666', '11111111-1111-1111-1111-111111111111', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 35, NOW(), NOW()),
+  ('66666666-6666-6666-6666-666666666666', '22222222-2222-2222-2222-222222222222', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 25, NOW(), NOW()),
+  ('66666666-6666-6666-6666-666666666666', '33333333-3333-3333-3333-333333333333', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 20, NOW(), NOW()),
+  ('66666666-6666-6666-6666-666666666666', '55555555-5555-5555-5555-555555555555', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 20, NOW(), NOW()),
+  -- Quantum Computing Researcher competencies
+  ('77777777-7777-7777-7777-777777777777', '11111111-1111-1111-1111-111111111111', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 45, NOW(), NOW()),
+  ('77777777-7777-7777-7777-777777777777', '22222222-2222-2222-2222-222222222222', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 35, NOW(), NOW()),
+  ('77777777-7777-7777-7777-777777777777', '33333333-3333-3333-3333-333333333333', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 10, NOW(), NOW()),
+  ('77777777-7777-7777-7777-777777777777', '44444444-4444-4444-4444-444444444444', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 10, NOW(), NOW())
+ON CONFLICT (position_id, competency_id) DO NOTHING;
+
 -- Create test candidates
-INSERT INTO public.candidates (id, tenant_id, first_name, last_name, email, phone, skills, experience, education, resume_text, resume_analysis, created_at, updated_at)
+INSERT INTO public.candidates (id, tenant_id, company_id, first_name, last_name, email, phone, skills, experience, education, resume_text, resume_analysis, created_at, updated_at)
 VALUES 
   (
     '11111111-1111-1111-1111-111111111112',
     'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    'c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1',
     'John',
     'Smith',
     'john.smith@example.com',
@@ -303,6 +468,7 @@ VALUES
   (
     '22222222-2222-2222-2222-222222222223',
     'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    'c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1',
     'Sarah',
     'Johnson',
     'sarah.johnson@example.com',
@@ -351,6 +517,7 @@ VALUES
   (
     '33333333-3333-3333-3333-333333333334',
     'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    'c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1',
     'Michael',
     'Chen',
     'michael.chen@example.com',
@@ -395,6 +562,175 @@ VALUES
     }'::jsonb,
     NOW(),
     NOW()
+  ),
+  -- Candidates for InnovateTech Labs
+  (
+    '44444444-4444-4444-4444-444444444445',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    'c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2',
+    'Emily',
+    'Rodriguez',
+    'emily.rodriguez@example.com',
+    '+15552345678',
+    ARRAY['Solidity', 'Ethereum', 'Web3.js', 'JavaScript', 'Smart Contracts', 'DeFi'],
+    '{
+      "positions_held": [
+        {
+          "title": "Smart Contract Developer",
+          "company": "DeFi Protocol Inc",
+          "start_date": "2021-06",
+          "end_date": "2024-01",
+          "responsibilities": ["Developed DeFi smart contracts", "Audited protocol security", "Integrated with multiple blockchains"]
+        },
+        {
+          "title": "Full Stack Developer",
+          "company": "Tech Solutions Ltd",
+          "start_date": "2019-03",
+          "end_date": "2021-05",
+          "responsibilities": ["Built web applications", "Worked with React and Node.js", "Implemented payment integrations"]
+        }
+      ]
+    }'::jsonb,
+    'Bachelor of Science in Computer Engineering',
+    'Blockchain developer with 3+ years experience in smart contract development and DeFi protocols...',
+    '{
+      "skills": ["Solidity", "Ethereum", "Web3.js", "JavaScript", "Smart Contracts", "DeFi"],
+      "experience": {
+        "positions_held": [
+          {
+            "title": "Smart Contract Developer",
+            "company": "DeFi Protocol Inc",
+            "start_date": "2021-06",
+            "end_date": "2024-01"
+          }
+        ]
+      },
+      "education": [
+        {
+          "degree": "Bachelor of Science",
+          "field": "Computer Engineering",
+          "institution": "Tech Institute",
+          "graduation_year": "2019"
+        }
+      ],
+      "professional_summary": "Blockchain developer specializing in DeFi and smart contract security",
+      "areas_specialization": ["Smart Contract Development", "DeFi Protocols", "Blockchain Security"],
+      "notable_achievements": ["Developed contracts handling $10M TVL", "Found critical vulnerability in audit"]
+    }'::jsonb,
+    NOW() - INTERVAL '3 days',
+    NOW() - INTERVAL '3 days'
+  ),
+  (
+    '55555555-5555-5555-5555-555555555556',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    'c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2',
+    'David',
+    'Park',
+    'david.park@example.com',
+    '+15553456789',
+    ARRAY['IoT', 'Python', 'C++', 'AWS IoT', 'MQTT', 'Edge Computing', 'Machine Learning'],
+    '{
+      "positions_held": [
+        {
+          "title": "IoT Engineer",
+          "company": "Smart Home Solutions",
+          "start_date": "2020-01",
+          "end_date": "2023-12",
+          "responsibilities": ["Designed IoT device architectures", "Implemented edge computing solutions", "Built cloud IoT platforms"]
+        },
+        {
+          "title": "Embedded Systems Developer",
+          "company": "Industrial Tech Corp",
+          "start_date": "2017-08",
+          "end_date": "2019-12",
+          "responsibilities": ["Programmed microcontrollers", "Developed sensor interfaces", "Optimized power consumption"]
+        }
+      ]
+    }'::jsonb,
+    'Master of Science in Electrical Engineering',
+    'IoT engineer with expertise in edge computing and industrial IoT solutions...',
+    '{
+      "skills": ["IoT", "Python", "C++", "AWS IoT", "MQTT", "Edge Computing", "Machine Learning"],
+      "experience": {
+        "positions_held": [
+          {
+            "title": "IoT Engineer",
+            "company": "Smart Home Solutions",
+            "start_date": "2020-01",
+            "end_date": "2023-12"
+          }
+        ]
+      },
+      "education": [
+        {
+          "degree": "Master of Science",
+          "field": "Electrical Engineering",
+          "institution": "Engineering University",
+          "graduation_year": "2017"
+        }
+      ],
+      "professional_summary": "IoT specialist with focus on industrial applications and edge AI",
+      "areas_specialization": ["Industrial IoT", "Edge Computing", "Sensor Networks"],
+      "notable_achievements": ["Reduced latency by 60% with edge processing", "Deployed 10,000+ IoT devices"]
+    }'::jsonb,
+    NOW() - INTERVAL '2 days',
+    NOW() - INTERVAL '2 days'
+  ),
+  (
+    '66666666-6666-6666-6666-666666666667',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    'c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2',
+    'Dr. Sophia',
+    'Zhang',
+    'sophia.zhang@example.com',
+    '+15554567891',
+    ARRAY['Quantum Computing', 'Qiskit', 'Python', 'Linear Algebra', 'Quantum Algorithms', 'Research'],
+    '{
+      "positions_held": [
+        {
+          "title": "Quantum Research Scientist",
+          "company": "Quantum Lab University",
+          "start_date": "2021-09",
+          "end_date": "2024-01",
+          "responsibilities": ["Developed quantum algorithms", "Published research papers", "Collaborated with IBM Quantum"]
+        },
+        {
+          "title": "Postdoctoral Researcher",
+          "company": "MIT Quantum Computing Lab",
+          "start_date": "2019-07",
+          "end_date": "2021-08",
+          "responsibilities": ["Researched quantum error correction", "Taught quantum computing courses", "Led research team"]
+        }
+      ]
+    }'::jsonb,
+    'PhD in Quantum Physics',
+    'Quantum computing researcher with expertise in quantum algorithms and error correction...',
+    '{
+      "skills": ["Quantum Computing", "Qiskit", "Python", "Linear Algebra", "Quantum Algorithms", "Research"],
+      "experience": {
+        "positions_held": [
+          {
+            "title": "Quantum Research Scientist",
+            "company": "Quantum Lab University",
+            "start_date": "2021-09",
+            "end_date": "2024-01"
+          }
+        ]
+      },
+      "education": [
+        {
+          "degree": "PhD",
+          "field": "Quantum Physics",
+          "institution": "Stanford University",
+          "graduation_year": "2019"
+        }
+      ],
+      "professional_summary": "Quantum researcher with focus on NISQ algorithms and quantum machine learning",
+      "areas_specialization": ["Quantum Algorithms", "Quantum Error Correction", "Quantum ML"],
+      "notable_achievements": ["Published 8 peer-reviewed papers", "Developed novel VQE optimization"]
+    }'::jsonb,
+    NOW() - INTERVAL '4 days',
+    NOW() - INTERVAL '4 days'
   )
 ON CONFLICT (id) DO NOTHING;
 
@@ -605,6 +941,62 @@ VALUES
     'scheduled',
     NOW() - INTERVAL '1 day',
     NOW() - INTERVAL '1 day'
+  ),
+  -- Interview sessions for InnovateTech Labs
+  (
+    '88888888-8888-8888-8888-888888888881',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '55555555-5555-5555-5555-555555555555', -- Blockchain Developer position
+    '44444444-4444-4444-4444-444444444445', -- Emily Rodriguez
+    NOW() + INTERVAL '6 days' + TIME '11:00:00',
+    NULL,
+    'scheduled',
+    NOW() - INTERVAL '1 day',
+    NOW() - INTERVAL '1 day'
+  ),
+  (
+    '88888888-8888-8888-8888-888888888882',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '66666666-6666-6666-6666-666666666666', -- IoT Solutions Architect position
+    '55555555-5555-5555-5555-555555555556', -- David Park
+    NOW() - INTERVAL '5 days' + TIME '14:00:00',
+    NOW() - INTERVAL '5 days' + TIME '14:45:00',
+    'completed',
+    NOW() - INTERVAL '7 days',
+    NOW() - INTERVAL '5 days'
+  ),
+  (
+    '88888888-8888-8888-8888-888888888883',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '77777777-7777-7777-7777-777777777777', -- Quantum Computing Researcher position
+    '66666666-6666-6666-6666-666666666667', -- Dr. Sophia Zhang
+    NOW() - INTERVAL '10 days' + TIME '10:00:00',
+    NOW() - INTERVAL '10 days' + TIME '10:50:00',
+    'completed',
+    NOW() - INTERVAL '12 days',
+    NOW() - INTERVAL '10 days'
+  ),
+  (
+    '88888888-8888-8888-8888-888888888884',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '55555555-5555-5555-5555-555555555555', -- Blockchain Developer position
+    '11111111-1111-1111-1111-111111111112', -- John Smith (cross-company interview)
+    NOW() + INTERVAL '8 days' + TIME '09:00:00',
+    NULL,
+    'scheduled',
+    NOW() - INTERVAL '2 days',
+    NOW() - INTERVAL '2 days'
+  ),
+  (
+    '88888888-8888-8888-8888-888888888885',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '66666666-6666-6666-6666-666666666666', -- IoT Solutions Architect position
+    '55555555-5555-5555-5555-555555555556', -- David Park
+    NOW() + INTERVAL '3 days' + TIME '16:00:00',
+    NULL,
+    'scheduled',
+    NOW(),
+    NOW()
   )
 ON CONFLICT (id) DO NOTHING;
 
@@ -698,6 +1090,89 @@ VALUES
     18000,
     0.91,
     NOW() - INTERVAL '3 days' + INTERVAL '18 seconds'
+  ),
+  -- Transcript entries for InnovateTech Labs interviews
+  -- Interview session 88888888-8888-8888-8888-888888888882 (David Park - IoT Solutions Architect)
+  (
+    '88888888-8888-8888-8888-888888888881',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '88888888-8888-8888-8888-888888888882',
+    'interviewer',
+    'David, welcome. Can you describe your experience with IoT architectures and edge computing?',
+    0,
+    0.95,
+    NOW() - INTERVAL '5 days'
+  ),
+  (
+    '88888888-8888-8888-8888-888888888882',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '88888888-8888-8888-8888-888888888882',
+    'candidate',
+    'Thank you for having me. I have been working with IoT systems for over 6 years, focusing on edge computing solutions that process data locally to reduce latency and bandwidth usage.',
+    15000,
+    0.93,
+    NOW() - INTERVAL '5 days' + INTERVAL '15 seconds'
+  ),
+  (
+    '88888888-8888-8888-8888-888888888883',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '88888888-8888-8888-8888-888888888882',
+    'interviewer',
+    'That is impressive. What protocols have you worked with for IoT communication?',
+    35000,
+    0.94,
+    NOW() - INTERVAL '5 days' + INTERVAL '35 seconds'
+  ),
+  (
+    '88888888-8888-8888-8888-888888888884',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '88888888-8888-8888-8888-888888888882',
+    'candidate',
+    'I have extensive experience with MQTT for lightweight messaging, CoAP for constrained devices, and LoRaWAN for long-range, low-power applications. I have also implemented custom protocols for specific industrial use cases.',
+    50000,
+    0.92,
+    NOW() - INTERVAL '5 days' + INTERVAL '50 seconds'
+  ),
+  -- Interview session 88888888-8888-8888-8888-888888888883 (Dr. Sophia Zhang - Quantum Computing Researcher)
+  (
+    '99999999-9999-9999-9999-999999999991',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '88888888-8888-8888-8888-888888888883',
+    'interviewer',
+    'Dr. Zhang, your research in quantum algorithms is quite impressive. Can you tell us about your work with NISQ devices?',
+    0,
+    0.96,
+    NOW() - INTERVAL '10 days'
+  ),
+  (
+    '99999999-9999-9999-9999-999999999992',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '88888888-8888-8888-8888-888888888883',
+    'candidate',
+    'Thank you. My research focuses on developing algorithms that can run effectively on Noisy Intermediate-Scale Quantum devices. I have been working on variational quantum eigensolver improvements that reduce circuit depth while maintaining accuracy.',
+    20000,
+    0.94,
+    NOW() - INTERVAL '10 days' + INTERVAL '20 seconds'
+  ),
+  (
+    '99999999-9999-9999-9999-999999999993',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '88888888-8888-8888-8888-888888888883',
+    'interviewer',
+    'How do you see quantum computing evolving in the next 5 years?',
+    45000,
+    0.95,
+    NOW() - INTERVAL '10 days' + INTERVAL '45 seconds'
+  ),
+  (
+    '99999999-9999-9999-9999-999999999994',
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
+    '88888888-8888-8888-8888-888888888883',
+    'candidate',
+    'I believe we will see significant improvements in error rates and coherence times. More importantly, we will identify specific problem domains where quantum advantage is achievable with current technology, particularly in optimization and chemistry simulations.',
+    65000,
+    0.93,
+    NOW() - INTERVAL '10 days' + INTERVAL '65 seconds'
   )
 ON CONFLICT (id) DO NOTHING;
 
@@ -711,11 +1186,20 @@ BEGIN
   RAISE NOTICE '';
   RAISE NOTICE 'NOTE: Auth users are created by the setup-local-test-data.sh script';
   RAISE NOTICE 'The following test accounts will be available:';
+  RAISE NOTICE '';
+  RAISE NOTICE 'Admin/General Users:';
   RAISE NOTICE '  - admin@testcompany.com (Admin role)';
   RAISE NOTICE '  - user@testcompany.com (User role)';
+  RAISE NOTICE '';
+  RAISE NOTICE 'TechCorp Solutions Candidates:';
   RAISE NOTICE '  - john.smith@example.com (User role - matches candidate John Smith)';
   RAISE NOTICE '  - sarah.johnson@example.com (User role - matches candidate Sarah Johnson)';
   RAISE NOTICE '  - michael.chen@example.com (User role - matches candidate Michael Chen)';
+  RAISE NOTICE '';
+  RAISE NOTICE 'InnovateTech Labs Candidates:';
+  RAISE NOTICE '  - emily.rodriguez@example.com (User role - matches candidate Emily Rodriguez)';
+  RAISE NOTICE '  - david.park@example.com (User role - matches candidate David Park)';
+  RAISE NOTICE '  - sophia.zhang@example.com (User role - matches candidate Dr. Sophia Zhang)';
   RAISE NOTICE '';
   RAISE NOTICE 'All accounts use password: TestPassword123!';
 END $$;

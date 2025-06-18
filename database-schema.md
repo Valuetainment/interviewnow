@@ -69,6 +69,7 @@ Note: Benefits are now stored at the company level in `companies.benefits_data`
 ### candidates
 - **id**: uuid (PK)
 - **tenant_id**: uuid (FK to tenants)
+- **company_id**: uuid (FK to companies, required, CASCADE DELETE)
 - **email**: text (unique per tenant)
 - **phone**: text
 - **first_name**: text (required)

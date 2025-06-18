@@ -453,6 +453,22 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
         throw new Error("Missing tenant ID for candidate creation");
       }
 
+      // Get the first company for this tenant as default
+      const { data: companyData, error: companyError } = await supabase
+        .from("companies")
+        .select("id")
+        .eq("tenant_id", effectiveTenantId)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .single();
+
+      if (companyError || !companyData?.id) {
+        console.error("No company found for tenant, cannot create candidate");
+        throw new Error(
+          "No company found for this tenant. Please create a company first."
+        );
+      }
+
       // Extract first and last name from full name
       const nameParts = parsedAnalysis.personal_info.full_name.split(" ");
       const firstName = nameParts[0] || "";
@@ -467,6 +483,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
         .from("candidates")
         .insert({
           tenant_id: effectiveTenantId,
+          company_id: companyData.id,
           first_name: firstName,
           last_name: lastName,
           email: parsedAnalysis.personal_info.email,
