@@ -130,9 +130,9 @@ export function useSDPProxy(
           break;
           
         case 'response.audio_transcript.delta':
-          // Incremental transcript
-          if (data.delta) {
-            saveTranscript(data.delta, 'ai');
+          // Incremental transcript - the field is 'text' not 'delta'
+          if (data.text) {
+            saveTranscript(data.text, 'ai');
           }
           break;
           
