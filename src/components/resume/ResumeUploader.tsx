@@ -21,6 +21,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { formatFullName } from "@/lib/utils";
+import { useCompany } from "@/contexts/CompanyContext";
 
 // Maximum file size: 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -84,6 +85,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const { toast } = useToast();
   const { user, tenantId } = useAuth();
+  const { selectedCompany } = useCompany();
   const navigate = useNavigate();
 
   // For tracking upload progress
@@ -453,20 +455,28 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
         throw new Error("Missing tenant ID for candidate creation");
       }
 
-      // Get the first company for this tenant as default
-      const { data: companyData, error: companyError } = await supabase
-        .from("companies")
-        .select("id")
-        .eq("tenant_id", effectiveTenantId)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .single();
+      // Use the selected company if available, otherwise get the first company for this tenant
+      let companyId: string;
 
-      if (companyError || !companyData?.id) {
-        console.error("No company found for tenant, cannot create candidate");
-        throw new Error(
-          "No company found for this tenant. Please create a company first."
-        );
+      if (selectedCompany) {
+        companyId = selectedCompany.id;
+      } else {
+        const { data: companyData, error: companyError } = await supabase
+          .from("companies")
+          .select("id")
+          .eq("tenant_id", effectiveTenantId)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .single();
+
+        if (companyError || !companyData?.id) {
+          console.error("No company found for tenant, cannot create candidate");
+          throw new Error(
+            "No company found for this tenant. Please create a company first."
+          );
+        }
+
+        companyId = companyData.id;
       }
 
       // Extract first and last name from full name
@@ -483,7 +493,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
         .from("candidates")
         .insert({
           tenant_id: effectiveTenantId,
-          company_id: companyData.id,
+          company_id: companyId,
           first_name: firstName,
           last_name: lastName,
           email: parsedAnalysis.personal_info.email,

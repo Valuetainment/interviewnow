@@ -1,13 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Bell,
-  User,
-  LogOut,
-  ChevronDown,
-  Building,
-  Check
-} from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Bell, User, LogOut, ChevronDown, Building, Check } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -18,18 +11,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { Button } from "@/components/ui/button";
 // import { SidebarTrigger } from "@/components/ui/sidebar"; -- Temporarily disabled for debugging
-import GlobalSearch from './GlobalSearch';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import GlobalSearch from "./GlobalSearch";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useCompany } from "@/contexts/CompanyContext";
 
 interface Notification {
   id: string;
@@ -45,99 +35,67 @@ interface Notification {
 }
 
 const DashboardHeader: React.FC = () => {
-  const { user, signOut, tenantId } = useAuth();
+  const { user, signOut } = useAuth();
+  const { companies, selectedCompany, setSelectedCompany, loading } =
+    useCompany();
   const navigate = useNavigate();
-  const [companies, setCompanies] = useState<any[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notificationsLoading, setNotificationsLoading] = useState(true);
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/login');
+    navigate("/login");
   };
-
-  // Fetch companies for the current tenant
-  useEffect(() => {
-    const fetchCompanies = async () => {
-      if (!tenantId) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('companies')
-          .select('id, name')
-          .eq('tenant_id', tenantId)
-          .order('name');
-          
-        if (error) {
-          console.error('Error fetching companies:', error);
-        } else {
-          setCompanies(data || []);
-          // Set the first company as selected if none is selected
-          if (data && data.length > 0 && !selectedCompany) {
-            setSelectedCompany(data[0]);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching companies:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchCompanies();
-  }, [tenantId, selectedCompany]);
 
   // Fetch notifications for the current user
   useEffect(() => {
     const fetchNotifications = async () => {
       if (!user) return;
-      
+
       setNotificationsLoading(true);
       try {
         const { data, error } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('is_read', false)
-          .order('created_at', { ascending: false });
-          
+          .from("notifications")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("is_read", false)
+          .order("created_at", { ascending: false });
+
         if (error) {
-          console.error('Error fetching notifications:', error);
+          console.error("Error fetching notifications:", error);
         } else {
           setNotifications(data || []);
         }
       } catch (error) {
-        console.error('Error fetching notifications:', error);
+        console.error("Error fetching notifications:", error);
       } finally {
         setNotificationsLoading(false);
       }
     };
-    
+
     fetchNotifications();
-    
+
     // Set up real-time subscription for new notifications
     const channel = supabase
-      .channel('notifications')
+      .channel("notifications")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user?.id}`
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user?.id}`,
         },
         (payload) => {
           const newNotification = payload.new as Notification;
-          setNotifications(prev => [newNotification, ...prev]);
+          setNotifications((prev) => [newNotification, ...prev]);
           toast.info(newNotification.title, {
-            description: newNotification.message
+            description: newNotification.message,
           });
         }
       )
       .subscribe();
-      
+
     return () => {
       supabase.removeChannel(channel);
     };
@@ -147,39 +105,39 @@ const DashboardHeader: React.FC = () => {
   const markAsRead = async (notificationId: string) => {
     try {
       const { error } = await supabase
-        .from('notifications')
+        .from("notifications")
         .update({ is_read: true })
-        .eq('id', notificationId);
-        
+        .eq("id", notificationId);
+
       if (error) {
-        console.error('Error marking notification as read:', error);
+        console.error("Error marking notification as read:", error);
       } else {
-        setNotifications(prev => prev.filter(n => n.id !== notificationId));
+        setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
       }
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.error("Error marking notification as read:", error);
     }
   };
 
   // Mark all notifications as read
   const markAllAsRead = async () => {
     if (!user || notifications.length === 0) return;
-    
+
     try {
       const { error } = await supabase
-        .from('notifications')
+        .from("notifications")
         .update({ is_read: true })
-        .eq('user_id', user.id)
-        .eq('is_read', false);
-        
+        .eq("user_id", user.id)
+        .eq("is_read", false);
+
       if (error) {
-        console.error('Error marking all notifications as read:', error);
+        console.error("Error marking all notifications as read:", error);
       } else {
         setNotifications([]);
-        toast.success('All notifications marked as read');
+        toast.success("All notifications marked as read");
       }
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      console.error("Error marking all notifications as read:", error);
     }
   };
 
@@ -187,14 +145,14 @@ const DashboardHeader: React.FC = () => {
   const handleNotificationClick = async (notification: Notification) => {
     // Mark as read
     await markAsRead(notification.id);
-    
+
     // Navigate to the session details page
     navigate(`/sessions/${notification.interview_session_id}`);
   };
 
   // Extract initials for avatar fallback
   const getUserInitials = () => {
-    if (!user?.email) return 'U';
+    if (!user?.email) return "U";
     return user.email.charAt(0).toUpperCase();
   };
 
@@ -205,7 +163,7 @@ const DashboardHeader: React.FC = () => {
       <div className="flex h-14 items-center justify-between px-6">
         <div className="flex items-center gap-4">
           {/* <SidebarTrigger className="md:hidden" /> -- Temporarily disabled for debugging */}
-          
+
           <div className="flex items-center gap-2">
             <GlobalSearch />
           </div>
@@ -218,7 +176,9 @@ const DashboardHeader: React.FC = () => {
               <Button variant="outline" size="sm" className="h-8 gap-1">
                 <Building className="h-4 w-4" />
                 <span className="max-w-[150px] truncate">
-                  {loading ? 'Loading...' : (selectedCompany?.name || 'Select Company')}
+                  {loading
+                    ? "Loading..."
+                    : selectedCompany?.name || "Select Company"}
                 </span>
                 <ChevronDown className="h-4 w-4 opacity-50" />
               </Button>
@@ -228,8 +188,8 @@ const DashboardHeader: React.FC = () => {
               <DropdownMenuSeparator />
               {companies.length > 0 ? (
                 companies.map((company) => (
-                  <DropdownMenuItem 
-                    key={company.id} 
+                  <DropdownMenuItem
+                    key={company.id}
                     className="cursor-pointer"
                     onClick={() => setSelectedCompany(company)}
                   >
@@ -240,12 +200,13 @@ const DashboardHeader: React.FC = () => {
                   </DropdownMenuItem>
                 ))
               ) : (
-                <DropdownMenuItem disabled>
-                  No companies found
-                </DropdownMenuItem>
+                <DropdownMenuItem disabled>No companies found</DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer" onClick={() => navigate('/companies')}>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => navigate("/companies")}
+              >
                 Manage Companies
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -255,11 +216,11 @@ const DashboardHeader: React.FC = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative h-8 w-8">
-              <Bell className="h-4 w-4" />
+                <Bell className="h-4 w-4" />
                 {unreadCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
                     {unreadCount}
-              </span>
+                  </span>
                 )}
               </Button>
             </DropdownMenuTrigger>
@@ -294,7 +255,9 @@ const DashboardHeader: React.FC = () => {
                       onClick={() => handleNotificationClick(notification)}
                     >
                       <div className="flex-1">
-                        <p className="text-sm font-medium">{notification.title}</p>
+                        <p className="text-sm font-medium">
+                          {notification.title}
+                        </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {notification.message}
                         </p>
@@ -312,14 +275,14 @@ const DashboardHeader: React.FC = () => {
                         }}
                       >
                         <Check className="h-3 w-3" />
-            </Button>
+                      </Button>
                     </DropdownMenuItem>
                   ))}
                 </>
               ) : (
                 <div className="p-4 text-center text-sm text-muted-foreground">
                   No new notifications
-          </div>
+                </div>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -329,7 +292,10 @@ const DashboardHeader: React.FC = () => {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email || 'User'} />
+                  <AvatarImage
+                    src={user?.user_metadata?.avatar_url}
+                    alt={user?.email || "User"}
+                  />
                   <AvatarFallback>{getUserInitials()}</AvatarFallback>
                 </Avatar>
               </Button>
@@ -337,14 +303,16 @@ const DashboardHeader: React.FC = () => {
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{user?.email}</p>
+                  <p className="text-sm font-medium leading-none">
+                    {user?.email}
+                  </p>
                   <p className="text-xs leading-none text-muted-foreground">
                     {user?.email}
                   </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate('/profile')}>
+              <DropdownMenuItem onClick={() => navigate("/profile")}>
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </DropdownMenuItem>
@@ -361,4 +329,4 @@ const DashboardHeader: React.FC = () => {
   );
 };
 
-export default DashboardHeader; 
+export default DashboardHeader;

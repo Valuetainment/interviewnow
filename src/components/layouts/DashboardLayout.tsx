@@ -1,12 +1,13 @@
-import React from 'react';
-import { useAuth } from '../../hooks/useAuth';
-import { Outlet, Navigate } from 'react-router-dom';
-import Footer from '../footer/Footer';
+import React from "react";
+import { useAuth } from "../../hooks/useAuth";
+import { Outlet, Navigate } from "react-router-dom";
+import Footer from "../footer/Footer";
 
 // Import the new components
-import DashboardSidebar from '../dashboard/Sidebar';
-import DashboardHeader from '../dashboard/DashboardHeader';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import DashboardSidebar from "../dashboard/Sidebar";
+import DashboardHeader from "../dashboard/DashboardHeader";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { CompanyProvider } from "@/contexts/CompanyContext";
 
 interface DashboardLayoutProps {
   children?: React.ReactNode;
@@ -19,16 +20,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   // This must be before any conditional returns to follow Rules of Hooks
   React.useEffect(() => {
     const handleError = (event: ErrorEvent) => {
-      if (event.error?.message?.includes('Cannot read properties of undefined') && 
-          event.error?.message?.includes("reading 'add'")) {
-        console.warn('Suppressing .add() error in DashboardLayout');
+      if (
+        event.error?.message?.includes("Cannot read properties of undefined") &&
+        event.error?.message?.includes("reading 'add'")
+      ) {
+        console.warn("Suppressing .add() error in DashboardLayout");
         event.preventDefault();
         event.stopPropagation();
       }
     };
 
-    window.addEventListener('error', handleError, true);
-    return () => window.removeEventListener('error', handleError, true);
+    window.addEventListener("error", handleError, true);
+    return () => window.removeEventListener("error", handleError, true);
   }, []);
 
   // If not authenticated, redirect to login
@@ -38,35 +41,41 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
   // Show loading indicator while checking auth status
   if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        Loading...
+      </div>
+    );
   }
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      <div className="flex h-screen w-full">
-        {/* Dashboard Sidebar */}
-        <DashboardSidebar />
-        
-        {/* Main Content Area */}
-        <SidebarInset className="flex-1">
-          <div className="flex flex-col h-full">
-            {/* Dashboard Header */}
-            <DashboardHeader />
-            
-            {/* Main Content */}
-            <main className="flex-1 overflow-y-auto">
-              <div className="container mx-auto p-6">
-                {children || <Outlet />}
-              </div>
-            </main>
-            
-            {/* Footer */}
-            <Footer />
-          </div>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+    <CompanyProvider>
+      <SidebarProvider defaultOpen={true}>
+        <div className="flex h-screen w-full">
+          {/* Dashboard Sidebar */}
+          <DashboardSidebar />
+
+          {/* Main Content Area */}
+          <SidebarInset className="flex-1">
+            <div className="flex flex-col h-full">
+              {/* Dashboard Header */}
+              <DashboardHeader />
+
+              {/* Main Content */}
+              <main className="flex-1 overflow-y-auto">
+                <div className="container mx-auto p-6">
+                  {children || <Outlet />}
+                </div>
+              </main>
+
+              {/* Footer */}
+              <Footer />
+            </div>
+          </SidebarInset>
+        </div>
+      </SidebarProvider>
+    </CompanyProvider>
   );
 };
 
-export default DashboardLayout; 
+export default DashboardLayout;

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Search } from 'lucide-react';
-import Navbar from '@/components/Navbar';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Search } from "lucide-react";
+import Navbar from "@/components/Navbar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -11,81 +11,83 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { format } from 'date-fns';
+} from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { format } from "date-fns";
+import { useCompany } from "@/contexts/CompanyContext";
 
 // Keep mock data for fallback
 const mockPositions = [
   {
-    id: '1',
-    title: 'Senior Frontend Developer',
-    department: 'Engineering',
-    location: 'Remote',
-    company: 'Acme Corp',
-    experienceLevel: 'Senior',
+    id: "1",
+    title: "Senior Frontend Developer",
+    department: "Engineering",
+    location: "Remote",
+    company: "Acme Corp",
+    experienceLevel: "Senior",
     applicants: 23,
-    created: '2025-03-12',
-    status: 'Active',
+    created: "2025-03-12",
+    status: "Active",
   },
   {
-    id: '2',
-    title: 'Full Stack Engineer',
-    department: 'Engineering',
-    location: 'San Francisco',
-    company: 'Stark Industries',
-    experienceLevel: 'Mid-level',
+    id: "2",
+    title: "Full Stack Engineer",
+    department: "Engineering",
+    location: "San Francisco",
+    company: "Stark Industries",
+    experienceLevel: "Mid-level",
     applicants: 18,
-    created: '2025-03-15',
-    status: 'Active',
+    created: "2025-03-15",
+    status: "Active",
   },
   {
-    id: '3',
-    title: 'Product Manager',
-    department: 'Product',
-    location: 'New York',
-    company: 'Acme Corp',
-    experienceLevel: 'Senior',
+    id: "3",
+    title: "Product Manager",
+    department: "Product",
+    location: "New York",
+    company: "Acme Corp",
+    experienceLevel: "Senior",
     applicants: 12,
-    created: '2025-03-18',
-    status: 'Active',
+    created: "2025-03-18",
+    status: "Active",
   },
   {
-    id: '4',
-    title: 'DevOps Engineer',
-    department: 'Infrastructure',
-    location: 'Remote',
-    company: 'Stark Industries',
-    experienceLevel: 'Mid-level',
+    id: "4",
+    title: "DevOps Engineer",
+    department: "Infrastructure",
+    location: "Remote",
+    company: "Stark Industries",
+    experienceLevel: "Mid-level",
     applicants: 8,
-    created: '2025-03-20',
-    status: 'Active',
+    created: "2025-03-20",
+    status: "Active",
   },
   {
-    id: '5',
-    title: 'UX Designer',
-    department: 'Design',
-    location: 'London',
-    company: 'Acme Corp',
-    experienceLevel: 'Entry-level',
+    id: "5",
+    title: "UX Designer",
+    department: "Design",
+    location: "London",
+    company: "Acme Corp",
+    experienceLevel: "Entry-level",
     applicants: 15,
-    created: '2025-03-22',
-    status: 'Active',
+    created: "2025-03-22",
+    status: "Active",
   },
 ];
 
 const Positions = () => {
   const { tenantId } = useAuth();
+  const { selectedCompany } = useCompany();
   const [positions, setPositions] = useState<any[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -117,7 +119,7 @@ const Positions = () => {
       name: string;
     };
   };
-  
+
   type DisplayPosition = {
     id: string;
     title: string;
@@ -136,42 +138,54 @@ const Positions = () => {
     const fetchPositions = async () => {
       try {
         if (!tenantId) return;
-        
+
         console.log("Fetching positions for tenant:", tenantId);
-        
-        const { data, error } = await supabase
-          .from('positions')
-          .select(`
+
+        let query = supabase
+          .from("positions")
+          .select(
+            `
             *,
             companies (
               id,
               name
             )
-          `)
-          .eq('tenant_id', tenantId)
-          .order('created_at', { ascending: false });
-          
+          `
+          )
+          .eq("tenant_id", tenantId);
+
+        // Filter by selected company if one is selected
+        if (selectedCompany) {
+          query = query.eq("company_id", selectedCompany.id);
+        }
+
+        const { data, error } = await query.order("created_at", {
+          ascending: false,
+        });
+
         if (error) {
           console.error("Error fetching positions:", error);
           setError("Failed to load positions");
           setPositions([]);
         } else if (data) {
           console.log("Fetched positions:", data);
-          
+
           // Transform data to match expected format
-          const formattedPositions = (data as Position[]).map(pos => ({
+          const formattedPositions = (data as Position[]).map((pos) => ({
             id: pos.id,
             title: pos.title,
-            department: pos.department || 'Not specified',
-            location: pos.location || 'Not specified',
-            company: pos.companies?.name || 'Not specified',
-            experienceLevel: pos.experience_level || 'Not specified',
-            employmentType: pos.employment_type || 'Full-Time',
+            department: pos.department || "Not specified",
+            location: pos.location || "Not specified",
+            company: pos.companies?.name || "Not specified",
+            experienceLevel: pos.experience_level || "Not specified",
+            employmentType: pos.employment_type || "Full-Time",
             applicants: 0, // We'll need to implement this with a real count later
-            created: pos.created_at ? format(new Date(pos.created_at), 'yyyy-MM-dd') : 'Unknown',
-            status: 'Active'
+            created: pos.created_at
+              ? format(new Date(pos.created_at), "yyyy-MM-dd")
+              : "Unknown",
+            status: "Active",
           }));
-          
+
           setPositions(formattedPositions);
         }
       } catch (err) {
@@ -182,18 +196,25 @@ const Positions = () => {
         setLoading(false);
       }
     };
-    
+
     fetchPositions();
-  }, [tenantId]);
+  }, [tenantId, selectedCompany]);
 
   // Filter positions based on search query
-  const filteredPositions = positions.filter(position => 
-    position.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    position.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    position.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    position.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (position.experienceLevel && position.experienceLevel.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (position.employmentType && position.employmentType.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredPositions = positions.filter(
+    (position) =>
+      position.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      position.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      position.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      position.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (position.experienceLevel &&
+        position.experienceLevel
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase())) ||
+      (position.employmentType &&
+        position.employmentType
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -211,7 +232,10 @@ const Positions = () => {
         <Card className="mb-8">
           <CardHeader className="pb-3">
             <CardTitle>Search & Filter</CardTitle>
-            <CardDescription>Find positions by title, department, location, company, experience level, or employment type</CardDescription>
+            <CardDescription>
+              Find positions by title, department, location, company, experience
+              level, or employment type
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="relative">
@@ -230,7 +254,10 @@ const Positions = () => {
         <Card>
           <CardHeader>
             <CardTitle>All Positions ({filteredPositions.length})</CardTitle>
-            <CardDescription>Complete position listings with department, location, and employment details</CardDescription>
+            <CardDescription>
+              Complete position listings with department, location, and
+              employment details
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -242,12 +269,20 @@ const Positions = () => {
                 <Table className="min-w-[1000px]">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="min-w-[200px]">Position Title</TableHead>
+                      <TableHead className="min-w-[200px]">
+                        Position Title
+                      </TableHead>
                       <TableHead className="min-w-[150px]">Company</TableHead>
-                      <TableHead className="min-w-[140px]">Experience Level</TableHead>
-                      <TableHead className="min-w-[120px]">Department</TableHead>
+                      <TableHead className="min-w-[140px]">
+                        Experience Level
+                      </TableHead>
+                      <TableHead className="min-w-[120px]">
+                        Department
+                      </TableHead>
                       <TableHead className="min-w-[120px]">Location</TableHead>
-                      <TableHead className="text-center min-w-[100px]">Applicants</TableHead>
+                      <TableHead className="text-center min-w-[100px]">
+                        Applicants
+                      </TableHead>
                       <TableHead className="min-w-[100px]">Created</TableHead>
                       <TableHead className="min-w-[80px]">Status</TableHead>
                     </TableRow>
@@ -255,31 +290,62 @@ const Positions = () => {
                   <TableBody>
                     {filteredPositions.length > 0 ? (
                       filteredPositions.map((position) => (
-                        <TableRow key={position.id} className="hover:cursor-pointer">
+                        <TableRow
+                          key={position.id}
+                          className="hover:cursor-pointer"
+                        >
                           <TableCell className="font-medium">
-                            <Link to={`/positions/${position.id}`} className="text-primary hover:underline">
+                            <Link
+                              to={`/positions/${position.id}`}
+                              className="text-primary hover:underline"
+                            >
                               {position.title}
                             </Link>
                           </TableCell>
-                          <TableCell className="whitespace-nowrap">{position.company}</TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {position.company}
+                          </TableCell>
                           <TableCell>
-                            <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium whitespace-nowrap
-                              ${position.experienceLevel === 'entry-level' ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20' : 
-                                position.experienceLevel === 'mid-level' ? 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20' :
-                                position.experienceLevel === 'senior' ? 'bg-purple-50 text-purple-700 ring-1 ring-inset ring-purple-600/20' :
-                                position.experienceLevel === 'lead' ? 'bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-600/20' :
-                                'bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-600/20'}`}>
-                              {position.experienceLevel === 'entry-level' ? 'Entry' :
-                               position.experienceLevel === 'mid-level' ? 'Mid' :
-                               position.experienceLevel === 'senior' ? 'Senior' :
-                               position.experienceLevel === 'lead' ? 'Lead' :
-                               position.experienceLevel.charAt(0).toUpperCase() + position.experienceLevel.slice(1)}
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium whitespace-nowrap
+                              ${
+                                position.experienceLevel === "entry-level"
+                                  ? "bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20"
+                                  : position.experienceLevel === "mid-level"
+                                  ? "bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20"
+                                  : position.experienceLevel === "senior"
+                                  ? "bg-purple-50 text-purple-700 ring-1 ring-inset ring-purple-600/20"
+                                  : position.experienceLevel === "lead"
+                                  ? "bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-600/20"
+                                  : "bg-gray-50 text-gray-700 ring-1 ring-inset ring-gray-600/20"
+                              }`}
+                            >
+                              {position.experienceLevel === "entry-level"
+                                ? "Entry"
+                                : position.experienceLevel === "mid-level"
+                                ? "Mid"
+                                : position.experienceLevel === "senior"
+                                ? "Senior"
+                                : position.experienceLevel === "lead"
+                                ? "Lead"
+                                : position.experienceLevel
+                                    .charAt(0)
+                                    .toUpperCase() +
+                                  position.experienceLevel.slice(1)}
                             </span>
                           </TableCell>
-                          <TableCell className="whitespace-nowrap">{position.department}</TableCell>
-                          <TableCell className="whitespace-nowrap">{position.location}</TableCell>
-                          <TableCell className="text-center">{position.applicants}</TableCell>
-                          <TableCell className="whitespace-nowrap">{position.created}</TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {position.department}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {position.location}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {position.applicants}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            {position.created}
+                          </TableCell>
                           <TableCell>
                             <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 whitespace-nowrap">
                               {position.status}
@@ -289,10 +355,13 @@ const Positions = () => {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                          {positions.length === 0 ? 
-                            "No positions found. Create your first position!" :
-                            "No positions found matching your search criteria."}
+                        <TableCell
+                          colSpan={8}
+                          className="text-center py-8 text-muted-foreground"
+                        >
+                          {positions.length === 0
+                            ? "No positions found. Create your first position!"
+                            : "No positions found matching your search criteria."}
                         </TableCell>
                       </TableRow>
                     )}
@@ -307,4 +376,4 @@ const Positions = () => {
   );
 };
 
-export default Positions; 
+export default Positions;

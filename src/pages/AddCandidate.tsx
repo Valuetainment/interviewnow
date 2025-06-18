@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ import {
   Globe,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import CompanySelect from "@/components/companies/CompanySelect";
+import { useCompany } from "@/contexts/CompanyContext";
 
 // Helper function to format phone number to E.164 format
 const formatPhoneToE164 = (phone: string | null | undefined): string | null => {
@@ -68,7 +68,6 @@ const formatPhoneToE164 = (phone: string | null | undefined): string | null => {
 
 // Form validation schema
 const candidateSchema = z.object({
-  company_id: z.string().min(1, "Company is required"),
   email: z.string().email("Invalid email address"),
   phone: z
     .string()
@@ -95,12 +94,12 @@ const AddCandidate = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, tenantId } = useAuth();
+  const { selectedCompany } = useCompany();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
     register,
     handleSubmit,
-    control,
     formState: { errors },
   } = useForm<CandidateFormData>({
     resolver: zodResolver(candidateSchema),
@@ -111,6 +110,15 @@ const AddCandidate = () => {
       toast({
         title: "Error",
         description: "Unable to determine tenant",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedCompany) {
+      toast({
+        title: "Error",
+        description: "Please select a company before adding candidates",
         variant: "destructive",
       });
       return;
@@ -144,7 +152,7 @@ const AddCandidate = () => {
       // Prepare the candidate data
       const candidateData = {
         tenant_id: tenantId,
-        company_id: data.company_id,
+        company_id: selectedCompany.id,
         email: data.email,
         phone: formattedPhone,
         first_name: data.first_name,
@@ -205,23 +213,21 @@ const AddCandidate = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Company Selection */}
+            {/* Company Information */}
             <div className="space-y-2">
-              <Label htmlFor="company_id">Company *</Label>
-              <Controller
-                name="company_id"
-                control={control}
-                render={({ field }) => (
-                  <CompanySelect
-                    value={field.value}
-                    onChange={field.onChange}
-                  />
-                )}
-              />
-              {errors.company_id && (
-                <p className="text-sm text-red-500">
-                  {errors.company_id.message}
-                </p>
+              <Label>Company</Label>
+              {selectedCompany ? (
+                <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                  <Briefcase className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">
+                    {selectedCompany.name}
+                  </span>
+                </div>
+              ) : (
+                <div className="text-sm text-destructive">
+                  Please select a company from the dropdown in the header before
+                  adding candidates.
+                </div>
               )}
             </div>
 
@@ -425,7 +431,7 @@ const AddCandidate = () => {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || !selectedCompany}>
                 {isSubmitting ? "Adding..." : "Add Candidate"}
               </Button>
             </div>

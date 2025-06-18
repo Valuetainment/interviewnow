@@ -1,41 +1,51 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableHeader, TableHead, TableRow, TableBody, TableCell } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableHead,
+  TableRow,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
 import { Calendar, Eye, FileText, Search, Star } from "lucide-react";
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import { formatFullName } from '@/lib/utils';
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { formatFullName } from "@/lib/utils";
+import { useCompany } from "@/contexts/CompanyContext";
 
 const DashboardInterviews: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [interviews, setInterviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { tenantId } = useAuth();
+  const { selectedCompany } = useCompany();
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     if (tenantId) {
       fetchInterviews();
     }
-  }, [tenantId]);
+  }, [tenantId, selectedCompany]);
 
   const fetchInterviews = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('interview_sessions')
-        .select(`
+      let query = supabase
+        .from("interview_sessions")
+        .select(
+          `
           id,
           start_time,
           end_time,
@@ -47,22 +57,31 @@ const DashboardInterviews: React.FC = () => {
             last_name,
             email
           ),
-          positions (
+          positions!inner (
             id,
-            title
+            title,
+            company_id
           )
-        `)
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false })
+        `
+        )
+        .eq("tenant_id", tenantId);
+
+      // Filter by selected company if one is selected
+      if (selectedCompany) {
+        query = query.eq("positions.company_id", selectedCompany.id);
+      }
+
+      const { data, error } = await query
+        .order("created_at", { ascending: false })
         .limit(20);
 
       if (error) {
-        console.error('Error fetching interviews:', error);
+        console.error("Error fetching interviews:", error);
       } else {
         setInterviews(data || []);
       }
     } catch (error) {
-      console.error('Error fetching interviews:', error);
+      console.error("Error fetching interviews:", error);
     } finally {
       setLoading(false);
     }
@@ -72,22 +91,26 @@ const DashboardInterviews: React.FC = () => {
     if (!dateString) return { date: null, time: null };
     const date = new Date(dateString);
     return {
-      date: date.toLocaleDateString('en-US', { 
-        month: '2-digit', 
-        day: '2-digit', 
-        year: 'numeric' 
+      date: date.toLocaleDateString("en-US", {
+        month: "2-digit",
+        day: "2-digit",
+        year: "numeric",
       }),
-      time: date.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: true 
-      })
+      time: date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }),
     };
   };
 
-  const calculateDuration = (startTime: string | null, endTime: string | null) => {
-    if (!startTime || !endTime) return 'N/A';
-    const duration = new Date(endTime).getTime() - new Date(startTime).getTime();
+  const calculateDuration = (
+    startTime: string | null,
+    endTime: string | null
+  ) => {
+    if (!startTime || !endTime) return "N/A";
+    const duration =
+      new Date(endTime).getTime() - new Date(startTime).getTime();
     const minutes = Math.floor(duration / 60000);
     if (minutes < 60) return `${minutes} min`;
     const hours = Math.floor(minutes / 60);
@@ -97,34 +120,37 @@ const DashboardInterviews: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'scheduled':
-        return 'bg-blue-100 text-blue-800';
-      case 'in_progress':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
+      case "completed":
+        return "bg-green-100 text-green-800";
+      case "scheduled":
+        return "bg-blue-100 text-blue-800";
+      case "in_progress":
+        return "bg-yellow-100 text-yellow-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
-      const filteredInterviews = interviews.filter(interview => {
-      const candidateName = formatFullName(interview.candidates?.first_name, interview.candidates?.last_name);
-      const positionTitle = interview.positions?.title || '';
-      return (
-        candidateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        positionTitle.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    });
-  
+  const filteredInterviews = interviews.filter((interview) => {
+    const candidateName = formatFullName(
+      interview.candidates?.first_name,
+      interview.candidates?.last_name
+    );
+    const positionTitle = interview.positions?.title || "";
+    return (
+      candidateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      positionTitle.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
+
   const sortedInterviews = filteredInterviews.sort((a, b) => {
     const statusOrder = {
-      'in_progress': 1,
-      'scheduled': 2,
-      'completed': 3,
-      'cancelled': 4
+      in_progress: 1,
+      scheduled: 2,
+      completed: 3,
+      cancelled: 4,
     };
     return statusOrder[a.status] - statusOrder[b.status];
   });
@@ -151,14 +177,16 @@ const DashboardInterviews: React.FC = () => {
               <Calendar className="h-5 w-5" />
               Recent Interviews
             </CardTitle>
-            <CardDescription>View and manage recent interview sessions</CardDescription>
+            <CardDescription>
+              View and manage recent interview sessions
+            </CardDescription>
           </div>
           <div className="relative w-full md:w-64">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              className="pl-9" 
-              placeholder="Search interviews..." 
-              value={searchTerm} 
+            <Input
+              className="pl-9"
+              placeholder="Search interviews..."
+              value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
@@ -181,19 +209,29 @@ const DashboardInterviews: React.FC = () => {
               {sortedInterviews.length > 0 ? (
                 sortedInterviews.map((interview) => {
                   const { date, time } = formatDateTime(interview.start_time);
-                  const duration = calculateDuration(interview.start_time, interview.end_time);
-                  
+                  const duration = calculateDuration(
+                    interview.start_time,
+                    interview.end_time
+                  );
+
                   return (
                     <TableRow key={interview.id}>
-                                              <TableCell className="font-medium">
-                          {formatFullName(interview.candidates?.first_name, interview.candidates?.last_name)}
-                        </TableCell>
-                      <TableCell>{interview.positions?.title || 'Unknown Position'}</TableCell>
+                      <TableCell className="font-medium">
+                        {formatFullName(
+                          interview.candidates?.first_name,
+                          interview.candidates?.last_name
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {interview.positions?.title || "Unknown Position"}
+                      </TableCell>
                       <TableCell>
                         {date ? (
                           <div className="flex items-center gap-1 whitespace-nowrap">
                             <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span>{date} at {time}</span>
+                            <span>
+                              {date} at {time}
+                            </span>
                           </div>
                         ) : (
                           "Not scheduled"
@@ -201,36 +239,42 @@ const DashboardInterviews: React.FC = () => {
                       </TableCell>
                       <TableCell>{duration}</TableCell>
                       <TableCell>
-                        <span 
+                        <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
                           ${getStatusColor(interview.status)}`}
                         >
-                          {interview.status.replace('_', ' ')}
+                          {interview.status.replace("_", " ")}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/candidates/${interview.candidates?.id}`)}
+                            onClick={() =>
+                              navigate(
+                                `/candidates/${interview.candidates?.id}`
+                              )
+                            }
                             disabled={!interview.candidates?.id}
                           >
                             <Eye className="h-4 w-4" />
                             <span className="ml-1">Profile</span>
                           </Button>
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/sessions/${interview.id}`)}
+                            onClick={() =>
+                              navigate(`/sessions/${interview.id}`)
+                            }
                           >
                             <FileText className="h-4 w-4" />
                             <span className="ml-1">Transcript</span>
                           </Button>
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="sm"
-                            disabled={interview.status !== 'completed'}
+                            disabled={interview.status !== "completed"}
                           >
                             <Star className="h-4 w-4" />
                             <span className="ml-1">Assessment</span>
