@@ -146,7 +146,10 @@ export function useWebRTC(
             }
           });
 
+          console.log('interview-start response:', { data: startData, error: startError });
+
           if (startError || !startData?.success) {
+            console.error('interview-start failed:', { startError, startData });
             throw new Error(startError?.message || startData?.error || 'Failed to start interview');
           }
 

@@ -289,11 +289,8 @@ export function useOpenAIConnection(
       return false;
     }
 
-    // Check if we have a server URL for ephemeral tokens or an API key
-    if (!config.serverUrl && !config.openAIKey) {
-      console.error('Either serverUrl (for ephemeral tokens) or openAIKey is required');
-      return false;
-    }
+    // No longer need to check for serverUrl or openAIKey
+    // We always use Supabase edge function for ephemeral tokens
 
     try {
       // Initialize WebRTC
@@ -375,11 +372,15 @@ export function useOpenAIConnection(
       console.log('Token request payload:', tokenPayload);
       
       // Use Supabase edge function
+      console.log('Calling openai-realtime-token edge function...');
       const { data: tokenData, error: tokenError } = await supabase.functions.invoke('openai-realtime-token', {
         body: tokenPayload
       });
 
+      console.log('openai-realtime-token response:', { data: tokenData, error: tokenError });
+
       if (tokenError || !tokenData) {
+        console.error('Failed to get ephemeral token:', { tokenError, tokenData });
         throw new Error(`Failed to get ephemeral token: ${tokenError?.message || 'Unknown error'}`);
       }
       
@@ -401,7 +402,7 @@ export function useOpenAIConnection(
       // Log the connection attempt details
       console.log('Attempting to connect to OpenAI Realtime API...');
       console.log(`Model: ${model}`);
-      console.log(`Auth token type: ${config.serverUrl ? 'ephemeral' : 'api_key'}`);
+      console.log(`Auth token type: ephemeral`);
       console.log(`Local SDP offer ready: ${!!pcRef.current.localDescription?.sdp}`);
 
       // Send offer to OpenAI Realtime API with appropriate auth
@@ -475,12 +476,11 @@ export function useOpenAIConnection(
     }
   }, [
     config.disabled,
-    config.openAIKey,
-    config.serverUrl,
     settings.voice,
     initializeWebRTC,
     configureOpenAISession,
-    handleDataChannelMessage
+    handleDataChannelMessage,
+    sessionId
   ]);
 
   // Wrap cleanup to check disabled
