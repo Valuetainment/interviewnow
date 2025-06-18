@@ -9,6 +9,7 @@ The InterviewNow application uses PostgreSQL with Supabase. The schema follows a
 - **id**: uuid (PK)
 - **name**: text
 - **plan_tier**: text (default: 'free')
+- **tenancy_type**: text (default: 'enterprise', options: 'enterprise', 'self-service')
 - **created_at**: timestamp
 - **updated_at**: timestamp
 
@@ -18,7 +19,7 @@ Links Supabase Auth users to tenants with roles.
 **Columns:**
 - `id` (uuid, PK): References auth.users
 - `tenant_id` (uuid, FK → tenants): User's organization
-- `role` (text): User role (default: 'user')
+- `role` (text): User role (options: 'system_admin', 'tenant_admin', 'tenant_interviewer', 'tenant_candidate', 'user')
 - `created_at` (timestamptz)
 - `updated_at` (timestamptz)
 
@@ -28,7 +29,94 @@ Links Supabase Auth users to tenants with roles.
 
 **Notes:**
 - Every auth.users entry must have a corresponding public.users entry
-- New signups are automatically assigned to the default tenant (Test Company Inc)
+- System Admin: Can access all tenants and system-wide features
+- Tenant Admin: Full access within their tenant
+- Tenant Interviewer: Limited access based on company assignments
+- Tenant Candidate: Currently not allowed to login
+
+### company_codes
+For tenant invitation system.
+
+- **id**: uuid (PK)
+- **code**: text (unique)
+- **tenant_id**: uuid (FK to tenants)
+- **created_at**: timestamp
+- **expires_at**: timestamp (default: 30 days from creation)
+- **used_at**: timestamp
+- **used_by**: uuid (FK to auth.users)
+
+### tenant_invitations
+Tracks tenant invitations sent by system admins.
+
+- **id**: uuid (PK)
+- **email**: text
+- **tenant_name**: text
+- **company_code**: text (unique)
+- **tenancy_type**: text (default: 'enterprise')
+- **invited_by**: uuid (FK to auth.users)
+- **created_at**: timestamp
+- **expires_at**: timestamp (default: 7 days from creation)
+- **accepted_at**: timestamp
+- **tenant_id**: uuid (FK to tenants)
+
+### interviewer_company_access
+Controls which companies interviewers can access.
+
+- **id**: uuid (PK)
+- **user_id**: uuid (FK to users)
+- **company_id**: uuid (FK to companies)
+- **tenant_id**: uuid (FK to tenants)
+- **granted_by**: uuid (FK to users)
+- **created_at**: timestamp
+- **Unique constraint**: (user_id, company_id)
+
+### billing_information
+Stores billing details for each tenant.
+
+- **id**: uuid (PK)
+- **tenant_id**: uuid (unique, FK to tenants)
+- **stripe_customer_id**: text
+- **payment_method_id**: text
+- **card_last4**: text
+- **card_brand**: text
+- **card_exp_month**: integer
+- **card_exp_year**: integer
+- **billing_email**: text
+- **billing_address**: jsonb
+- **created_at**: timestamp
+- **updated_at**: timestamp
+
+### invoices
+Tracks all invoices for tenants.
+
+- **id**: uuid (PK)
+- **tenant_id**: uuid (FK to tenants)
+- **invoice_number**: text (unique)
+- **stripe_invoice_id**: text
+- **amount_due**: integer (in cents)
+- **amount_paid**: integer (default: 0, in cents)
+- **currency**: text (default: 'usd')
+- **status**: text (options: 'draft', 'open', 'paid', 'void', 'uncollectible')
+- **due_date**: date
+- **paid_at**: timestamp
+- **invoice_pdf_url**: text
+- **line_items**: jsonb
+- **created_at**: timestamp
+- **updated_at**: timestamp
+
+### payment_history
+Records all payment transactions.
+
+- **id**: uuid (PK)
+- **tenant_id**: uuid (FK to tenants)
+- **invoice_id**: uuid (FK to invoices)
+- **stripe_payment_intent_id**: text
+- **amount**: integer (in cents)
+- **currency**: text (default: 'usd')
+- **status**: text (options: 'succeeded', 'failed', 'pending', 'refunded')
+- **payment_method**: text
+- **failure_reason**: text
+- **created_at**: timestamp
 
 ### companies
 - **id**: uuid (PK)
@@ -278,16 +366,29 @@ Note: Benefits are now stored at the company level in `companies.benefits_data`
 6. **Notifications**: Users receive notifications for interview events
 7. **Competencies**: Positions can have weighted competencies for evaluation
 8. **Candidate Relationships**: candidate_tenants manages many-to-many relationships between candidates and tenants
+9. **Access Control**: 
+   - System Admins have full system access
+   - Tenant Admins have full access within their tenant
+   - Tenant Interviewers have access controlled by interviewer_company_access
+   - Tenant Candidates currently cannot login
+10. **Billing**: Each tenant has billing information, invoices, and payment history
 
 ## Row Level Security (RLS)
 All tables have RLS policies that ensure:
-- Users can only access data within their tenant
-- Candidates can access their own interview data
+- System Admins can access all data across all tenants
+- Tenant Admins can access all data within their tenant
+- Tenant Interviewers can only access data for companies they're assigned to
 - Proper isolation between tenants
+- Candidates can access their own interview data (when login is enabled)
+
+## Helper Functions
+- `is_system_admin()`: Returns true if the current user is a system admin
 
 ## Indexes
 Key indexes are created on:
 - tenant_id (all tables)
 - Foreign key relationships
 - status fields for filtering
-- created_at for sorting 
+- created_at for sorting
+- email fields for lookups
+- expires_at for cleanup operations 
