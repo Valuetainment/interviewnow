@@ -38,7 +38,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const { tenantId, isTenantInterviewer } = useAuth();
+  const { tenantId, isTenantInterviewer, isTenantAdmin } = useAuth();
   const { getAccessibleCompanyIds, isLoading: accessLoading } =
     useInterviewerAccess();
 
@@ -81,9 +81,15 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
 
       setCompanies(data || []);
 
-      // If there's only one company, auto-select it
-      if (data && data.length === 1) {
-        setSelectedCompany(data[0]);
+      // Auto-select a company if none is selected
+      if (data && data.length > 0) {
+        // If no company is selected, or the selected company is no longer in the list
+        if (
+          !selectedCompany ||
+          !data.find((c) => c.id === selectedCompany.id)
+        ) {
+          setSelectedCompany(data[0]);
+        }
       }
     } catch (err) {
       setError(err as Error);
@@ -98,10 +104,23 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
     fetchCompanies();
   }, [tenantId, isTenantInterviewer, accessLoading]);
 
+  // Custom setter that prevents clearing selection for tenant admins
+  const handleSetSelectedCompany = (company: Company | null) => {
+    // For tenant admins, don't allow clearing the selection if companies exist
+    if (isTenantAdmin && !company && companies.length > 0) {
+      // Keep the current selection or select the first company
+      if (!selectedCompany) {
+        setSelectedCompany(companies[0]);
+      }
+      return;
+    }
+    setSelectedCompany(company);
+  };
+
   const value = {
     companies,
     selectedCompany,
-    setSelectedCompany,
+    setSelectedCompany: handleSetSelectedCompany,
     loading,
     error,
     refetch: fetchCompanies,
