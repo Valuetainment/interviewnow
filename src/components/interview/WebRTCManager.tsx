@@ -4,7 +4,7 @@ import { useWebRTC, WebRTCConfig } from '../../hooks/webrtc';
 
 // Default settings moved outside component to prevent recreation
 const DEFAULT_OPENAI_SETTINGS = {
-  voice: 'alloy',
+  voice: 'verse',
   temperature: 0.7,
   maximumLength: 5
 };

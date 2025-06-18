@@ -9,7 +9,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-tenant-id, x-session-id',
   'Access-Control-Max-Age': '86400',
   'X-Content-Type-Options': 'nosniff',
-  'Content-Security-Policy': "default-src 'self'; connect-src *.fly.dev *.openai.com"
+  'Content-Security-Policy': "default-src 'self'; connect-src *.openai.com"
 };
 
 // Operation ID for request tracking
@@ -641,14 +641,14 @@ serve(async (req) => {
       );
     }
 
-    // Enhanced OpenAI configuration for hybrid architecture
+    // Enhanced OpenAI configuration for direct-openai architecture
     let openaiConfig = undefined;
 
-    if (usedArchitecture === 'hybrid') {
+    if (usedArchitecture === 'direct-openai') {
       // ENHANCED: Use the new instruction builder
       openaiConfig = {
         voice: openai_settings.voice || 'verse',
-        model: openai_settings.model || 'gpt-4o',
+        model: openai_settings.model || 'gpt-4o-realtime-preview-2025-06-03',
         temperature: openai_settings.temperature || 0.7,
         turn_detection: {
           silence_duration_ms: openai_settings.turn_detection?.silence_duration_ms || 5000,

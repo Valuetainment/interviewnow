@@ -149,6 +149,7 @@ const OpenAITestPage: React.FC = () => {
                 value={interviewSettings.voice}
                 onChange={e => setInterviewSettings({...interviewSettings, voice: e.target.value})}
               >
+                <option value="verse">Verse</option>
                 <option value="alloy">Alloy (Neutral)</option>
                 <option value="echo">Echo (Male)</option>
                 <option value="fable">Fable (Male)</option>
