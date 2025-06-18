@@ -188,13 +188,16 @@ export function useOpenAIConnection(
             
             // Add to AI response buffer
             aiResponseTextRef.current += message.text;
-            saveTranscript(aiResponseTextRef.current, 'ai');
+            // Don't save individual deltas - wait for done event
           }
           break;
 
         case 'response.audio_transcript.done':
-          // AI response completed
-          console.log('AI response completed');
+          // AI response completed - save the accumulated transcript
+          console.log('AI response completed, saving transcript');
+          if (aiResponseTextRef.current.trim()) {
+            saveTranscript(aiResponseTextRef.current, 'ai');
+          }
           // Reset for next response
           aiResponseTextRef.current = '';
           break;
