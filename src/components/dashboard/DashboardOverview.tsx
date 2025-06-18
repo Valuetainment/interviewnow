@@ -42,6 +42,7 @@ import { Separator } from '@/components/ui/separator';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { formatFullName } from '@/lib/utils';
 
 // Metric card with optional trend
 const MetricCard = ({ 
@@ -351,10 +352,10 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({ 
         status,
         created_at,
         updated_at,
-        candidates (
+        candidates(
           id,
-          full_name,
-          email
+          first_name,
+          last_name
         ),
         positions (
           id,
@@ -388,15 +389,15 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({ 
 
         const timeAgo = getTimeAgo(new Date(session.updated_at));
         
-        return {
-          candidate: {
-            name: candidate?.full_name || 'Unknown Candidate',
-            initials: getInitials(candidate?.full_name || 'UC')
-          },
-          action,
-          time: timeAgo,
-          position: position?.title || 'Unknown Position'
-        };
+                  return {
+            candidate: {
+              name: formatFullName(candidate?.first_name, candidate?.last_name),
+              initials: getInitials(formatFullName(candidate?.first_name, candidate?.last_name))
+            },
+            action,
+            time: timeAgo,
+            position: position?.title || 'Unknown Position'
+          };
       });
 
       setRecentActivities(activities);
@@ -412,10 +413,10 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({ 
       .select(`
         id,
         start_time,
-        candidates (
+        candidates(
           id,
-          full_name,
-          email
+          first_name,
+          last_name
         ),
         positions (
           id,
@@ -435,15 +436,15 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({ 
         const position = session.positions;
         const startTime = new Date(session.start_time);
         
-        return {
-          candidate: {
-            name: candidate?.full_name || 'Unknown Candidate',
-            initials: getInitials(candidate?.full_name || 'UC')
-          },
-          position: position?.title || 'Unknown Position',
-          time: startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-          date: getRelativeDate(startTime)
-        };
+                  return {
+            candidate: {
+              name: formatFullName(candidate?.first_name, candidate?.last_name),
+              initials: getInitials(formatFullName(candidate?.first_name, candidate?.last_name))
+            },
+            position: position?.title || 'Unknown Position',
+            time: startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            date: getRelativeDate(startTime)
+          };
       });
 
       setUpcomingInterviews(interviews);
@@ -514,9 +515,10 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({ 
         start_time,
         end_time,
         created_at,
-        candidates (
+        candidates(
           id,
-          full_name
+          first_name,
+          last_name
         ),
         positions (
           id,
@@ -538,7 +540,7 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({ 
           : 0;
         
         return {
-          candidateName: session.candidates?.full_name || 'Unknown Candidate',
+          candidateName: formatFullName(session.candidates?.first_name, session.candidates?.last_name),
           position: session.positions?.title || 'Unknown Position',
           duration,
           wordCount: session.transcript_entries?.length * 50 || 0, // Rough estimate

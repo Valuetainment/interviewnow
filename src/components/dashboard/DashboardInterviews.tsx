@@ -13,6 +13,9 @@ import { Calendar, Eye, FileText, Search, Star } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { formatFullName } from '@/lib/utils';
 
 const DashboardInterviews: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -40,7 +43,8 @@ const DashboardInterviews: React.FC = () => {
           created_at,
           candidates (
             id,
-            full_name,
+            first_name,
+            last_name,
             email
           ),
           positions (
@@ -106,14 +110,14 @@ const DashboardInterviews: React.FC = () => {
     }
   };
 
-  const filteredInterviews = interviews.filter(interview => {
-    const candidateName = interview.candidates?.full_name || '';
-    const positionTitle = interview.positions?.title || '';
-    return (
-      candidateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      positionTitle.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  });
+      const filteredInterviews = interviews.filter(interview => {
+      const candidateName = formatFullName(interview.candidates?.first_name, interview.candidates?.last_name);
+      const positionTitle = interview.positions?.title || '';
+      return (
+        candidateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        positionTitle.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    });
   
   const sortedInterviews = filteredInterviews.sort((a, b) => {
     const statusOrder = {
@@ -181,9 +185,9 @@ const DashboardInterviews: React.FC = () => {
                   
                   return (
                     <TableRow key={interview.id}>
-                      <TableCell className="font-medium">
-                        {interview.candidates?.full_name || 'Unknown Candidate'}
-                      </TableCell>
+                                              <TableCell className="font-medium">
+                          {formatFullName(interview.candidates?.first_name, interview.candidates?.last_name)}
+                        </TableCell>
                       <TableCell>{interview.positions?.title || 'Unknown Position'}</TableCell>
                       <TableCell>
                         {date ? (

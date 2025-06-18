@@ -8,11 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
+import { formatFullName } from '@/lib/utils';
 
 // Define proper types for our data
 interface Candidate {
   id: string;
-  full_name: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string;
 }
 
@@ -38,7 +41,7 @@ const InterviewTestProduction = () => {
         // Fetch candidates
         const { data: candidatesData, error: candidatesError } = await supabase
           .from('candidates')
-          .select('id, full_name, email');
+          .select('id, first_name, last_name, email');
 
         if (candidatesError) throw candidatesError;
         setCandidates(candidatesData || []);
@@ -139,7 +142,7 @@ const InterviewTestProduction = () => {
                       <SelectContent>
                         {candidates.map(candidate => (
                           <SelectItem key={candidate.id} value={candidate.id}>
-                            {candidate.full_name}
+                            {formatFullName(candidate.first_name, candidate.last_name)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -148,7 +151,7 @@ const InterviewTestProduction = () => {
                     {selectedCandidateData && (
                       <div className="mt-6 space-y-4">
                         <div className="border rounded-md p-4">
-                          <h3 className="font-semibold text-lg">{selectedCandidateData.full_name}</h3>
+                          <h3 className="font-semibold text-lg">{formatFullName(selectedCandidateData.first_name, selectedCandidateData.last_name)}</h3>
                           <p className="text-sm text-muted-foreground">{selectedCandidateData.email}</p>
                         </div>
                       </div>

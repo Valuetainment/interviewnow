@@ -18,6 +18,8 @@ import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Calendar, Clock, Users, ArrowRight, List, FileText } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import InterviewInvitation from '@/components/interview/InterviewInvitation';
+import { Json } from '@/integrations/supabase/types';
+import { formatFullName } from '@/lib/utils';
 
 interface TranscriptEntry {
   id: string;
@@ -34,7 +36,8 @@ interface SessionData {
   };
   candidate: {
     id: string;
-    full_name: string;
+    first_name: string | null;
+    last_name: string | null;
     email: string;
   };
   start_time: string;
@@ -71,7 +74,7 @@ const SessionDetail = () => {
         .select(`
           id,
           position:positions!interview_sessions_position_id_fkey (id, title),
-          candidate:candidates!interview_sessions_candidate_id_fkey (id, full_name, email),
+          candidate:candidates!interview_sessions_candidate_id_fkey (id, first_name, last_name, email),
           start_time,
           end_time,
           status,
@@ -181,7 +184,7 @@ const SessionDetail = () => {
         <div>
           <h1 className="text-3xl font-bold">Interview Session</h1>
           <p className="text-muted-foreground mt-1">
-            {session.position.title} • {session.candidate.full_name}
+            {session.position.title} • {formatFullName(session.candidate.first_name, session.candidate.last_name)}
           </p>
         </div>
         
@@ -224,7 +227,7 @@ const SessionDetail = () => {
                   
                   <div>
                     <h3 className="text-sm font-medium text-muted-foreground">Candidate</h3>
-                    <p className="text-lg font-medium">{session.candidate.full_name}</p>
+                    <p className="text-lg font-medium">{formatFullName(session.candidate.first_name, session.candidate.last_name)}</p>
                     <p className="text-sm text-muted-foreground">{session.candidate.email}</p>
                   </div>
                 </div>
@@ -306,7 +309,7 @@ const SessionDetail = () => {
           <InterviewInvitation
             sessionId={session.id}
             candidateId={session.candidate.id}
-            candidateName={session.candidate.full_name}
+            candidateName={formatFullName(session.candidate.first_name, session.candidate.last_name)}
             candidateEmail={session.candidate.email}
             positionTitle={session.position.title}
             scheduledTime={session.start_time}

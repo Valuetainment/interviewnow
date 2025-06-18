@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, AlertCircle } from 'lucide-react';
+import { formatFullName } from '@/lib/utils';
 
 interface InterviewSessionData {
   id: string;
@@ -23,8 +24,9 @@ interface InterviewSessionData {
   };
   candidate: {
     id: string;
-    full_name: string;
-    email?: string;
+    first_name: string | null;
+    last_name: string | null;
+    email: string;
   };
   company?: {
     id: string;
@@ -71,7 +73,7 @@ const InterviewRoomHybrid = () => {
           .select(`
             id,
             position:position_id (id, title, description),
-            candidate:candidate_id (id, full_name, email),
+            candidate:candidate_id (id, first_name, last_name, email),
             company:company_id (id, name),
             start_time,
             status
@@ -238,7 +240,7 @@ const InterviewRoomHybrid = () => {
           <div className="flex justify-between items-center py-4">
             <div>
               <h1 className="text-2xl font-bold">
-                Interview: {session.candidate.full_name}
+                Interview: {formatFullName(session.candidate.first_name, session.candidate.last_name)}
               </h1>
               <p className="text-gray-600">
                 {session.position.title} 
@@ -285,7 +287,7 @@ const InterviewRoomHybrid = () => {
               <CardContent className="space-y-4">
                 <div>
                   <h3 className="font-semibold mb-1">Candidate</h3>
-                  <p>{session.candidate.full_name}</p>
+                  <p>{formatFullName(session.candidate.first_name, session.candidate.last_name)}</p>
                   {session.candidate.email && (
                     <p className="text-sm text-gray-600">{session.candidate.email}</p>
                   )}

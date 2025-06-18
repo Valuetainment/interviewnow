@@ -10,10 +10,12 @@ import { toast } from "sonner";
 import { supabase, getCurrentTenantId } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 import { Json } from "@/integrations/supabase/types";
+import { formatFullName } from '@/lib/utils';
 
 interface Candidate {
   id: string;
-  full_name: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string;
   skills?: string[] | null;
   resume_analysis?: Json | null;
@@ -122,7 +124,7 @@ const TestInterview = () => {
         // Fetch candidates for the current tenant
         const { data: candidatesData, error: candidatesError } = await supabase
           .from('candidates')
-          .select('id, full_name, email, skills, resume_analysis')
+          .select('id, first_name, last_name, email, skills, resume_analysis')
           .eq('tenant_id', effectiveTenantId);
 
         if (candidatesError) throw new Error(`Error fetching candidates: ${candidatesError.message}`);
@@ -401,7 +403,7 @@ const TestInterview = () => {
                     ) : (
                       candidates.map(candidate => (
                         <SelectItem key={candidate.id} value={candidate.id}>
-                          {candidate.full_name}
+                          {formatFullName(candidate.first_name, candidate.last_name)}
                         </SelectItem>
                       ))
                     )}
@@ -411,7 +413,7 @@ const TestInterview = () => {
                 {candidate && (
                   <div className="mt-6 space-y-4">
                     <div className="border rounded-md p-4">
-                      <h3 className="font-semibold text-lg">{candidate.full_name}</h3>
+                      <h3 className="font-semibold text-lg">{formatFullName(candidate.first_name, candidate.last_name)}</h3>
                       <p className="text-sm text-muted-foreground">{candidate.email}</p>
                       {candidate.skills && candidate.skills.length > 0 && (
                         <div className="mt-2">

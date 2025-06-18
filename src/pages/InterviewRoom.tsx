@@ -24,11 +24,13 @@ import {
   Play,
   StopCircle,
   FileText,
+  AlertCircle,
 } from 'lucide-react';
 
 import { useAudioCapture } from '@/hooks/useAudioCapture';
 import { useTranscriptSubscription, TranscriptEntry } from '@/hooks/useTranscriptSubscription';
 import { getCurrentTenantId } from '@/integrations/supabase/client';
+import { formatFullName } from '@/lib/utils';
 
 interface InterviewSessionData {
   id: string;
@@ -38,7 +40,8 @@ interface InterviewSessionData {
   };
   candidate: {
     id: string;
-    full_name: string;
+    first_name: string | null;
+    last_name: string | null;
   };
   start_time: string;
   status: string;
@@ -83,7 +86,7 @@ const InterviewRoom = () => {
           .select(`
             id,
             position:position_id (id, title),
-            candidate:candidate_id (id, full_name),
+            candidate:candidate_id (id, first_name, last_name),
             start_time,
             status
           `)
@@ -288,7 +291,7 @@ const InterviewRoom = () => {
       <div className="flex items-center justify-between border-b px-6 py-4">
         <div>
           <h1 className="text-xl font-semibold">Interview: {session.position.title}</h1>
-          <p className="text-sm text-muted-foreground">Candidate: {session.candidate.full_name}</p>
+          <p className="text-sm text-muted-foreground">Candidate: {formatFullName(session.candidate.first_name, session.candidate.last_name)}</p>
         </div>
         
         <div className="flex items-center space-x-4">

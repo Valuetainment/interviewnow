@@ -3,12 +3,19 @@
 
 create table if not exists public.candidates (
   id uuid primary key default gen_random_uuid(),
-  tenant_id uuid not null,
-  full_name text not null,
+  tenant_id uuid not null references public.tenants(id) on delete cascade,
   email text not null,
+  first_name text,
+  last_name text,
   phone text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  skills text[],
+  experience jsonb,
+  education text,
+  resume_url text,
+  resume_text text,
+  resume_analysis jsonb,
+  created_at timestamp with time zone default now() not null,
+  updated_at timestamp with time zone default now() not null
 );
 
 -- enable row level security

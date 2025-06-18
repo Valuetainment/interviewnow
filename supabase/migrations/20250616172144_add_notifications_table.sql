@@ -74,7 +74,7 @@ begin
       new.id,
       'interview_completed',
       'Interview Completed',
-      concat('Interview with ', c.full_name, ' for ', p.title, ' has been completed')
+      concat('Interview with ', coalesce(c.first_name || ' ' || c.last_name, 'Unknown Candidate'), ' for ', p.title, ' has been completed')
     from public.tenant_users tu
     left join public.candidates c on c.id = new.candidate_id
     left join public.positions p on p.id = new.position_id

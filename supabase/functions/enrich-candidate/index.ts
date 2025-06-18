@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     // First, check if we need to fetch the tenant_id for this candidate
     const { data: candidateData, error: candidateError } = await supabase
       .from('candidates')
-      .select('tenant_id, email, full_name, phone')
+      .select('tenant_id, email, first_name, last_name, phone')
       .eq('id', candidate_id)
       .single();
     
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
     else if (candidateData.email) searchParams.append('email', candidateData.email);
     
     if (name) searchParams.append('name', name);
-    else if (candidateData.full_name) searchParams.append('name', candidateData.full_name);
+    else if (candidateData.first_name && candidateData.last_name) searchParams.append('name', `${candidateData.first_name} ${candidateData.last_name}`);
     
     if (phone) searchParams.append('phone', phone);
     else if (candidateData.phone) searchParams.append('phone', candidateData.phone);

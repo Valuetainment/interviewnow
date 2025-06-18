@@ -34,6 +34,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Table, TableHeader, TableHead, TableRow, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Mail, User, Briefcase } from "lucide-react";
+import { formatFullName } from '@/lib/utils';
 
 // Form schema
 const invitationSchema = z.object({
@@ -92,9 +93,9 @@ const DashboardInvitations: React.FC = () => {
   const fetchCandidates = async () => {
     const { data, error } = await supabase
       .from('candidates')
-      .select('id, full_name, email')
+      .select('id, first_name, last_name, email')
       .eq('tenant_id', tenantId)
-      .order('full_name');
+      .order('first_name');
     
     if (error) {
       console.error('Error fetching candidates:', error);
@@ -127,7 +128,8 @@ const DashboardInvitations: React.FC = () => {
         created_at,
         candidates (
           id,
-          full_name,
+          first_name,
+          last_name,
           email
         ),
         interview_sessions (
@@ -195,7 +197,7 @@ const DashboardInvitations: React.FC = () => {
       const candidate = candidates.find(c => c.id === data.candidateId);
       const position = positions.find(p => p.id === data.positionId);
       
-      toast.success(`Invitation sent to ${candidate?.full_name} for ${position?.title} position.`, {
+      toast.success(`Invitation sent to ${formatFullName(candidate?.first_name, candidate?.last_name)} for ${position?.title} position.`, {
         description: `The invitation will expire in ${data.expirationHours} hours.`,
       });
       
@@ -275,11 +277,11 @@ const DashboardInvitations: React.FC = () => {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {candidates.map((candidate) => (
-                          <SelectItem key={candidate.id} value={candidate.id}>
-                            {candidate.full_name}
-                          </SelectItem>
-                        ))}
+                                                  {candidates.map((candidate) => (
+                            <SelectItem key={candidate.id} value={candidate.id}>
+                              {formatFullName(candidate.first_name, candidate.last_name)}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -385,10 +387,10 @@ const DashboardInvitations: React.FC = () => {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <div className="font-medium">{invitation.candidates?.full_name}</div>
-                              <div className="text-sm text-muted-foreground">{invitation.candidates?.email}</div>
-                            </div>
+                                                          <div>
+                                <div className="font-medium">{formatFullName(invitation.candidates?.first_name, invitation.candidates?.last_name)}</div>
+                                <div className="text-sm text-muted-foreground">{invitation.candidates?.email}</div>
+                              </div>
                           </div>
                         </TableCell>
                         <TableCell>

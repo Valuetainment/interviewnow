@@ -9,7 +9,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Upload, FileText, AlertCircle, CheckCircle, X, File } from 'lucide-react';
+import { Upload, FileText, AlertCircle, CheckCircle, X, File, Loader2, FileUp, CheckCircle2 } from 'lucide-react';
+import { formatFullName } from '@/lib/utils';
 
 // Maximum file size: 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -352,26 +353,30 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
         throw new Error('Missing tenant ID for candidate creation');
       }
       
-      const { data: candidate, error: dbError } = await supabase
+      // Extract first and last name from full name
+      const nameParts = parsedAnalysis.personal_info.full_name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      const { data: candidate, error: candidateError } = await supabase
         .from('candidates')
         .insert({
           tenant_id: effectiveTenantId,
-          full_name: parsedAnalysis.personal_info.full_name,
-          email: parsedAnalysis.personal_info.email || '',
-          phone: parsedAnalysis.personal_info.phone || '',
+          first_name: firstName,
+          last_name: lastName,
+          email: parsedAnalysis.personal_info.email,
+          phone: parsedAnalysis.personal_info.phone,
           resume_url: fileUrl,
           resume_text: processedData.text,
           skills: parsedAnalysis.skills || [],
           experience: parsedAnalysis.experience || {},
-          education: Array.isArray(parsedAnalysis.education) 
-            ? parsedAnalysis.education.map(edu => `${edu.degree} at ${edu.institution}`).join('; ')
-            : '',
-          resume_analysis: parsedAnalysis
+          education: parsedAnalysis.education || '',
+          resume_analysis: parsedAnalysis,
         })
-        .select('id')
+        .select()
         .single();
         
-      if (dbError) throw dbError;
+      if (candidateError) throw candidateError;
       
       console.log('Candidate created with ID:', candidate.id);
       
@@ -393,7 +398,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
           body: JSON.stringify({
             candidate_id: candidate.id,
             email: parsedAnalysis.personal_info.email,
-            name: parsedAnalysis.personal_info.full_name,
+            name: formatFullName(firstName, lastName),
             phone: parsedAnalysis.personal_info.phone
           })
         });

@@ -116,7 +116,7 @@ serve(async (req) => {
 
     // Prepare data for AI analysis
     const candidateContext = {
-      name: candidate.full_name || `${candidate.first_name} ${candidate.last_name}`,
+      name: `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim() || 'Unknown Candidate',
       skills: candidate.skills || [],
       experience: candidate.experience || [],
       education: candidate.education || '',

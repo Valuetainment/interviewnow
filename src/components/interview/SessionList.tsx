@@ -48,19 +48,23 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { formatFullName } from '@/lib/utils';
 
 interface InvitationStatus {
   token: string;
   status: 'pending' | 'sent' | 'accepted' | 'expired';
 }
 
+interface Candidate {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+}
+
 interface InterviewSession {
   id: string;
-  candidate: {
-    id: string;
-    full_name: string;
-    email: string;
-  };
+  candidate: Candidate;
   position: {
     id: string;
     title: string;
@@ -104,7 +108,7 @@ const SessionList: React.FC<SessionListProps> = ({ filterStatus }) => {
         .from('interview_sessions')
         .select(`
           id,
-          candidate:candidates!interview_sessions_candidate_id_fkey (id, full_name, email),
+          candidate:candidates!interview_sessions_candidate_id_fkey (id, first_name, last_name, email),
           position:positions!interview_sessions_position_id_fkey (id, title),
           start_time,
           status,
@@ -204,7 +208,8 @@ const SessionList: React.FC<SessionListProps> = ({ filterStatus }) => {
   const filteredSessions = sessions.filter((session) => {
     const searchLower = searchTerm.toLowerCase();
     return (
-      session.candidate.full_name.toLowerCase().includes(searchLower) ||
+      session.candidate.first_name?.toLowerCase().includes(searchLower) ||
+      session.candidate.last_name?.toLowerCase().includes(searchLower) ||
       session.candidate.email.toLowerCase().includes(searchLower) ||
       session.position.title.toLowerCase().includes(searchLower)
     );
@@ -309,10 +314,10 @@ const SessionList: React.FC<SessionListProps> = ({ filterStatus }) => {
                         <TableCell>
                           <div className="flex items-center space-x-2">
                             <User className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <p className="font-medium">{session.candidate.full_name}</p>
-                              <p className="text-sm text-muted-foreground">{session.candidate.email}</p>
-                            </div>
+                                                          <div>
+                                <p className="font-medium">{formatFullName(session.candidate.first_name, session.candidate.last_name)}</p>
+                                <p className="text-sm text-muted-foreground">{session.candidate.email}</p>
+                              </div>
                           </div>
                         </TableCell>
                         <TableCell>
