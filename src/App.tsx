@@ -14,6 +14,7 @@ import InterviewRoomHybrid from "./pages/InterviewRoomHybrid";
 import SessionDetail from "./pages/SessionDetail";
 import Sessions from "./pages/Sessions";
 import Candidate from "./pages/Candidate";
+import AddCandidate from "./pages/AddCandidate";
 import CandidateProfile from "./pages/CandidateProfile";
 import CompanySettings from "./pages/CompanySettings";
 import TestInterview from "./pages/TestInterview";
@@ -78,6 +79,7 @@ const App = () => (
                 <Route path="/sessions/:id" element={<SessionDetail />} />
                 <Route path="/candidate" element={<Candidate />} />
                 <Route path="/candidates" element={<Candidate />} />
+                <Route path="/add-candidate" element={<AddCandidate />} />
                 <Route path="/candidates/:id" element={<CandidateProfile />} />
                 <Route path="/settings" element={<CompanySettings />} />
                 <Route path="/test-interview" element={<TestInterview />} />
