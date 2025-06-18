@@ -22,7 +22,7 @@ ON CONFLICT (id) DO NOTHING;
 -- The script will automatically link auth users to the correct tenant (Test Company Inc)
 
 -- Create test companies
-INSERT INTO public.companies (id, tenant_id, name, culture, story, values, benefits, core_values, benefits_list, created_at, updated_at)
+INSERT INTO public.companies (id, tenant_id, name, culture, story, values_data, benefits_data, created_at, updated_at)
 VALUES 
   (
     'c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1',
@@ -30,10 +30,14 @@ VALUES
     'TechCorp Solutions',
     'We foster a culture of innovation, collaboration, and continuous learning. Our team members are encouraged to take ownership, experiment with new ideas, and grow both personally and professionally.',
     'Founded in 2015, TechCorp Solutions started as a small startup with a big vision: to revolutionize how businesses leverage AI and machine learning. Today, we''re a leading provider of AI-powered solutions serving Fortune 500 companies worldwide.',
-    'Innovation, Integrity, Impact, Inclusion',
-    'Comprehensive health insurance, 401k matching, flexible work arrangements, unlimited PTO, professional development budget',
-    '["Innovation", "Integrity", "Impact", "Inclusion", "Continuous Learning"]'::jsonb,
-    '["Health Insurance", "401k Matching", "Remote Work", "Unlimited PTO", "Learning Budget", "Stock Options"]'::jsonb,
+    '{
+      "description": "Innovation, Integrity, Impact, Inclusion",
+      "items": ["Innovation", "Integrity", "Impact", "Inclusion", "Continuous Learning"]
+    }'::jsonb,
+    '{
+      "description": "Comprehensive health insurance, 401k matching, flexible work arrangements, unlimited PTO, professional development budget",
+      "items": ["Health Insurance", "401k Matching", "Remote Work", "Unlimited PTO", "Learning Budget", "Stock Options"]
+    }'::jsonb,
     NOW(),
     NOW()
   )

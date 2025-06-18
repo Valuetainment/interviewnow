@@ -5,7 +5,7 @@
 
 set -e  # Exit on error
 
-echo ""
+echo ""t
 echo "=== Resetting database and setting up test data ==="
 echo ""
 
@@ -34,13 +34,13 @@ if ! npx supabase status >/dev/null 2>&1; then
 fi
 
 # Check if setup script exists and is executable
-if [ ! -f "./scripts/setup-local-test-data.sh" ]; then
-    echo "Error: setup-local-test-data.sh not found"
+if [ ! -f "./scripts/helpers/setup-local-test-data.sh" ]; then
+    echo "Error: setup-local-test-data.sh not found in scripts/helpers/"
     exit 1
 fi
 
 # Make sure the setup script is executable
-chmod +x ./scripts/setup-local-test-data.sh
+chmod +x ./scripts/helpers/setup-local-test-data.sh
 
 # Step 1: Reset the database
 echo "Step 1: Resetting local database..."
@@ -58,7 +58,7 @@ echo ""
 
 # Step 2: Run the setup script
 echo "Step 2: Setting up test auth users..."
-./scripts/setup-local-test-data.sh
+./scripts/helpers/setup-local-test-data.sh
 
 echo ""
 echo "=== All done! ==="

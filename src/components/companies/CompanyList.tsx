@@ -1,6 +1,5 @@
-
 import React from "react";
-import { type Company } from "@/pages/Companies";
+import { type Company } from "@/types/company";
 import CompanyCard from "./CompanyCard";
 import { Card } from "@/components/ui/card";
 import { Building } from "lucide-react";
