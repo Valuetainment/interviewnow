@@ -97,16 +97,30 @@ export const InterviewerAccessManagement: React.FC = () => {
   const fetchInterviewers = async () => {
     const { data, error } = await supabase
       .from("users")
-      .select("id, email, role, created_at")
+      .select(
+        `
+        id, 
+        role, 
+        created_at,
+        auth_users:id (
+          email
+        )
+      `
+      )
       .eq("tenant_id", tenantId)
       .eq("role", "tenant_interviewer")
-      .order("email");
+      .order("created_at");
 
     if (error) {
       console.error("Error fetching interviewers:", error);
       toast.error("Failed to load interviewers");
     } else {
-      setInterviewers(data || []);
+      // Transform the data to include email at the top level
+      const transformedData = (data || []).map((user) => ({
+        ...user,
+        email: user.auth_users?.email || "Unknown",
+      }));
+      setInterviewers(transformedData);
     }
   };
 
@@ -132,19 +146,33 @@ export const InterviewerAccessManagement: React.FC = () => {
         `
         user_id,
         company_id,
-        granted_at,
+        created_at,
         granted_by,
-        users!interviewer_company_access_user_id_fkey (email),
+        users!interviewer_company_access_user_id_fkey (
+          id,
+          auth_users:id (
+            email
+          )
+        ),
         companies!interviewer_company_access_company_id_fkey (name)
       `
       )
-      .order("granted_at", { ascending: false });
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Error fetching access list:", error);
       toast.error("Failed to load access list");
     } else {
-      setAccessList(data || []);
+      // Transform the data to have the email at the expected location
+      const transformedData = (data || []).map((access) => ({
+        ...access,
+        granted_at: access.created_at,
+        users: {
+          email: access.users?.auth_users?.email || "Unknown",
+        },
+      }));
+      setAccessList(transformedData);
     }
   };
 
