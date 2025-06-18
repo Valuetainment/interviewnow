@@ -5,8 +5,8 @@ import { useTranscriptManager } from './useTranscriptManager';
 import { supabase, getCurrentTenantId } from '@/integrations/supabase/client';
 
 export interface OpenAIConnectionConfig {
-  openAIKey?: string; // Now optional - only used if serverUrl is not provided
-  serverUrl?: string; // URL to fetch ephemeral token from
+  // Note: We ALWAYS use ephemeral tokens via Supabase edge function
+  // Never pass API keys to the browser
   openAISettings?: {
     voice?: string;
     temperature?: number;
@@ -362,46 +362,41 @@ export function useOpenAIConnection(
       let authToken: string;
       let model = 'gpt-4o-realtime-preview-2025-06-03';
 
-      // Always use Supabase edge function for ephemeral tokens (secure)
-      if (!config.openAIKey) {
-        console.log('Fetching ephemeral token from Supabase edge function...');
-        
-        const tokenPayload = {
-          model: model,
-          voice: settings.voice || 'verse',
-          session_id: sessionId,
-          tenant_id: await getCurrentTenantId()
-        };
-        console.log('Token request payload:', tokenPayload);
-        
-        // Use Supabase edge function
-        const { data: tokenData, error: tokenError } = await supabase.functions.invoke('openai-realtime-token', {
-          body: tokenPayload
-        });
+      // ALWAYS use Supabase edge function for ephemeral tokens (secure)
+      // Never use API key directly in the browser
+      console.log('Fetching ephemeral token from Supabase edge function...');
+      
+      const tokenPayload = {
+        model: model,
+        voice: settings.voice || 'verse',
+        session_id: sessionId,
+        tenant_id: await getCurrentTenantId()
+      };
+      console.log('Token request payload:', tokenPayload);
+      
+      // Use Supabase edge function
+      const { data: tokenData, error: tokenError } = await supabase.functions.invoke('openai-realtime-token', {
+        body: tokenPayload
+      });
 
-        if (tokenError || !tokenData) {
-          throw new Error(`Failed to get ephemeral token: ${tokenError?.message || 'Unknown error'}`);
-        }
-        
-        if (!tokenData.client_secret?.value) {
-          throw new Error('Invalid token response from edge function');
-        }
-
-        authToken = tokenData.client_secret.value;
-        
-        // Use the model from the response if provided
-        if (tokenData.model) {
-          model = tokenData.model;
-        }
-        
-        console.log('Successfully obtained ephemeral token');
-        console.log('Token preview (first 20 chars):', authToken.substring(0, 20) + '...');
-        console.log('Token length:', authToken.length);
-      } else {
-        // Fallback to direct API key (not recommended for production)
-        console.warn('Using API key directly - this is not recommended for production');
-        authToken = config.openAIKey!;
+      if (tokenError || !tokenData) {
+        throw new Error(`Failed to get ephemeral token: ${tokenError?.message || 'Unknown error'}`);
       }
+      
+      if (!tokenData.client_secret?.value) {
+        throw new Error('Invalid token response from edge function');
+      }
+
+      authToken = tokenData.client_secret.value;
+      
+      // Use the model from the response if provided
+      if (tokenData.model) {
+        model = tokenData.model;
+      }
+      
+      console.log('Successfully obtained ephemeral token');
+      console.log('Token preview (first 20 chars):', authToken.substring(0, 20) + '...');
+      console.log('Token length:', authToken.length);
 
       // Log the connection attempt details
       console.log('Attempting to connect to OpenAI Realtime API...');

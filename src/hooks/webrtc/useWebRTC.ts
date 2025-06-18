@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 import { ConnectionState } from './useConnectionState';
 import { useOpenAIConnection } from './useOpenAIConnection';
@@ -6,10 +6,7 @@ import { useTranscriptManager } from './useTranscriptManager';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface WebRTCConfig {
-  serverUrl?: string;
   simulationMode?: boolean;
-  openAIMode?: boolean;
-  openAIKey?: string;
   jobDescription?: string;
   resume?: string;
   openAISettings?: {
@@ -69,12 +66,16 @@ export function useWebRTC(
     }
   }, [onConnectionStateChange]);
 
+  // Memoize the OpenAI settings to prevent recreation
+  const openAISettings = useMemo(() => {
+    return openAIConfig || config.openAISettings;
+  }, [openAIConfig, config.openAISettings]);
+
   // Always use direct OpenAI connection with ephemeral tokens
   const openAIConnection = useOpenAIConnection(
     sessionId,
     {
-      openAIKey: config.openAIKey, // Optional - if not provided, will use ephemeral tokens
-      openAISettings: openAIConfig || config.openAISettings,
+      openAISettings: openAISettings,
       jobDescription: config.jobDescription,
       resume: config.resume,
       disabled: false // Always enabled
@@ -82,6 +83,10 @@ export function useWebRTC(
     handleConnectionStateChange,
     onTranscriptUpdate
   );
+  
+  // Store connection in ref to avoid circular dependency
+  const connectionRef = useRef(openAIConnection);
+  connectionRef.current = openAIConnection;
 
   // Extracted status properties
   const status: WebRTCStatus = {
@@ -158,8 +163,8 @@ export function useWebRTC(
         }
       }
 
-      // Initialize the OpenAI connection
-      const success = await openAIConnection.initialize();
+      // Initialize the OpenAI connection using ref
+      const success = await connectionRef.current.initialize();
       
       if (success) {
         setIsReady(true);
@@ -174,19 +179,19 @@ export function useWebRTC(
       setError(err.message || 'Unknown error during initialization');
       return false;
     }
-  }, [sessionId, config, clearTranscript, openAIConnection]);
+  }, [sessionId, config.simulationMode, config.openAISettings, config.jobDescription, config.resume, clearTranscript]);
 
   // Cleanup
   const cleanup = useCallback(() => {
     console.log('Cleaning up WebRTC connections');
     
-    openAIConnection.cleanup();
+    connectionRef.current.cleanup();
     
     setIsReady(false);
     setInternalConnectionState('disconnected');
     setError(null);
     setOpenAIConfig(null);
-  }, [openAIConnection]);
+  }, []);
 
   // Clean up on unmount
   useEffect(() => {
