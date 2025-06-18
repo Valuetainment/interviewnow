@@ -2,6 +2,7 @@ import { useCallback, useRef } from 'react';
 import { useWebRTCConnection } from './useWebRTCConnection';
 import { ConnectionState } from './useConnectionState';
 import { useTranscriptManager } from './useTranscriptManager';
+import { supabase, getCurrentTenantId } from '@/integrations/supabase/client';
 
 export interface OpenAIConnectionConfig {
   openAIKey?: string; // Now optional - only used if serverUrl is not provided
@@ -361,44 +362,29 @@ export function useOpenAIConnection(
       let authToken: string;
       let model = 'gpt-4o-realtime-preview-2025-06-03';
 
-      // If we have a server URL, fetch ephemeral token
-      if (config.serverUrl) {
-        console.log('Fetching ephemeral token from server...');
-        
-        // Extract base URL from WebSocket URL (remove protocol and query params)
-        let baseUrl = config.serverUrl;
-        if (baseUrl.startsWith('wss://') || baseUrl.startsWith('ws://')) {
-          baseUrl = baseUrl.replace(/^wss?:\/\//, 'https://');
-        }
-        // Remove query parameters
-        const urlParts = baseUrl.split('?');
-        baseUrl = urlParts[0];
-        
-        console.log(`Fetching token from: ${baseUrl}/api/realtime/sessions`);
+      // Always use Supabase edge function for ephemeral tokens (secure)
+      if (!config.openAIKey) {
+        console.log('Fetching ephemeral token from Supabase edge function...');
         
         const tokenPayload = {
           model: model,
-          voice: settings.voice || 'verse'
+          voice: settings.voice || 'verse',
+          session_id: sessionId,
+          tenant_id: await getCurrentTenantId()
         };
         console.log('Token request payload:', tokenPayload);
         
-        const tokenResponse = await fetch(`${baseUrl}/api/realtime/sessions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(tokenPayload)
+        // Use Supabase edge function
+        const { data: tokenData, error: tokenError } = await supabase.functions.invoke('openai-realtime-token', {
+          body: tokenPayload
         });
 
-        if (!tokenResponse.ok) {
-          const errorText = await tokenResponse.text();
-          throw new Error(`Failed to get ephemeral token (${tokenResponse.status}): ${errorText}`);
+        if (tokenError || !tokenData) {
+          throw new Error(`Failed to get ephemeral token: ${tokenError?.message || 'Unknown error'}`);
         }
-
-        const tokenData = await tokenResponse.json();
         
         if (!tokenData.client_secret?.value) {
-          throw new Error('Invalid token response from server');
+          throw new Error('Invalid token response from edge function');
         }
 
         authToken = tokenData.client_secret.value;

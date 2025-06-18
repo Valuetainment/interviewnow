@@ -614,41 +614,15 @@ serve(async (req) => {
       // Continue without prep analysis - don't fail the entire interview
     }
 
-    // Set up Fly.io VM for the interview
-    const {
-      url: webrtcServerUrl,
-      error: vmError,
-      architecture: usedArchitecture
-    } = await setupFlyVM(
-      tenant_id,
-      interview_session_id,
-      region,
-      architecture
-    );
-
-    if (vmError || !webrtcServerUrl) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: `Failed to set up WebRTC server: ${vmError || 'Unknown error'}`,
-          operation_id: operationId
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500
-        }
-      );
-    }
-
-    // Generate a WebRTC session ID with tenant context for database storage
-    // Note: Fly.io server will generate its own sessionId for WebSocket management
+    // For direct OpenAI connection, no server setup needed
+    const usedArchitecture = 'direct-openai';
     const webrtcSessionId = `${tenant_id}:${interview_session_id}:${crypto.randomUUID()}`;
 
-    // Update the interview session with WebRTC information
+    // Update the interview session with architecture information
     const updateSuccess = await updateInterviewSession(
       supabaseClient,
       interview_session_id,
-      webrtcServerUrl,
+      null, // No server URL needed for direct OpenAI
       webrtcSessionId,
       usedArchitecture
     );
@@ -705,7 +679,7 @@ serve(async (req) => {
     // Return success with enhanced connection details
     const response: InterviewResponse = {
       success: true,
-      webrtc_server_url: webrtcServerUrl,
+      webrtc_server_url: null, // No server URL needed for direct OpenAI
       webrtc_session_id: webrtcSessionId,
       architecture: usedArchitecture,
       operation_id: operationId,
