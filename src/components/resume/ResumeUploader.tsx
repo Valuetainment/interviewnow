@@ -1,20 +1,69 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/components/ui/use-toast';
-import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent } from '@/components/ui/card';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { Upload, FileText, AlertCircle, CheckCircle, X, File, Loader2, FileUp, CheckCircle2 } from 'lucide-react';
-import { formatFullName } from '@/lib/utils';
+import React, { useState, useRef, useCallback } from "react";
+import { useDropzone } from "react-dropzone";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/components/ui/use-toast";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Upload,
+  FileText,
+  AlertCircle,
+  CheckCircle,
+  X,
+  File,
+  Loader2,
+  FileUp,
+  CheckCircle2,
+} from "lucide-react";
+import { formatFullName } from "@/lib/utils";
 
 // Maximum file size: 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const ALLOWED_FILE_TYPES = ['application/pdf'];
+const ALLOWED_FILE_TYPES = ["application/pdf"];
+
+// Helper function to format phone number to E.164 format
+const formatPhoneToE164 = (phone: string | null | undefined): string | null => {
+  if (!phone) return null;
+
+  // Remove all non-digit characters
+  const digits = phone.replace(/\D/g, "");
+
+  // If empty after removing non-digits, return null
+  if (!digits) return null;
+
+  // Handle US numbers (10 digits)
+  if (digits.length === 10) {
+    return `+1${digits}`;
+  }
+
+  // Handle US numbers with country code (11 digits starting with 1)
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `+${digits}`;
+  }
+
+  // Handle numbers that already have country code (more than 10 digits)
+  if (digits.length > 10 && !digits.startsWith("+")) {
+    return `+${digits}`;
+  }
+
+  // For other formats, try to preserve as is if it's between 7-15 digits
+  if (digits.length >= 7 && digits.length <= 15) {
+    // If it doesn't start with a country code, assume US
+    if (digits.length <= 10) {
+      return `+1${digits}`;
+    }
+    return `+${digits}`;
+  }
+
+  // If we can't format it properly, return null to avoid constraint violation
+  console.warn(`Unable to format phone number to E.164: ${phone}`);
+  return null;
+};
 
 interface ResumeUploaderProps {
   onUploadComplete?: (fileUrl: string, fileName: string) => void;
@@ -36,7 +85,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
   const { toast } = useToast();
   const { user, tenantId } = useAuth();
   const navigate = useNavigate();
-  
+
   // For tracking upload progress
   const uploadProgressInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -44,7 +93,8 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
   React.useEffect(() => {
     return () => {
       if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl);
-      if (uploadProgressInterval.current) clearInterval(uploadProgressInterval.current);
+      if (uploadProgressInterval.current)
+        clearInterval(uploadProgressInterval.current);
     };
   }, [filePreviewUrl]);
 
@@ -54,7 +104,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
     if (!ALLOWED_FILE_TYPES.includes(file.type)) {
       return {
         valid: false,
-        error: 'Only PDF files are allowed.',
+        error: "Only PDF files are allowed.",
       };
     }
 
@@ -62,7 +112,9 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
     if (file.size > MAX_FILE_SIZE) {
       return {
         valid: false,
-        error: `File size must be less than ${MAX_FILE_SIZE / (1024 * 1024)}MB.`,
+        error: `File size must be less than ${
+          MAX_FILE_SIZE / (1024 * 1024)
+        }MB.`,
       };
     }
 
@@ -78,10 +130,10 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
       const validation = validateFile(file);
 
       if (!validation.valid) {
-        setUploadError(validation.error || 'Invalid file');
+        setUploadError(validation.error || "Invalid file");
         toast({
-          variant: 'destructive',
-          title: 'Invalid File',
+          variant: "destructive",
+          title: "Invalid File",
           description: validation.error,
         });
         return;
@@ -104,74 +156,75 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
   );
 
   // Configure dropzone
-  const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
-    onDrop,
-    accept: {
-      'application/pdf': ['.pdf'],
-    },
-    maxFiles: 1,
-    multiple: false,
-  });
+  const { getRootProps, getInputProps, isDragActive, isDragReject } =
+    useDropzone({
+      onDrop,
+      accept: {
+        "application/pdf": [".pdf"],
+      },
+      maxFiles: 1,
+      multiple: false,
+    });
 
   // Handle file upload to Supabase
   const handleUpload = async () => {
     // Add debug logs
-    console.log('Upload initiated with:', { 
-      fileExists: !!file, 
-      userExists: !!user, 
-      userInfo: user, 
-      tenantIdExists: !!tenantId, 
-      tenantId 
+    console.log("Upload initiated with:", {
+      fileExists: !!file,
+      userExists: !!user,
+      userInfo: user,
+      tenantIdExists: !!tenantId,
+      tenantId,
     });
 
     // Temporary workaround: If tenant ID is missing, try to fetch the first one from the database
     let effectiveTenantId = tenantId;
     if (!effectiveTenantId && user) {
-      console.log('Attempting to fetch a fallback tenant ID');
+      console.log("Attempting to fetch a fallback tenant ID");
       try {
         // First try to get the user's tenant ID from the database
         const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('tenant_id')
-          .eq('id', user.id)
+          .from("users")
+          .select("tenant_id")
+          .eq("id", user.id)
           .single();
-          
+
         if (userData?.tenant_id) {
-          console.log('Found tenant ID in users table:', userData.tenant_id);
+          console.log("Found tenant ID in users table:", userData.tenant_id);
           effectiveTenantId = userData.tenant_id;
         } else {
           // If not found, get any tenant ID as a fallback
           const { data: tenantData, error: tenantError } = await supabase
-            .from('tenants')
-            .select('id')
+            .from("tenants")
+            .select("id")
             .limit(1)
             .single();
-            
+
           if (tenantData?.id) {
-            console.log('Using fallback tenant ID:', tenantData.id);
+            console.log("Using fallback tenant ID:", tenantData.id);
             effectiveTenantId = tenantData.id;
           }
         }
       } catch (error) {
-        console.error('Error getting fallback tenant ID:', error);
+        console.error("Error getting fallback tenant ID:", error);
       }
     }
 
     if (!file || !user) {
-      setUploadError('Missing file or user information');
-      console.error('Upload error: Missing file or user information', { 
-        file: !!file, 
-        user: !!user
+      setUploadError("Missing file or user information");
+      console.error("Upload error: Missing file or user information", {
+        file: !!file,
+        user: !!user,
       });
       return;
     }
 
     // If we still don't have a tenant ID, use the user ID as a fallback path
-    const uploadPath = effectiveTenantId 
-      ? `${effectiveTenantId}/${Date.now()}_${file.name}` 
+    const uploadPath = effectiveTenantId
+      ? `${effectiveTenantId}/${Date.now()}_${file.name}`
       : `${user.id}/${Date.now()}_${file.name}`;
 
-    console.log('Using upload path:', uploadPath);
+    console.log("Using upload path:", uploadPath);
 
     setIsUploading(true);
     setUploadProgress(0);
@@ -188,9 +241,9 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
 
       // Upload to Supabase storage
       const { data, error } = await supabase.storage
-        .from('resumes')
+        .from("resumes")
         .upload(uploadPath, file, {
-          cacheControl: '3600',
+          cacheControl: "3600",
           upsert: false,
         });
 
@@ -203,39 +256,59 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
       if (error) throw error;
 
       // Get public URL
-      const { data: urlData } = supabase.storage.from('resumes').getPublicUrl(uploadPath);
-      
+      const { data: urlData } = supabase.storage
+        .from("resumes")
+        .getPublicUrl(uploadPath);
+      console.log(`Original Public URL: ${urlData.publicUrl}`);
+      // Check to see if we are running in dev. If so, we need to use out TunnelMole IP address
+      if (import.meta.env.MODE === "development") {
+        const TUNNEL_MOLE_URL = import.meta.env.VITE_TUNNEL_MOLE_URL;
+        if (!TUNNEL_MOLE_URL) {
+          throw new Error("TUNNEL_MOLE_URL is not set");
+        }
+        const { data, error } = await supabase.storage
+          .from("resumes")
+          .createSignedUrl(uploadPath, 60); // expires in 60 seconds
+        const LOCAL_S3_URL = "http://127.0.0.1:54321";
+        const newUrl = data.signedUrl.replace(LOCAL_S3_URL, TUNNEL_MOLE_URL);
+        console.log(`Updated Public URL: ${newUrl}`);
+        urlData.publicUrl = newUrl;
+      }
+
       // Set progress to 100% and mark as success
       setUploadProgress(100);
       setUploadSuccess(true);
       toast({
-        title: 'Resume Uploaded',
-        description: 'Resume was successfully uploaded.',
+        title: "Resume Uploaded",
+        description: "Resume was successfully uploaded.",
       });
 
       // Trigger resume processing
       try {
         const candidateId = await processResume(urlData.publicUrl, file.name);
-        
+
         // Notify parent component with the URL and new candidate ID
         if (onUploadComplete) onUploadComplete(urlData.publicUrl, file.name);
       } catch (processingError) {
         // Processing error is handled inside processResume
         // We don't need to throw here since the upload was successful
-        console.error('Processing error:', processingError);
+        console.error("Processing error:", processingError);
       }
     } catch (error) {
-      console.error('Upload error:', error);
-      setUploadError(error instanceof Error ? error.message : 'Failed to upload file');
-      
+      console.error("Upload error:", error);
+      setUploadError(
+        error instanceof Error ? error.message : "Failed to upload file"
+      );
+
       if (onUploadError && error instanceof Error) {
         onUploadError(error);
       }
-      
+
       toast({
-        variant: 'destructive',
-        title: 'Upload Failed',
-        description: error instanceof Error ? error.message : 'Failed to upload file',
+        variant: "destructive",
+        title: "Upload Failed",
+        description:
+          error instanceof Error ? error.message : "Failed to upload file",
       });
     } finally {
       setIsUploading(false);
@@ -250,72 +323,99 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
   const processResume = async (fileUrl: string, fileName: string) => {
     try {
       // Get the Supabase URL and key
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://gypnutyegqxelvsqjedu.supabase.co';
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5cG51dHllZ3F4ZWx2c3FqZWR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU4NzQ1MTUsImV4cCI6MjA2MTQ1MDUxNX0.1GnoF-EZ5jr_DJgcgeCJcqy-NASlEFGt1XavwbiIELA';
-      
+      const supabaseUrl =
+        import.meta.env.VITE_SUPABASE_URL ||
+        "https://gypnutyegqxelvsqjedu.supabase.co";
+      const supabaseKey =
+        import.meta.env.VITE_SUPABASE_ANON_KEY ||
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd5cG51dHllZ3F4ZWx2c3FqZWR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU4NzQ1MTUsImV4cCI6MjA2MTQ1MDUxNX0.1GnoF-EZ5jr_DJgcgeCJcqy-NASlEFGt1XavwbiIELA";
+
       // Get current session for auth token, if available
       const { data: sessionData } = await supabase.auth.getSession();
       const authToken = sessionData?.session?.access_token;
-      
-      console.log('Processing resume using direct fetch instead of client.functions.invoke');
-      
+
+      console.log(
+        "Processing resume using direct fetch instead of client.functions.invoke"
+      );
+
+      console.log(`Resume URL: ${fileUrl}`);
+
       // Step 1: Call process-resume function directly with fetch to extract text from PDF
-      const processResumeResponse = await fetch(`${supabaseUrl}/functions/v1/process-resume`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseKey,
-          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
-        },
-        body: JSON.stringify({ pdfUrl: fileUrl })
-      });
-      
+      const processResumeResponse = await fetch(
+        `${supabaseUrl}/functions/v1/process-resume`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: supabaseKey,
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          },
+          body: JSON.stringify({ pdfUrl: fileUrl }),
+        }
+      );
+
       if (!processResumeResponse.ok) {
         const errorText = await processResumeResponse.text();
-        console.error('Process resume error:', processResumeResponse.status, errorText);
-        throw new Error(`Failed to extract text from resume: ${processResumeResponse.status}`);
+        console.error(
+          "Process resume error:",
+          processResumeResponse.status,
+          errorText
+        );
+        throw new Error(
+          `Failed to extract text from resume: ${processResumeResponse.status}`
+        );
       }
-      
+
       const processedData = await processResumeResponse.json();
-      
+
       if (!processedData?.success || !processedData?.text) {
-        throw new Error('Failed to extract text from resume');
+        throw new Error("Failed to extract text from resume");
       }
-      
+
       // Step 2: Call analyze-resume function directly with fetch to structure the resume data
-      const analyzeResumeResponse = await fetch(`${supabaseUrl}/functions/v1/analyze-resume`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseKey,
-          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
-        },
-        body: JSON.stringify({ resumeText: processedData.text })
-      });
-      
+      const analyzeResumeResponse = await fetch(
+        `${supabaseUrl}/functions/v1/analyze-resume`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: supabaseKey,
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          },
+          body: JSON.stringify({ resumeText: processedData.text }),
+        }
+      );
+
       if (!analyzeResumeResponse.ok) {
         const errorText = await analyzeResumeResponse.text();
-        console.error('Analyze resume error:', analyzeResumeResponse.status, errorText);
-        throw new Error(`Failed to analyze resume: ${analyzeResumeResponse.status}`);
+        console.error(
+          "Analyze resume error:",
+          analyzeResumeResponse.status,
+          errorText
+        );
+        throw new Error(
+          `Failed to analyze resume: ${analyzeResumeResponse.status}`
+        );
       }
-      
+
       const analysisData = await analyzeResumeResponse.json();
-      
+
       if (!analysisData?.analysis) {
-        throw new Error('Failed to analyze resume data');
+        throw new Error("Failed to analyze resume data");
       }
-      
+
       // Parse the analysis data if it's a string (from response_format: "json_object")
       let parsedAnalysis;
       try {
-        parsedAnalysis = typeof analysisData.analysis === 'string' 
-          ? JSON.parse(analysisData.analysis) 
-          : analysisData.analysis;
+        parsedAnalysis =
+          typeof analysisData.analysis === "string"
+            ? JSON.parse(analysisData.analysis)
+            : analysisData.analysis;
       } catch (parseError) {
-        console.error('Error parsing analysis data:', parseError);
-        throw new Error('Failed to parse resume analysis data');
+        console.error("Error parsing analysis data:", parseError);
+        throw new Error("Failed to parse resume analysis data");
       }
-      
+
       // Step 3: Store candidate data in the database
       // Use the same tenant ID fallback logic as in upload
       let effectiveTenantId = tenantId;
@@ -323,128 +423,142 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
         try {
           // First try to get from users table
           const { data: userData } = await supabase
-            .from('users')
-            .select('tenant_id')
-            .eq('id', user.id)
+            .from("users")
+            .select("tenant_id")
+            .eq("id", user.id)
             .single();
-            
+
           if (userData?.tenant_id) {
             effectiveTenantId = userData.tenant_id;
           } else {
             // If not found, get any tenant ID as fallback
             const { data: tenantData } = await supabase
-              .from('tenants')
-              .select('id')
+              .from("tenants")
+              .select("id")
               .limit(1)
               .single();
-              
+
             if (tenantData?.id) {
               effectiveTenantId = tenantData.id;
             }
           }
         } catch (error) {
-          console.error('Error getting fallback tenant ID:', error);
+          console.error("Error getting fallback tenant ID:", error);
         }
       }
-      
+
       // If we still don't have a tenant ID and must have one, use a UUID
       if (!effectiveTenantId) {
-        console.error('No tenant ID available, cannot create candidate');
-        throw new Error('Missing tenant ID for candidate creation');
+        console.error("No tenant ID available, cannot create candidate");
+        throw new Error("Missing tenant ID for candidate creation");
       }
-      
+
       // Extract first and last name from full name
-      const nameParts = parsedAnalysis.personal_info.full_name.split(' ');
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.slice(1).join(' ') || '';
+      const nameParts = parsedAnalysis.personal_info.full_name.split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
+      // Format phone number to E.164 format
+      const formattedPhone = formatPhoneToE164(
+        parsedAnalysis.personal_info.phone
+      );
 
       const { data: candidate, error: candidateError } = await supabase
-        .from('candidates')
+        .from("candidates")
         .insert({
           tenant_id: effectiveTenantId,
           first_name: firstName,
           last_name: lastName,
           email: parsedAnalysis.personal_info.email,
-          phone: parsedAnalysis.personal_info.phone,
+          phone: formattedPhone,
           resume_url: fileUrl,
           resume_text: processedData.text,
           skills: parsedAnalysis.skills || [],
           experience: parsedAnalysis.experience || {},
-          education: parsedAnalysis.education || '',
+          education: parsedAnalysis.education || "",
           resume_analysis: parsedAnalysis,
         })
         .select()
         .single();
-        
+
       if (candidateError) throw candidateError;
-      
-      console.log('Candidate created with ID:', candidate.id);
-      
+
+      console.log("Candidate created with ID:", candidate.id);
+
       // Step 4: Enrich candidate profile with PDL data
       try {
         toast({
-          title: 'Enriching Profile',
-          description: 'Enhancing candidate profile with additional data...',
+          title: "Enriching Profile",
+          description: "Enhancing candidate profile with additional data...",
         });
-        
+
         // Step 4: Call enrich-candidate function directly with fetch
-        const enrichCandidateResponse = await fetch(`${supabaseUrl}/functions/v1/enrich-candidate`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': supabaseKey,
-            ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
-          },
-          body: JSON.stringify({
-            candidate_id: candidate.id,
-            email: parsedAnalysis.personal_info.email,
-            name: formatFullName(firstName, lastName),
-            phone: parsedAnalysis.personal_info.phone
-          })
-        });
-        
+        const enrichCandidateResponse = await fetch(
+          `${supabaseUrl}/functions/v1/enrich-candidate`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: supabaseKey,
+              ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+            },
+            body: JSON.stringify({
+              candidate_id: candidate.id,
+              email: parsedAnalysis.personal_info.email,
+              name: formatFullName(firstName, lastName),
+              phone: formattedPhone,
+            }),
+          }
+        );
+
         if (!enrichCandidateResponse.ok) {
-          console.error('Profile enrichment error (non-critical):', enrichCandidateResponse.status);
+          console.error(
+            "Profile enrichment error (non-critical):",
+            enrichCandidateResponse.status
+          );
           toast({
-            title: 'Enrichment Notice',
-            description: 'Basic profile created. Additional data enrichment unavailable.',
-            variant: 'default'
+            title: "Enrichment Notice",
+            description:
+              "Basic profile created. Additional data enrichment unavailable.",
+            variant: "default",
           });
         } else {
           const enrichmentData = await enrichCandidateResponse.json();
-          console.log('Profile enrichment completed:', enrichmentData);
+          console.log("Profile enrichment completed:", enrichmentData);
           toast({
-            title: 'Profile Enriched',
-            description: 'Enhanced profile data successfully added.',
-            variant: 'default'
+            title: "Profile Enriched",
+            description: "Enhanced profile data successfully added.",
+            variant: "default",
           });
         }
       } catch (enrichmentError) {
         // Non-critical error, log but continue
-        console.error('Profile enrichment error (caught):', enrichmentError);
+        console.error("Profile enrichment error (caught):", enrichmentError);
         toast({
-          title: 'Enrichment Notice',
-          description: 'Basic profile created. Additional data enrichment unavailable.',
-          variant: 'default'
+          title: "Enrichment Notice",
+          description:
+            "Basic profile created. Additional data enrichment unavailable.",
+          variant: "default",
         });
       }
-      
+
       // Notify user of successful processing
       toast({
-        title: 'Resume Processed',
-        description: 'Resume analysis complete and candidate created.',
+        title: "Resume Processed",
+        description: "Resume analysis complete and candidate created.",
       });
-      
+
       // After successful candidate creation, navigate to the candidate profile
       navigate(`/candidates/${candidate.id}`);
-      
+
       return candidate.id;
     } catch (error) {
-      console.error('Resume processing error:', error);
+      console.error("Resume processing error:", error);
       toast({
-        variant: 'destructive',
-        title: 'Processing Failed',
-        description: error instanceof Error ? error.message : 'Failed to process resume',
+        variant: "destructive",
+        title: "Processing Failed",
+        description:
+          error instanceof Error ? error.message : "Failed to process resume",
       });
       throw error;
     }
@@ -469,8 +583,12 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
           className={`
             border-2 border-dashed rounded-lg p-10 text-center cursor-pointer
             transition-colors duration-200 ease-in-out
-            ${isDragActive ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-primary/50'}
-            ${isDragReject ? 'border-red-500 bg-red-50' : ''}
+            ${
+              isDragActive
+                ? "border-primary bg-primary/5"
+                : "border-gray-300 hover:border-primary/50"
+            }
+            ${isDragReject ? "border-red-500 bg-red-50" : ""}
           `}
         >
           <input {...getInputProps()} />
@@ -480,7 +598,9 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
             </div>
             <div>
               <p className="text-sm font-medium">
-                {isDragActive ? 'Drop the resume here...' : 'Drag & drop a resume, or click to browse'}
+                {isDragActive
+                  ? "Drop the resume here..."
+                  : "Drag & drop a resume, or click to browse"}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 Supports PDF files up to 10MB
@@ -506,9 +626,9 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
                   </p>
                 </div>
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={handleClearFile}
                 disabled={isUploading}
               >
@@ -528,7 +648,12 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
                 >
                   <p className="p-4 text-center text-muted-foreground">
                     Your browser doesn't support PDF preview.
-                    <a href={filePreviewUrl} className="text-primary hover:underline ml-1" target="_blank" rel="noreferrer">
+                    <a
+                      href={filePreviewUrl}
+                      className="text-primary hover:underline ml-1"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
                       Click here to view the PDF.
                     </a>
                   </p>
@@ -559,33 +684,41 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
             {uploadSuccess && (
               <Alert className="mx-4 my-3 border-green-500 text-green-500">
                 <CheckCircle className="h-4 w-4" />
-                <AlertDescription>Resume uploaded successfully!</AlertDescription>
+                <AlertDescription>
+                  Resume uploaded successfully!
+                </AlertDescription>
               </Alert>
             )}
 
             {/* Upload Button */}
             <div className="p-4 border-t flex justify-end gap-2">
-              <Button variant="outline" onClick={handleClearFile} disabled={isUploading}>
+              <Button
+                variant="outline"
+                onClick={handleClearFile}
+                disabled={isUploading}
+              >
                 Cancel
               </Button>
-              <Button 
-                onClick={handleUpload} 
+              <Button
+                onClick={handleUpload}
                 disabled={isUploading || uploadSuccess}
                 className="gap-2"
               >
                 {isUploading ? (
                   <>
                     <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle 
-                        className="opacity-25" 
-                        cx="12" cy="12" r="10" 
-                        stroke="currentColor" 
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
                         strokeWidth="4"
                         fill="none"
                       />
-                      <path 
-                        className="opacity-75" 
-                        fill="currentColor" 
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       />
                     </svg>
@@ -611,4 +744,4 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
   );
 };
 
-export default ResumeUploader; 
+export default ResumeUploader;
