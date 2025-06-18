@@ -126,24 +126,22 @@ export function useWebRTC(
         try {
           const { data: sessionData, error: sessionError } = await supabase
             .from('interview_sessions')
-            .select('id, status, openai_configuration')
+            .select('id, status, tenant_id')
             .eq('id', sessionId)
             .single();
 
           if (sessionError || !sessionData) {
+            console.error('Session query error:', sessionError);
             throw new Error('Invalid session ID');
           }
 
-          // If session has OpenAI configuration, use it
-          if (sessionData.openai_configuration) {
-            setOpenAIConfig(sessionData.openai_configuration as WebRTCConfig['openAISettings']);
-          }
+          console.log('Session data retrieved:', { id: sessionData.id, status: sessionData.status });
 
           // Call interview-start edge function to initialize session
           const { data: startData, error: startError } = await supabase.functions.invoke('interview-start', {
             body: {
               interview_session_id: sessionId,
-              tenant_id: await supabase.from('interview_sessions').select('tenant_id').eq('id', sessionId).single().then(r => r.data?.tenant_id),
+              tenant_id: sessionData.tenant_id,
               architecture: 'direct-openai'
             }
           });
