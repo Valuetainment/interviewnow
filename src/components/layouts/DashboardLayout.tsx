@@ -14,7 +14,7 @@ interface DashboardLayoutProps {
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isSystemAdmin } = useAuth();
 
   // Add a global error suppressor for the lovable-tagger error
   // This must be before any conditional returns to follow Rules of Hooks
@@ -34,11 +34,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     return () => window.removeEventListener("error", handleError, true);
   }, []);
 
-  // If not authenticated, redirect to login
-  if (!isLoading && !user) {
-    return <Navigate to="/login" />;
-  }
-
   // Show loading indicator while checking auth status
   if (isLoading) {
     return (
@@ -46,6 +41,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         Loading...
       </div>
     );
+  }
+
+  // If not authenticated, redirect to login
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  // If system admin, redirect to system admin dashboard
+  if (isSystemAdmin) {
+    return <Navigate to="/system-admin" replace />;
   }
 
   return (
