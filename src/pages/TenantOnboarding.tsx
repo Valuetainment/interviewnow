@@ -141,67 +141,50 @@ export const TenantOnboarding: React.FC = () => {
 
       if (signInError) throw signInError;
 
-      // 3. Create user profile first (without tenant_id)
-      const { error: createUserError } = await supabase.from("users").insert({
-        id: authData.user.id,
-        tenant_id: null,
-        role: "tenant_admin",
-      });
+      // Debug: Check auth state
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+      console.log("Current auth user after sign in:", currentUser);
+      console.log("Auth user ID:", currentUser?.id);
 
-      if (createUserError && createUserError.code !== "23505") {
-        // Ignore duplicate key errors
-        console.error("Error creating user profile:", createUserError);
-        throw createUserError;
+      // Wait a moment for the auth session to fully propagate
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Verify we're authenticated before proceeding
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Authentication session not established");
       }
 
-      // 4. Now create the tenant (user exists and is authenticated)
-      const { data: tenant, error: tenantError } = await supabase
-        .from("tenants")
-        .insert({
-          name: invitation.tenant_name,
-          plan_tier: "free", // Default to free plan
-          tenancy_type: invitation.tenancy_type,
-        })
-        .select()
-        .single();
+      // 3. Use the secure onboarding function to complete the process
+      // This function runs with elevated privileges to bypass RLS during setup
+      const { data: onboardingResult, error: onboardingError } =
+        await supabase.rpc("complete_tenant_onboarding", {
+          p_user_id: session.user.id,
+          p_invitation_id: invitation.id,
+          p_tenant_name: invitation.tenant_name,
+          p_tenancy_type: invitation.tenancy_type,
+        });
 
-      if (tenantError) {
-        console.error("Error creating tenant:", tenantError);
-        throw tenantError;
+      if (onboardingError) {
+        console.error("Error during onboarding:", onboardingError);
+        throw onboardingError;
       }
 
-      // 5. Update user profile with tenant_id
-      const { error: updateUserError } = await supabase
-        .from("users")
-        .update({
-          tenant_id: tenant.id,
-        })
-        .eq("id", authData.user.id);
-
-      if (updateUserError) {
-        console.error("Error updating user profile:", updateUserError);
-        throw updateUserError;
+      if (!onboardingResult?.success) {
+        throw new Error("Onboarding failed");
       }
 
-      // 6. Update the invitation as accepted
-      const { error: updateError } = await supabase
-        .from("tenant_invitations")
-        .update({
-          accepted_at: new Date().toISOString(),
-          tenant_id: tenant.id,
-        })
-        .eq("id", invitation.id);
-
-      if (updateError) throw updateError;
-
-      // 7. Refresh the session to trigger metadata sync
-      // This ensures the auth.users app_metadata is updated with tenant_id and role
+      // 4. Refresh the session to get the updated metadata
       await supabase.auth.refreshSession();
 
-      // 8. Show success message
+      // 5. Show success message
       toast.success("Account created successfully!");
 
-      // 9. Wait a brief moment for auth state to fully propagate
+      // 6. Wait a brief moment for auth state to fully propagate
       // This prevents any race conditions with the dashboard loading
       setTimeout(() => {
         navigate("/dashboard");
