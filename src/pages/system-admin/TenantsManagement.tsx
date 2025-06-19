@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Building2, Edit, Trash2, Plus, Search } from "lucide-react";
+import { Building2, Edit, Trash2, Plus, Search, Users } from "lucide-react";
 import { format } from "date-fns";
 
 interface Tenant {
@@ -59,6 +59,11 @@ export const TenantsManagement: React.FC = () => {
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [totals, setTotals] = useState({
+    tenants: 0,
+    users: 0,
+    companies: 0,
+  });
 
   // Form state
   const [formData, setFormData] = useState({
@@ -74,19 +79,61 @@ export const TenantsManagement: React.FC = () => {
   const fetchTenants = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+
+      // First, fetch all tenants
+      const { data: tenantsData, error: tenantsError } = await supabase
         .from("tenants")
-        .select(
-          `
-          *,
-          users (count),
-          companies (count)
-        `
-        )
+        .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      setTenants(data || []);
+      if (tenantsError) throw tenantsError;
+
+      // Then, fetch counts for each tenant
+      const tenantsWithCounts = await Promise.all(
+        (tenantsData || []).map(async (tenant) => {
+          // Fetch user count for this tenant
+          const { count: userCount, error: userError } = await supabase
+            .from("users")
+            .select("*", { count: "exact", head: true })
+            .eq("tenant_id", tenant.id);
+
+          // Fetch company count for this tenant
+          const { count: companyCount, error: companyError } = await supabase
+            .from("companies")
+            .select("*", { count: "exact", head: true })
+            .eq("tenant_id", tenant.id);
+
+          if (userError) console.error("Error fetching user count:", userError);
+          if (companyError)
+            console.error("Error fetching company count:", companyError);
+
+          return {
+            ...tenant,
+            _count: {
+              users: userCount || 0,
+              companies: companyCount || 0,
+            },
+          };
+        })
+      );
+
+      setTenants(tenantsWithCounts);
+
+      // Calculate totals
+      const totalUsers = tenantsWithCounts.reduce(
+        (sum, tenant) => sum + tenant._count.users,
+        0
+      );
+      const totalCompanies = tenantsWithCounts.reduce(
+        (sum, tenant) => sum + tenant._count.companies,
+        0
+      );
+
+      setTotals({
+        tenants: tenantsWithCounts.length,
+        users: totalUsers,
+        companies: totalCompanies,
+      });
     } catch (error) {
       console.error("Error fetching tenants:", error);
       toast.error("Failed to load tenants");
@@ -282,6 +329,44 @@ export const TenantsManagement: React.FC = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Tenants</CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totals.tenants}</div>
+            <p className="text-xs text-muted-foreground">
+              Active organizations
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totals.users}</div>
+            <p className="text-xs text-muted-foreground">Across all tenants</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Companies
+            </CardTitle>
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totals.companies}</div>
+            <p className="text-xs text-muted-foreground">Across all tenants</p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
