@@ -115,20 +115,7 @@ export const TenantOnboarding: React.FC = () => {
     try {
       setSubmitting(true);
 
-      // 1. Create the tenant
-      const { data: tenant, error: tenantError } = await supabase
-        .from("tenants")
-        .insert({
-          name: invitation.tenant_name,
-          plan_tier: "free", // Default to free plan
-          tenancy_type: invitation.tenancy_type,
-        })
-        .select()
-        .single();
-
-      if (tenantError) throw tenantError;
-
-      // 2. Sign up the user
+      // 1. First sign up the user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -146,8 +133,29 @@ export const TenantOnboarding: React.FC = () => {
         throw new Error("Failed to create user account");
       }
 
-      // 3. Create user profile with tenant_admin role
-      const { error: profileError } = await supabase.from("users").insert({
+      // 2. Sign in the user immediately to get authenticated
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (signInError) throw signInError;
+
+      // 3. Now create the tenant (user is authenticated now)
+      const { data: tenant, error: tenantError } = await supabase
+        .from("tenants")
+        .insert({
+          name: invitation.tenant_name,
+          plan_tier: "free", // Default to free plan
+          tenancy_type: invitation.tenancy_type,
+        })
+        .select()
+        .single();
+
+      if (tenantError) throw tenantError;
+
+      // 4. Create/update user profile with tenant_admin role
+      const { error: profileError } = await supabase.from("users").upsert({
         id: authData.user.id,
         tenant_id: tenant.id,
         role: "tenant_admin",
@@ -155,7 +163,7 @@ export const TenantOnboarding: React.FC = () => {
 
       if (profileError) throw profileError;
 
-      // 4. Update the invitation as accepted
+      // 5. Update the invitation as accepted
       const { error: updateError } = await supabase
         .from("tenant_invitations")
         .update({
@@ -165,14 +173,6 @@ export const TenantOnboarding: React.FC = () => {
         .eq("id", invitation.id);
 
       if (updateError) throw updateError;
-
-      // 5. Sign in the user
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-      });
-
-      if (signInError) throw signInError;
 
       toast.success("Account created successfully!");
 
