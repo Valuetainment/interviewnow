@@ -123,27 +123,32 @@ export function useWebRTC(
 
       // For non-simulation mode, check if we need to call interview-start
       if (!config.simulationMode && sessionId) {
-        try {
-          const { data: sessionData, error: sessionError } = await supabase
-            .from('interview_sessions')
-            .select('id, status, tenant_id')
-            .eq('id', sessionId)
-            .single();
+        // Check if we already have OpenAI settings from config
+        if (config.openAISettings?.instructions) {
+          console.log('OpenAI configuration already provided, skipping interview-start call');
+          setOpenAIConfig(config.openAISettings);
+        } else {
+          try {
+            const { data: sessionData, error: sessionError } = await supabase
+              .from('interview_sessions')
+              .select('id, status, tenant_id')
+              .eq('id', sessionId)
+              .single();
 
-          if (sessionError || !sessionData) {
-            console.error('Session query error:', sessionError);
-            console.error('Session ID used:', sessionId);
-            throw new Error('Invalid session ID');
-          }
+            if (sessionError || !sessionData) {
+              console.error('Session query error:', sessionError);
+              console.error('Session ID used:', sessionId);
+              throw new Error('Invalid session ID');
+            }
 
-          console.log('Session data retrieved:', { 
-            id: sessionData.id, 
-            status: sessionData.status,
-            tenant_id: sessionData.tenant_id
-          });
+            console.log('Session data retrieved:', { 
+              id: sessionData.id, 
+              status: sessionData.status,
+              tenant_id: sessionData.tenant_id
+            });
 
-          // Call interview-start edge function to initialize session
-          const { data: startData, error: startError } = await supabase.functions.invoke('interview-start', {
+            // Call interview-start edge function to initialize session
+            const { data: startData, error: startError } = await supabase.functions.invoke('interview-start', {
             body: {
               interview_session_id: sessionId,
               tenant_id: sessionData.tenant_id,
@@ -168,14 +173,15 @@ export function useWebRTC(
             throw new Error(startError?.message || startData?.error || 'Failed to start interview');
           }
 
-          // Use OpenAI config from edge function if provided
-          if (startData.openai_api_config) {
-            setOpenAIConfig(startData.openai_api_config);
+            // Use OpenAI config from edge function if provided
+            if (startData.openai_api_config) {
+              setOpenAIConfig(startData.openai_api_config);
+            }
+          } catch (err) {
+            console.error('Error initializing session:', err);
+            setError(err.message || 'Failed to initialize session');
+            return false;
           }
-        } catch (err) {
-          console.error('Error initializing session:', err);
-          setError(err.message || 'Failed to initialize session');
-          return false;
         }
       }
 
