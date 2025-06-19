@@ -187,7 +187,7 @@ export const TenantOnboarding: React.FC = () => {
       // 6. Wait a brief moment for auth state to fully propagate
       // This prevents any race conditions with the dashboard loading
       setTimeout(() => {
-        navigate("/dashboard");
+        navigate("/company-setup");
       }, 200);
     } catch (err) {
       console.error("Error during onboarding:", err);

@@ -38,6 +38,7 @@ import { WebRTCTestPage } from "./pages/WebRTCTestPage";
 import Privacy from "./pages/Privacy";
 import { CompanyProvider } from "./contexts/CompanyContext";
 import { TenantOnboarding } from "./pages/TenantOnboarding";
+import { CompanySetupWizard } from "./pages/CompanySetupWizard";
 
 // Import layout components
 import MainLayout from "./components/layouts/MainLayout";
@@ -149,6 +150,10 @@ const App = () => (
                 {/* Protected routes with DashboardLayout */}
                 <Route element={<DashboardLayout />}>
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route
+                    path="/company-setup"
+                    element={<CompanySetupWizard />}
+                  />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/create-position" element={<CreatePosition />} />
                   <Route path="/create-session" element={<CreateSession />} />

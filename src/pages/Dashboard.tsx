@@ -1,40 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  Activity, 
-  Calendar, 
-  ChevronRight, 
-  LayoutDashboard, 
-  Mail, 
-  Plus, 
-  PlusCircle, 
-  UserPlus, 
+import {
+  Activity,
+  Calendar,
+  ChevronRight,
+  LayoutDashboard,
+  Mail,
+  Plus,
+  PlusCircle,
+  UserPlus,
   Users,
   FileText,
   BriefcaseBusiness,
   Clock,
   CheckCircle2,
-  XCircle
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import DashboardInterviews from '@/components/dashboard/DashboardInterviews';
-import DashboardInvitations from '@/components/dashboard/DashboardInvitations';
-import DashboardStatistics from '@/components/dashboard/DashboardStatistics';
-import DashboardOverview from '@/components/dashboard/DashboardOverview';
+  XCircle,
+  Loader2,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import DashboardInterviews from "@/components/dashboard/DashboardInterviews";
+import DashboardInvitations from "@/components/dashboard/DashboardInvitations";
+import DashboardStatistics from "@/components/dashboard/DashboardStatistics";
+import DashboardOverview from "@/components/dashboard/DashboardOverview";
 
-const RecentActivityItem = ({ icon, title, description, time, status }: { 
-  icon: React.ReactNode, 
-  title: string, 
-  description: string,
-  time: string,
-  status?: 'success' | 'pending' | 'failed'
+const RecentActivityItem = ({
+  icon,
+  title,
+  description,
+  time,
+  status,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  time: string;
+  status?: "success" | "pending" | "failed";
 }) => (
   <div className="flex items-start space-x-4 py-3">
-    <div className="rounded-full bg-muted p-2">
-      {icon}
-    </div>
+    <div className="rounded-full bg-muted p-2">{icon}</div>
     <div className="flex-1 space-y-1">
       <p className="text-sm font-medium">{title}</p>
       <p className="text-sm text-muted-foreground">{description}</p>
@@ -43,15 +55,29 @@ const RecentActivityItem = ({ icon, title, description, time, status }: {
         <span className="text-xs text-muted-foreground">{time}</span>
         {status && (
           <div className="ml-2 flex items-center">
-            {status === 'success' && <CheckCircle2 className="mr-1 h-3 w-3 text-green-500" />}
-            {status === 'pending' && <Clock className="mr-1 h-3 w-3 text-yellow-500" />}
-            {status === 'failed' && <XCircle className="mr-1 h-3 w-3 text-red-500" />}
-            <span className={`text-xs ${
-              status === 'success' ? 'text-green-500' : 
-              status === 'pending' ? 'text-yellow-500' : 'text-red-500'
-            }`}>
-              {status === 'success' ? 'Completed' : 
-               status === 'pending' ? 'Pending' : 'Failed'}
+            {status === "success" && (
+              <CheckCircle2 className="mr-1 h-3 w-3 text-green-500" />
+            )}
+            {status === "pending" && (
+              <Clock className="mr-1 h-3 w-3 text-yellow-500" />
+            )}
+            {status === "failed" && (
+              <XCircle className="mr-1 h-3 w-3 text-red-500" />
+            )}
+            <span
+              className={`text-xs ${
+                status === "success"
+                  ? "text-green-500"
+                  : status === "pending"
+                  ? "text-yellow-500"
+                  : "text-red-500"
+              }`}
+            >
+              {status === "success"
+                ? "Completed"
+                : status === "pending"
+                ? "Pending"
+                : "Failed"}
             </span>
           </div>
         )}
@@ -60,15 +86,21 @@ const RecentActivityItem = ({ icon, title, description, time, status }: {
   </div>
 );
 
-const QuickStatCard = ({ icon, title, value, description, trend }: {
-  icon: React.ReactNode,
-  title: string,
-  value: string,
-  description: string,
+const QuickStatCard = ({
+  icon,
+  title,
+  value,
+  description,
+  trend,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  value: string;
+  description: string;
   trend?: {
-    value: string,
-    up?: boolean
-  }
+    value: string;
+    up?: boolean;
+  };
 }) => (
   <Card>
     <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -81,8 +113,12 @@ const QuickStatCard = ({ icon, title, value, description, trend }: {
       <div className="flex items-baseline justify-between">
         <div className="text-3xl font-bold">{value}</div>
         {trend && (
-          <div className={`ml-2 text-xs ${trend.up ? 'text-green-500' : 'text-red-500'}`}>
-            {trend.up ? '↑' : '↓'} {trend.value}
+          <div
+            className={`ml-2 text-xs ${
+              trend.up ? "text-green-500" : "text-red-500"
+            }`}
+          >
+            {trend.up ? "↑" : "↓"} {trend.value}
           </div>
         )}
       </div>
@@ -93,7 +129,95 @@ const QuickStatCard = ({ icon, title, value, description, trend }: {
 
 const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("overview");
+  const [checkingCompanies, setCheckingCompanies] = useState(true);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Wait for auth to be ready before checking companies
+    const checkAuth = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        await checkForCompanies();
+      } else {
+        // No session, user will be redirected by auth guard
+        setCheckingCompanies(false);
+      }
+    };
+
+    checkAuth();
+  }, [navigate]);
+
+  const checkForCompanies = async () => {
+    try {
+      // First check if user is a system admin
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("role, tenant_id")
+        .single();
+
+      console.log("User data:", userData);
+
+      if (userError) {
+        console.error("Error checking user role:", userError);
+      }
+
+      // System admins don't need companies
+      if (userData?.role === "system_admin") {
+        console.log("User is system admin, skipping company check");
+        setCheckingCompanies(false);
+        return;
+      }
+
+      // Check if the user has any companies in their tenant
+      let query = supabase.from("companies").select("id");
+
+      // Filter by tenant_id if user has one
+      if (userData?.tenant_id) {
+        query = query.eq("tenant_id", userData.tenant_id);
+      }
+
+      const { data: companies, error } = await query.limit(1);
+
+      console.log("Company check result:", {
+        companies,
+        error,
+        tenant_id: userData?.tenant_id,
+      });
+
+      if (error) {
+        console.error("Error checking companies:", error);
+        setCheckingCompanies(false);
+        return;
+      }
+
+      if (!companies || companies.length === 0) {
+        // No companies found, redirect to company setup wizard
+        console.log(
+          "No companies found for tenant, redirecting to setup wizard..."
+        );
+        setCheckingCompanies(false); // Set this before navigating
+        navigate("/company-setup", { replace: true });
+      } else {
+        // User has companies, continue with dashboard
+        console.log("Companies found:", companies);
+        setCheckingCompanies(false);
+      }
+    } catch (error) {
+      console.error("Error checking companies:", error);
+      setCheckingCompanies(false);
+    }
+  };
+
+  // Show loading spinner while checking for companies
+  if (checkingCompanies) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+      </div>
+    );
+  }
 
   // Mock data for recent activities
   const recentActivities = [
@@ -102,27 +226,27 @@ const Dashboard: React.FC = () => {
       title: "Ben Pappas completed the Cursor AI Engineer interview",
       description: "The assessment has been generated with a score of 8.5/10",
       time: "2 hours ago",
-      status: 'success' as const
+      status: "success" as const,
     },
     {
       icon: <Mail className="h-4 w-4" />,
       title: "Interview invitation sent to Sarah Johnson",
       description: "For the position of Frontend Engineer",
       time: "Yesterday",
-      status: 'pending' as const
+      status: "pending" as const,
     },
     {
       icon: <BriefcaseBusiness className="h-4 w-4" />,
       title: "New position created: Digital Marketing Media Buyer",
       description: "With 7 competencies defined",
-      time: "2 days ago"
+      time: "2 days ago",
     },
     {
       icon: <FileText className="h-4 w-4" />,
       title: "Resume uploaded for Alex Wong",
       description: "For the Backend Node Engineer position",
-      time: "3 days ago"
-    }
+      time: "3 days ago",
+    },
   ];
 
   return (
@@ -130,14 +254,19 @@ const Dashboard: React.FC = () => {
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
         <div className="flex items-center space-x-2">
-          <Button onClick={() => navigate('/companies/new')}>
+          <Button onClick={() => navigate("/companies/new")}>
             <Plus className="mr-2 h-4 w-4" />
             New Company
           </Button>
         </div>
       </div>
-      
-      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+
+      <Tabs
+        defaultValue="overview"
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-6"
+      >
         <TabsList className="bg-muted/40 w-full justify-start border-b pb-px mb-4">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <LayoutDashboard className="h-4 w-4" />
@@ -156,19 +285,21 @@ const Dashboard: React.FC = () => {
             <span>Statistics</span>
           </TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="overview">
-          <DashboardOverview onNavigateToStatistics={() => setActiveTab('statistics')} />
+          <DashboardOverview
+            onNavigateToStatistics={() => setActiveTab("statistics")}
+          />
         </TabsContent>
-        
+
         <TabsContent value="interviews">
           <DashboardInterviews />
         </TabsContent>
-        
+
         <TabsContent value="invitations">
           <DashboardInvitations />
         </TabsContent>
-        
+
         <TabsContent value="statistics">
           <DashboardStatistics />
         </TabsContent>
