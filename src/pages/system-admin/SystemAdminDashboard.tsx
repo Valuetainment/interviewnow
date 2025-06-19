@@ -16,6 +16,7 @@ import {
   TrendingUp,
   UserPlus,
   Activity,
+  UserCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
@@ -28,7 +29,7 @@ interface SystemStats {
   totalRevenue: number;
   activeSubscriptions: number;
   pendingInvoices: number;
-  recentActivity: number;
+  totalCandidates: number;
 }
 
 export const SystemAdminDashboard: React.FC = () => {
@@ -40,7 +41,7 @@ export const SystemAdminDashboard: React.FC = () => {
     totalRevenue: 0,
     activeSubscriptions: 0,
     pendingInvoices: 0,
-    recentActivity: 0,
+    totalCandidates: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -57,6 +58,7 @@ export const SystemAdminDashboard: React.FC = () => {
         companiesResult,
         sessionsResult,
         invoicesResult,
+        candidatesResult,
       ] = await Promise.all([
         supabase.from("tenants").select("id", { count: "exact", head: true }),
         supabase.from("users").select("id", { count: "exact", head: true }),
@@ -65,6 +67,9 @@ export const SystemAdminDashboard: React.FC = () => {
           .from("interview_sessions")
           .select("id", { count: "exact", head: true }),
         supabase.from("invoices").select("amount_paid, status"),
+        supabase
+          .from("candidates")
+          .select("id", { count: "exact", head: true }),
       ]);
 
       // Calculate revenue and pending invoices
@@ -88,7 +93,7 @@ export const SystemAdminDashboard: React.FC = () => {
         totalRevenue: totalRevenue / 100, // Convert from cents
         activeSubscriptions: tenantsResult.count || 0, // For now, assume all tenants are active
         pendingInvoices,
-        recentActivity: sessionsResult.count || 0,
+        totalCandidates: candidatesResult.count || 0,
       });
     } catch (error) {
       console.error("Error fetching system stats:", error);
@@ -117,13 +122,22 @@ export const SystemAdminDashboard: React.FC = () => {
       bgColor: "bg-green-50",
     },
     {
-      title: "Companies",
+      title: "Total Companies",
       value: stats.totalCompanies,
       description: "Registered companies",
       icon: Briefcase,
       href: "/system-admin/companies",
       color: "text-purple-600",
       bgColor: "bg-purple-50",
+    },
+    {
+      title: "Total Candidates",
+      value: stats.totalCandidates,
+      description: "All candidates",
+      icon: UserCheck,
+      href: "/system-admin/candidates",
+      color: "text-cyan-600",
+      bgColor: "bg-cyan-50",
     },
     {
       title: "Interview Sessions",
@@ -160,15 +174,6 @@ export const SystemAdminDashboard: React.FC = () => {
       href: "/system-admin/billing",
       color: "text-red-600",
       bgColor: "bg-red-50",
-    },
-    {
-      title: "Recent Activity",
-      value: stats.recentActivity,
-      description: "Last 30 days",
-      icon: Activity,
-      href: "/system-admin/sessions",
-      color: "text-gray-600",
-      bgColor: "bg-gray-50",
     },
   ];
 
@@ -232,21 +237,6 @@ export const SystemAdminDashboard: React.FC = () => {
           </Link>
         ))}
       </div>
-
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent System Activity</CardTitle>
-          <CardDescription>Latest events across all tenants</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-500">
-              Activity feed coming soon...
-            </p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
