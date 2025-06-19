@@ -166,6 +166,7 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
       },
       maxFiles: 1,
       multiple: false,
+      disabled: !selectedCompany,
     });
 
   // Handle file upload to Supabase
@@ -603,34 +604,62 @@ const ResumeUploader: React.FC<ResumeUploaderProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Company Selection Alert */}
+      {!selectedCompany && !file && (
+        <Alert className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Please select a company from the dropdown above before uploading
+            resumes.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Dropzone */}
       {!file && (
         <div
           {...getRootProps()}
           className={`
-            border-2 border-dashed rounded-lg p-10 text-center cursor-pointer
-            transition-colors duration-200 ease-in-out
+            border-2 border-dashed rounded-lg p-10 text-center transition-colors duration-200 ease-in-out
             ${
-              isDragActive
-                ? "border-primary bg-primary/5"
-                : "border-gray-300 hover:border-primary/50"
+              !selectedCompany
+                ? "border-gray-200 bg-gray-50 cursor-not-allowed opacity-60"
+                : isDragActive
+                ? "border-primary bg-primary/5 cursor-pointer"
+                : "border-gray-300 hover:border-primary/50 cursor-pointer"
             }
             ${isDragReject ? "border-red-500 bg-red-50" : ""}
           `}
         >
           <input {...getInputProps()} />
           <div className="flex flex-col items-center justify-center gap-3">
-            <div className="p-3 bg-primary/10 rounded-full">
-              <Upload className="h-6 w-6 text-primary" />
+            <div
+              className={`p-3 rounded-full ${
+                !selectedCompany ? "bg-gray-200" : "bg-primary/10"
+              }`}
+            >
+              <Upload
+                className={`h-6 w-6 ${
+                  !selectedCompany ? "text-gray-400" : "text-primary"
+                }`}
+              />
             </div>
             <div>
-              <p className="text-sm font-medium">
-                {isDragActive
+              <p
+                className={`text-sm font-medium ${
+                  !selectedCompany ? "text-gray-500" : ""
+                }`}
+              >
+                {!selectedCompany
+                  ? "Select a company to enable resume upload"
+                  : isDragActive
                   ? "Drop the resume here..."
                   : "Drag & drop a resume, or click to browse"}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Supports PDF files up to 10MB
+                {!selectedCompany
+                  ? "Resume uploads require a company selection"
+                  : "Supports PDF files up to 10MB"}
               </p>
             </div>
           </div>
