@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               .from("users")
               .select("tenant_id, role")
               .eq("id", data.session.user.id)
-              .single();
+              .maybeSingle();
 
             if (userError) {
               console.error("Error fetching user data:", userError);
@@ -67,6 +67,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               console.log("Fetched user data from database:", userData);
               setTenantId(userData.tenant_id || appMetadataTenantId || null);
               setRole(userData.role || appMetadataRole || null);
+            } else {
+              // No user data found yet, use defaults
+              console.log("No user data found yet, using defaults");
+              setTenantId(appMetadataTenantId || null);
+              setRole(appMetadataRole || null);
             }
           } else {
             setTenantId(appMetadataTenantId);
@@ -112,7 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               .from("users")
               .select("tenant_id, role")
               .eq("id", newSession.user.id)
-              .single()
+              .maybeSingle()
               .then(({ data, error }) => {
                 if (error) {
                   console.error("Error fetching user data:", error);
@@ -123,6 +128,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
                   console.log("Found user data in database:", data);
                   setTenantId(data.tenant_id || userTenantId || null);
                   setRole(data.role || userRole || null);
+                } else {
+                  // No user data found yet, use defaults
+                  console.log("No user data found yet in auth state change");
+                  setTenantId(userTenantId || null);
+                  setRole(userRole || null);
                 }
               });
           } else {
@@ -165,7 +175,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         .from("users")
         .select("tenant_id, role")
         .eq("id", data.user.id)
-        .single();
+        .maybeSingle();
 
       if (userError) {
         console.error("Error fetching user data after sign in:", userError);

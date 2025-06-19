@@ -141,7 +141,20 @@ export const TenantOnboarding: React.FC = () => {
 
       if (signInError) throw signInError;
 
-      // 3. Now create the tenant (user is authenticated now)
+      // 3. Create user profile first (without tenant_id)
+      const { error: createUserError } = await supabase.from("users").insert({
+        id: authData.user.id,
+        tenant_id: null,
+        role: "tenant_admin",
+      });
+
+      if (createUserError && createUserError.code !== "23505") {
+        // Ignore duplicate key errors
+        console.error("Error creating user profile:", createUserError);
+        throw createUserError;
+      }
+
+      // 4. Now create the tenant (user exists and is authenticated)
       const { data: tenant, error: tenantError } = await supabase
         .from("tenants")
         .insert({
@@ -152,18 +165,25 @@ export const TenantOnboarding: React.FC = () => {
         .select()
         .single();
 
-      if (tenantError) throw tenantError;
+      if (tenantError) {
+        console.error("Error creating tenant:", tenantError);
+        throw tenantError;
+      }
 
-      // 4. Create/update user profile with tenant_admin role
-      const { error: profileError } = await supabase.from("users").upsert({
-        id: authData.user.id,
-        tenant_id: tenant.id,
-        role: "tenant_admin",
-      });
+      // 5. Update user profile with tenant_id
+      const { error: updateUserError } = await supabase
+        .from("users")
+        .update({
+          tenant_id: tenant.id,
+        })
+        .eq("id", authData.user.id);
 
-      if (profileError) throw profileError;
+      if (updateUserError) {
+        console.error("Error updating user profile:", updateUserError);
+        throw updateUserError;
+      }
 
-      // 5. Update the invitation as accepted
+      // 6. Update the invitation as accepted
       const { error: updateError } = await supabase
         .from("tenant_invitations")
         .update({
@@ -174,10 +194,19 @@ export const TenantOnboarding: React.FC = () => {
 
       if (updateError) throw updateError;
 
+      // 7. Refresh the session to get updated metadata
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        console.error("Error refreshing session:", refreshError);
+      }
+
+      // 8. Wait a moment for metadata sync
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       toast.success("Account created successfully!");
 
-      // Redirect to dashboard
-      navigate("/dashboard");
+      // 9. Force a full page reload to ensure auth state is fresh
+      window.location.href = "/dashboard";
     } catch (err) {
       console.error("Error during onboarding:", err);
       toast.error(
