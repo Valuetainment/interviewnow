@@ -117,34 +117,20 @@ export const SystemAdminInvitations: React.FC = () => {
       const companyCode = generateCompanyCode();
       const invitationUrl = `${window.location.origin}/onboarding?code=${companyCode}`;
 
-      // Send email via edge function
-      const { error: emailError } = await supabase.functions.invoke(
-        "send-tenant-invitation",
-        {
+      // Send email via edge function (only call once!)
+      const { data: emailResult, error: emailError } =
+        await supabase.functions.invoke("send-tenant-invitation", {
           body: {
             to: formData.email,
             tenantName: formData.tenant_name,
             invitationUrl,
             companyCode,
           },
-        }
-      );
+        });
 
       if (emailError) {
         throw new Error("Failed to send invitation email");
       }
-
-      const { data: emailResult } = await supabase.functions.invoke(
-        "send-tenant-invitation",
-        {
-          body: {
-            to: formData.email,
-            tenantName: formData.tenant_name,
-            invitationUrl,
-            companyCode,
-          },
-        }
-      );
 
       // Only create the invitation record if email was sent successfully
       const { data: invitation, error: inviteError } = await supabase
