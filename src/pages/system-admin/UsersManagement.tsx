@@ -59,6 +59,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/hooks/useAuth";
 
 interface User {
   id: string;
@@ -73,6 +74,7 @@ interface User {
 }
 
 export const SystemAdminUsersManagement: React.FC = () => {
+  const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -151,6 +153,22 @@ export const SystemAdminUsersManagement: React.FC = () => {
   const handleUpdateUser = async () => {
     if (!editingUser) return;
 
+    // Prevent changing role of the last system admin
+    if (
+      editingUser.role === "system_admin" &&
+      editFormData.role !== "system_admin"
+    ) {
+      const systemAdminCount = users.filter(
+        (u) => u.role === "system_admin"
+      ).length;
+      if (systemAdminCount <= 1) {
+        toast.error(
+          "Cannot change role of the last system admin. The system must always have at least one system admin."
+        );
+        return;
+      }
+    }
+
     try {
       const { error } = await supabase
         .from("users")
@@ -172,6 +190,26 @@ export const SystemAdminUsersManagement: React.FC = () => {
   };
 
   const handleDeleteUser = async (userId: string) => {
+    // Check if user is trying to delete themselves
+    if (user && userId === user.id) {
+      toast.error("You cannot delete your own account");
+      return;
+    }
+
+    // Check if this is the last system admin
+    const targetUser = users.find((u) => u.id === userId);
+    if (targetUser?.role === "system_admin") {
+      const systemAdminCount = users.filter(
+        (u) => u.role === "system_admin"
+      ).length;
+      if (systemAdminCount <= 1) {
+        toast.error(
+          "Cannot delete the last system admin. The system must always have at least one system admin."
+        );
+        return;
+      }
+    }
+
     if (
       !confirm(
         "Are you sure you want to delete this user? This action cannot be undone."
@@ -389,33 +427,33 @@ export const SystemAdminUsersManagement: React.FC = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
+                  filteredUsers.map((tableUser) => (
+                    <TableRow key={tableUser.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
                             <AvatarFallback>
-                              {getUserInitials(user.email)}
+                              {getUserInitials(tableUser.email)}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <div className="font-medium">{user.email}</div>
-                            {user.auth_id && (
+                            <div className="font-medium">{tableUser.email}</div>
+                            {tableUser.auth_id && (
                               <div className="text-xs text-gray-500">
-                                ID: {user.id}
+                                ID: {tableUser.id}
                               </div>
                             )}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        {user.tenant_name || (
+                        {tableUser.tenant_name || (
                           <span className="text-gray-400">No tenant</span>
                         )}
                       </TableCell>
-                      <TableCell>{getRoleBadge(user.role)}</TableCell>
+                      <TableCell>{getRoleBadge(tableUser.role)}</TableCell>
                       <TableCell>
-                        {format(new Date(user.created_at), "MMM d, yyyy")}
+                        {format(new Date(tableUser.created_at), "MMM d, yyyy")}
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -428,15 +466,15 @@ export const SystemAdminUsersManagement: React.FC = () => {
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() => handleEditUser(user)}
+                              onClick={() => handleEditUser(tableUser)}
                             >
                               <Edit className="mr-2 h-4 w-4" />
                               Edit User
                             </DropdownMenuItem>
-                            {user.auth_email && (
+                            {tableUser.auth_email && (
                               <DropdownMenuItem
                                 onClick={() =>
-                                  resetUserPassword(user.auth_email!)
+                                  resetUserPassword(tableUser.auth_email!)
                                 }
                               >
                                 <Key className="mr-2 h-4 w-4" />
@@ -445,11 +483,32 @@ export const SystemAdminUsersManagement: React.FC = () => {
                             )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="text-red-600"
+                              onClick={() => handleDeleteUser(tableUser.id)}
+                              className={
+                                (user && tableUser.id === user.id) ||
+                                (tableUser.role === "system_admin" &&
+                                  users.filter((u) => u.role === "system_admin")
+                                    .length <= 1)
+                                  ? "text-gray-400 cursor-not-allowed"
+                                  : "text-red-600 cursor-pointer"
+                              }
+                              disabled={
+                                // Can't delete yourself
+                                (user && tableUser.id === user.id) ||
+                                // Can't delete last system admin
+                                (tableUser.role === "system_admin" &&
+                                  users.filter((u) => u.role === "system_admin")
+                                    .length <= 1)
+                              }
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Delete User
+                              {user && tableUser.id === user.id
+                                ? "Cannot Delete Yourself"
+                                : tableUser.role === "system_admin" &&
+                                  users.filter((u) => u.role === "system_admin")
+                                    .length <= 1
+                                ? "Last System Admin"
+                                : "Delete User"}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -524,6 +583,14 @@ export const SystemAdminUsersManagement: React.FC = () => {
                     System admins typically don't have a tenant assignment
                   </p>
                 )}
+                {editingUser?.role === "system_admin" &&
+                  users.filter((u) => u.role === "system_admin").length <=
+                    1 && (
+                    <p className="text-sm text-amber-600 mt-2">
+                      ⚠️ This is the last system admin. You cannot change their
+                      role.
+                    </p>
+                  )}
               </div>
             </div>
           )}
