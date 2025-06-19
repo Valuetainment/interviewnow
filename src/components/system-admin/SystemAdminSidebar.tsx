@@ -11,10 +11,8 @@ import {
   LayoutDashboard,
   Building,
   UserCheck,
-  LogOut,
   Settings,
 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -38,8 +36,6 @@ const navItems: NavItem[] = [
 ];
 
 export const SystemAdminSidebar: React.FC = () => {
-  const { signOut } = useAuth();
-
   return (
     <div className="w-64 bg-slate-900 text-white flex flex-col">
       <div className="p-6">
@@ -71,16 +67,6 @@ export const SystemAdminSidebar: React.FC = () => {
           ))}
         </ul>
       </nav>
-
-      <div className="p-4 border-t border-slate-800">
-        <button
-          onClick={() => signOut()}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors hover:bg-slate-800 text-slate-300 w-full"
-        >
-          <LogOut className="h-5 w-5" />
-          <span>Sign Out</span>
-        </button>
-      </div>
     </div>
   );
 };
