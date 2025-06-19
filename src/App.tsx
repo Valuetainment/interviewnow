@@ -37,6 +37,7 @@ import { AuthProvider } from "./hooks/useAuth";
 import { WebRTCTestPage } from "./pages/WebRTCTestPage";
 import Privacy from "./pages/Privacy";
 import { CompanyProvider } from "./contexts/CompanyContext";
+import { TenantOnboarding } from "./pages/TenantOnboarding";
 
 // Import layout components
 import MainLayout from "./components/layouts/MainLayout";
@@ -88,6 +89,7 @@ const App = () => (
                   <Route path="/login" element={<Login />} />
                   <Route path="/signup" element={<Signup />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/onboarding" element={<TenantOnboarding />} />
                 </Route>
 
                 {/* System Admin routes with SystemAdminLayout */}
