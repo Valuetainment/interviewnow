@@ -501,6 +501,8 @@ serve(async (req) => {
         candidate_id,
         position_id,
         company_id,
+        webrtc_status,
+        webrtc_session_id,
         positions(
           id,
           title,
@@ -581,6 +583,27 @@ serve(async (req) => {
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 403
+        }
+      );
+    }
+
+    // Check if session is already initialized
+    if (sessionData.webrtc_status === 'ready' && sessionData.webrtc_session_id) {
+      console.log(`Session ${interview_session_id} is already initialized, skipping duplicate initialization [${operationId}]`);
+      
+      // Return the existing configuration
+      return new Response(
+        JSON.stringify({
+          success: true,
+          webrtc_server_url: null,
+          webrtc_session_id: sessionData.webrtc_session_id,
+          architecture: 'direct-openai',
+          operation_id: operationId,
+          message: 'Session already initialized'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
         }
       );
     }
