@@ -225,7 +225,12 @@ export const TenantOnboarding: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-6"
+            autoComplete="on"
+            name="onboardingForm"
+          >
             <Alert className="bg-blue-50 border-blue-200">
               <CheckCircle className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-blue-800">
@@ -241,6 +246,9 @@ export const TenantOnboarding: React.FC = () => {
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     id="firstName"
+                    name="firstName"
+                    type="text"
+                    autoComplete="given-name"
                     value={formData.firstName}
                     onChange={(e) =>
                       setFormData({ ...formData, firstName: e.target.value })
@@ -256,6 +264,9 @@ export const TenantOnboarding: React.FC = () => {
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     id="lastName"
+                    name="lastName"
+                    type="text"
+                    autoComplete="family-name"
                     value={formData.lastName}
                     onChange={(e) =>
                       setFormData({ ...formData, lastName: e.target.value })
@@ -273,10 +284,13 @@ export const TenantOnboarding: React.FC = () => {
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   id="email"
+                  name="email"
                   type="email"
+                  autoComplete="off"
                   value={formData.email}
                   className="pl-10"
                   disabled
+                  readOnly
                 />
               </div>
               <p className="text-sm text-gray-500">
@@ -291,7 +305,9 @@ export const TenantOnboarding: React.FC = () => {
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     id="password"
+                    name="password"
                     type="password"
+                    autoComplete="new-password"
                     value={formData.password}
                     onChange={(e) =>
                       setFormData({ ...formData, password: e.target.value })
@@ -308,7 +324,9 @@ export const TenantOnboarding: React.FC = () => {
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     id="confirmPassword"
+                    name="confirmPassword"
                     type="password"
+                    autoComplete="new-password"
                     value={formData.confirmPassword}
                     onChange={(e) =>
                       setFormData({
