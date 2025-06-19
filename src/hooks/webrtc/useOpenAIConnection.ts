@@ -170,7 +170,13 @@ export function useOpenAIConnection(
   const handleDataChannelMessage = useCallback((event: MessageEvent) => {
     try {
       const message = JSON.parse(event.data);
-      console.log('Received OpenAI data channel message type:', message.type);
+      console.log('Received OpenAI data channel message:', {
+        type: message.type,
+        event_id: message.event_id,
+        hasTranscript: !!message.transcript,
+        hasText: !!message.text,
+        hasDelta: !!message.delta
+      });
 
       // Handle different message types
       switch (message.type) {
@@ -184,18 +190,20 @@ export function useOpenAIConnection(
 
         case 'response.audio_transcript.delta':
           // Process AI speech transcript
-          if (message.text && message.text.trim()) {
-            console.log('AI transcript delta:', message.text);
+          console.log('AI transcript delta event:', message);
+          if (message.delta) {
+            console.log('AI transcript delta text:', message.delta);
             
             // Add to AI response buffer
-            aiResponseTextRef.current += message.text;
+            aiResponseTextRef.current += message.delta;
             // Don't save individual deltas - wait for done event
           }
           break;
 
         case 'response.audio_transcript.done':
           // AI response completed - save the accumulated transcript
-          console.log('AI response completed, saving transcript');
+          console.log('AI response done event:', message);
+          console.log('Accumulated AI transcript:', aiResponseTextRef.current);
           if (aiResponseTextRef.current.trim()) {
             saveTranscript(aiResponseTextRef.current, 'ai');
           }
@@ -206,6 +214,13 @@ export function useOpenAIConnection(
         case 'response.function_call_arguments.done':
           // Handle function call completion if we added functions
           console.log('Function call completed:', message.name);
+          break;
+          
+        default:
+          // Log any unhandled message types
+          if (message.type && message.type.includes('transcript')) {
+            console.log('Unhandled transcript message:', message);
+          }
           break;
       }
     } catch (error) {
