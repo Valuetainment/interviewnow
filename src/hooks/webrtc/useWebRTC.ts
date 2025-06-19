@@ -132,10 +132,15 @@ export function useWebRTC(
 
           if (sessionError || !sessionData) {
             console.error('Session query error:', sessionError);
+            console.error('Session ID used:', sessionId);
             throw new Error('Invalid session ID');
           }
 
-          console.log('Session data retrieved:', { id: sessionData.id, status: sessionData.status });
+          console.log('Session data retrieved:', { 
+            id: sessionData.id, 
+            status: sessionData.status,
+            tenant_id: sessionData.tenant_id
+          });
 
           // Call interview-start edge function to initialize session
           const { data: startData, error: startError } = await supabase.functions.invoke('interview-start', {
@@ -147,6 +152,16 @@ export function useWebRTC(
           });
 
           console.log('interview-start response:', { data: startData, error: startError });
+
+          if (startError) {
+            console.error('interview-start error details:', {
+              error: startError,
+              message: startError.message,
+              details: startError.details,
+              hint: startError.hint,
+              code: startError.code
+            });
+          }
 
           if (startError || !startData?.success) {
             console.error('interview-start failed:', { startError, startData });
