@@ -61,7 +61,7 @@ export const SystemAdminDashboard: React.FC = () => {
         candidatesResult,
       ] = await Promise.all([
         supabase.from("tenants").select("id", { count: "exact", head: true }),
-        supabase.from("users").select("id", { count: "exact", head: true }),
+        supabase.rpc("get_users_with_auth"),
         supabase.from("companies").select("id", { count: "exact", head: true }),
         supabase
           .from("interview_sessions")
@@ -87,7 +87,7 @@ export const SystemAdminDashboard: React.FC = () => {
 
       setStats({
         totalTenants: tenantsResult.count || 0,
-        totalUsers: usersResult.count || 0,
+        totalUsers: usersResult.data?.length || 0,
         totalCompanies: companiesResult.count || 0,
         totalSessions: sessionsResult.count || 0,
         totalRevenue: totalRevenue / 100, // Convert from cents

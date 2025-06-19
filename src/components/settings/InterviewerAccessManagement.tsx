@@ -95,32 +95,49 @@ export const InterviewerAccessManagement: React.FC = () => {
   };
 
   const fetchInterviewers = async () => {
-    const { data, error } = await supabase
+    // Check if current user is system admin first
+    const { data: currentUser } = await supabase
       .from("users")
-      .select(
-        `
-        id, 
-        role, 
-        created_at,
-        auth_users:id (
-          email
-        )
-      `
-      )
-      .eq("tenant_id", tenantId)
-      .eq("role", "tenant_interviewer")
-      .order("created_at");
+      .select("role")
+      .eq("id", user?.id)
+      .single();
 
-    if (error) {
-      console.error("Error fetching interviewers:", error);
-      toast.error("Failed to load interviewers");
+    if (currentUser?.role === "system_admin") {
+      // System admins use the security definer function to bypass RLS
+      const { data, error } = await supabase.rpc("get_users_with_auth");
+
+      if (error) {
+        console.error("Error fetching interviewers:", error);
+        toast.error("Failed to load interviewers");
+      } else {
+        // Filter for tenant_interviewer role and transform the data
+        const interviewerData = (data || [])
+          .filter((user: any) => user.role === "tenant_interviewer")
+          .map((user: any) => ({
+            id: user.id,
+            email: user.email || "Unknown",
+            role: user.role,
+            created_at: user.created_at,
+            tenant_id: user.tenant_id,
+            tenant_name: user.tenant_name,
+          }));
+        setInterviewers(interviewerData);
+      }
     } else {
-      // Transform the data to include email at the top level
-      const transformedData = (data || []).map((user) => ({
-        ...user,
-        email: user.auth_users?.email || "Unknown",
-      }));
-      setInterviewers(transformedData);
+      // Tenant admins can only see users in their tenant
+      const { data, error } = await supabase
+        .from("tenant_users_view")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .eq("role", "tenant_interviewer")
+        .order("created_at");
+
+      if (error) {
+        console.error("Error fetching interviewers:", error);
+        toast.error("Failed to load interviewers");
+      } else {
+        setInterviewers(data || []);
+      }
     }
   };
 
@@ -148,13 +165,7 @@ export const InterviewerAccessManagement: React.FC = () => {
         company_id,
         created_at,
         granted_by,
-        users!interviewer_company_access_user_id_fkey (
-          id,
-          auth_users:id (
-            email
-          )
-        ),
-        companies!interviewer_company_access_company_id_fkey (name)
+        companies (name)
       `
       )
       .eq("tenant_id", tenantId)
@@ -164,12 +175,18 @@ export const InterviewerAccessManagement: React.FC = () => {
       console.error("Error fetching access list:", error);
       toast.error("Failed to load access list");
     } else {
+      // Get user emails from interviewers list
+      const emailMap: Record<string, string> = {};
+      interviewers.forEach((interviewer) => {
+        emailMap[interviewer.id] = interviewer.email;
+      });
+
       // Transform the data to have the email at the expected location
       const transformedData = (data || []).map((access) => ({
         ...access,
         granted_at: access.created_at,
         users: {
-          email: access.users?.auth_users?.email || "Unknown",
+          email: emailMap[access.user_id] || "Unknown",
         },
       }));
       setAccessList(transformedData);
