@@ -194,19 +194,18 @@ export const TenantOnboarding: React.FC = () => {
 
       if (updateError) throw updateError;
 
-      // 7. Refresh the session to get updated metadata
-      const { error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError) {
-        console.error("Error refreshing session:", refreshError);
-      }
+      // 7. Refresh the session to trigger metadata sync
+      // This ensures the auth.users app_metadata is updated with tenant_id and role
+      await supabase.auth.refreshSession();
 
-      // 8. Wait a moment for metadata sync
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
+      // 8. Show success message
       toast.success("Account created successfully!");
 
-      // 9. Force a full page reload to ensure auth state is fresh
-      window.location.href = "/dashboard";
+      // 9. Wait a brief moment for auth state to fully propagate
+      // This prevents any race conditions with the dashboard loading
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 200);
     } catch (err) {
       console.error("Error during onboarding:", err);
       toast.error(
