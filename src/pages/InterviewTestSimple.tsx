@@ -239,6 +239,7 @@ const InterviewTestSimple: React.FC = () => {
           <div className="test-control-group">
             <label>Voice:</label>
             <select value={voice} onChange={e => setVoice(e.target.value)}>
+              <option value="verse">Verse</option>
               <option value="alloy">Alloy</option>
               <option value="echo">Echo</option>
               <option value="fable">Fable</option>

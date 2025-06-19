@@ -9,7 +9,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-tenant-id, x-session-id',
   'Access-Control-Max-Age': '86400',
   'X-Content-Type-Options': 'nosniff',
-  'Content-Security-Policy': "default-src 'self'; connect-src *.fly.dev *.openai.com"
+  'Content-Security-Policy': "default-src 'self'; connect-src *.openai.com"
 };
 
 // Operation ID for request tracking
@@ -501,6 +501,8 @@ serve(async (req) => {
         candidate_id,
         position_id,
         company_id,
+        webrtc_status,
+        webrtc_session_id,
         positions(
           id,
           title,
@@ -584,6 +586,27 @@ serve(async (req) => {
       );
     }
 
+    // Check if session is already initialized
+    if (sessionData.webrtc_status === 'ready' && sessionData.webrtc_session_id) {
+      console.log(`Session ${interview_session_id} is already initialized, skipping duplicate initialization [${operationId}]`);
+      
+      // Return the existing configuration
+      return new Response(
+        JSON.stringify({
+          success: true,
+          webrtc_server_url: null,
+          webrtc_session_id: sessionData.webrtc_session_id,
+          architecture: 'direct-openai',
+          operation_id: operationId,
+          message: 'Session already initialized'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
+      );
+    }
+
     // Call interview-prepper for AI analysis
     let prepperAnalysis = null;
     try {
@@ -613,41 +636,15 @@ serve(async (req) => {
       // Continue without prep analysis - don't fail the entire interview
     }
 
-    // Set up Fly.io VM for the interview
-    const {
-      url: webrtcServerUrl,
-      error: vmError,
-      architecture: usedArchitecture
-    } = await setupFlyVM(
-      tenant_id,
-      interview_session_id,
-      region,
-      architecture
-    );
-
-    if (vmError || !webrtcServerUrl) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: `Failed to set up WebRTC server: ${vmError || 'Unknown error'}`,
-          operation_id: operationId
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500
-        }
-      );
-    }
-
-    // Generate a WebRTC session ID with tenant context for database storage
-    // Note: Fly.io server will generate its own sessionId for WebSocket management
+    // For direct OpenAI connection, no server setup needed
+    const usedArchitecture = 'direct-openai';
     const webrtcSessionId = `${tenant_id}:${interview_session_id}:${crypto.randomUUID()}`;
 
-    // Update the interview session with WebRTC information
+    // Update the interview session with architecture information
     const updateSuccess = await updateInterviewSession(
       supabaseClient,
       interview_session_id,
-      webrtcServerUrl,
+      null, // No server URL needed for direct OpenAI
       webrtcSessionId,
       usedArchitecture
     );
@@ -666,14 +663,14 @@ serve(async (req) => {
       );
     }
 
-    // Enhanced OpenAI configuration for hybrid architecture
+    // Enhanced OpenAI configuration for direct-openai architecture
     let openaiConfig = undefined;
 
-    if (usedArchitecture === 'hybrid') {
+    if (usedArchitecture === 'direct-openai') {
       // ENHANCED: Use the new instruction builder
       openaiConfig = {
         voice: openai_settings.voice || 'verse',
-        model: openai_settings.model || 'gpt-4o',
+        model: openai_settings.model || 'gpt-4o-realtime-preview-2025-06-03',
         temperature: openai_settings.temperature || 0.7,
         turn_detection: {
           silence_duration_ms: openai_settings.turn_detection?.silence_duration_ms || 5000,
@@ -704,7 +701,7 @@ serve(async (req) => {
     // Return success with enhanced connection details
     const response: InterviewResponse = {
       success: true,
-      webrtc_server_url: webrtcServerUrl,
+      webrtc_server_url: null, // No server URL needed for direct OpenAI
       webrtc_session_id: webrtcSessionId,
       architecture: usedArchitecture,
       operation_id: operationId,

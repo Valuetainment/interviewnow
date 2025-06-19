@@ -1,10 +1,11 @@
 # AI Interview Insights Platform - Working Notes
 
 ## Current State (June 2025)
-- **WebRTC Implementation**: Hybrid architecture using Fly.io as SDP proxy for OpenAI Realtime API
+- **WebRTC Implementation**: Direct OpenAI connection using ephemeral tokens
 - **Model**: `gpt-4o-realtime-preview-2025-06-03` 
 - **Voice**: `verse` (updated from `alloy`)
-- **Architecture**: Hooks-based WebRTC implementation with modular design
+- **Architecture**: Simplified direct P2P connection, no proxy needed
+- **Security**: API keys stay in Supabase edge functions, never exposed to browser
 
 ## Essential Commands
 
@@ -17,10 +18,8 @@ npm run build                  # Build for production
 
 ### Deployments
 ```bash
-# Deploy Fly.io SDP Proxy
-cd fly-interview-hybrid && fly deploy
-
 # Deploy Supabase Edge Functions
+supabase functions deploy openai-realtime-token    # NEW: Ephemeral token generation
 supabase functions deploy interview-start
 supabase functions deploy interview-prepper
 supabase functions deploy interview-transcript
@@ -29,19 +28,26 @@ supabase functions deploy interview-transcript-batch
 
 ### Local Testing
 ```bash
-# Start local simulation server
-cd fly-interview-hybrid && node simple-server.js
+# Start development server
+npm run dev
 
-# Start ngrok tunnel (for WebRTC testing)
-ngrok http 3001
+# Test interview at http://localhost:8080/test-interview
 ```
 
 ## Key URLs
-- **Production SDP Proxy**: wss://interview-sdp-proxy.fly.dev/ws
 - **Supabase Dashboard**: https://supabase.com/dashboard/project/gypnutyegqxelvsqjedu
 - **Local Dev**: http://localhost:8080
+- **Test Interview**: http://localhost:8080/test-interview
 
 ## Recent Updates
+
+### June 18, 2025
+- **MAJOR ARCHITECTURE CHANGE**: Replaced Fly.io proxy with Supabase edge functions
+- Created `openai-realtime-token` edge function for ephemeral token generation
+- Simplified to direct P2P connection with OpenAI (no proxy needed)
+- Fixed circular dependency causing browser freeze
+- ALWAYS use ephemeral tokens - never expose API keys to browser
+- Fixed AI transcript capture issue
 
 ### June 16, 2025
 - Updated OpenAI Realtime API model to `gpt-4o-realtime-preview-2025-06-03`
@@ -66,7 +72,7 @@ ngrok http 3001
    - Create candidate assessment dashboard
 
 2. **Infrastructure Optimization**
-   - Consider migrating SDP proxy to Supabase edge functions
+   - ✅ DONE: Migrated to Supabase edge functions (no more Fly.io)
    - Implement proper WebRTC session cleanup
    - Add connection quality monitoring
 
@@ -89,13 +95,13 @@ ngrok http 3001
 ## Architecture Notes
 
 ### WebRTC Hooks Structure
-- `useWebRTC` - Main orchestrator
-- `useOpenAIConnection` - Direct OpenAI WebRTC
-- `useSDPProxy` - Fly.io proxy connection
-- `useTranscriptManager` - Transcript handling
+- `useWebRTC` - Main orchestrator (simplified, always uses direct connection)
+- `useOpenAIConnection` - Direct OpenAI WebRTC (ALWAYS uses ephemeral tokens)
+- `useTranscriptManager` - Transcript handling with batching
 - `useConnectionState` - State management
 
 ### Key Edge Functions
+- `openai-realtime-token` - Generates ephemeral tokens for OpenAI (NEW)
 - `interview-start` - Initializes interview sessions
 - `interview-prepper` - Pre-analyzes candidates
 - `interview-transcript` - Saves real-time transcripts
@@ -104,5 +110,7 @@ ngrok http 3001
 ## Debugging Tips
 - Check browser console for WebRTC connection states
 - Monitor Supabase function logs for edge function errors
-- Use `/test/webrtc-hooks` route for WebRTC testing
-- Check Fly.io logs: `fly logs -a interview-sdp-proxy`
+- Use `/test-interview` route for testing interviews
+- Check for circular dependencies in React hooks
+- Ensure OPENAI_API_KEY is set in Supabase environment
+- AI transcripts now use accumulation pattern (not saved on every delta)

@@ -2,10 +2,11 @@ import { useCallback, useRef } from 'react';
 import { useWebRTCConnection } from './useWebRTCConnection';
 import { ConnectionState } from './useConnectionState';
 import { useTranscriptManager } from './useTranscriptManager';
+import { supabase, getCurrentTenantId } from '@/integrations/supabase/client';
 
 export interface OpenAIConnectionConfig {
-  openAIKey?: string; // Now optional - only used if serverUrl is not provided
-  serverUrl?: string; // URL to fetch ephemeral token from
+  // Note: We ALWAYS use ephemeral tokens via Supabase edge function
+  // Never pass API keys to the browser
   openAISettings?: {
     voice?: string;
     temperature?: number;
@@ -169,7 +170,13 @@ export function useOpenAIConnection(
   const handleDataChannelMessage = useCallback((event: MessageEvent) => {
     try {
       const message = JSON.parse(event.data);
-      console.log('Received OpenAI data channel message type:', message.type);
+      console.log('Received OpenAI data channel message:', {
+        type: message.type,
+        event_id: message.event_id,
+        hasTranscript: !!message.transcript,
+        hasText: !!message.text,
+        hasDelta: !!message.delta
+      });
 
       // Handle different message types
       switch (message.type) {
@@ -183,18 +190,23 @@ export function useOpenAIConnection(
 
         case 'response.audio_transcript.delta':
           // Process AI speech transcript
-          if (message.text && message.text.trim()) {
-            console.log('AI transcript delta:', message.text);
+          console.log('AI transcript delta event:', message);
+          if (message.delta) {
+            console.log('AI transcript delta text:', message.delta);
             
             // Add to AI response buffer
-            aiResponseTextRef.current += message.text;
-            saveTranscript(aiResponseTextRef.current, 'ai');
+            aiResponseTextRef.current += message.delta;
+            // Don't save individual deltas - wait for done event
           }
           break;
 
         case 'response.audio_transcript.done':
-          // AI response completed
-          console.log('AI response completed');
+          // AI response completed - save the accumulated transcript
+          console.log('AI response done event:', message);
+          console.log('Accumulated AI transcript:', aiResponseTextRef.current);
+          if (aiResponseTextRef.current.trim()) {
+            saveTranscript(aiResponseTextRef.current, 'ai');
+          }
           // Reset for next response
           aiResponseTextRef.current = '';
           break;
@@ -202,6 +214,13 @@ export function useOpenAIConnection(
         case 'response.function_call_arguments.done':
           // Handle function call completion if we added functions
           console.log('Function call completed:', message.name);
+          break;
+          
+        default:
+          // Log any unhandled message types
+          if (message.type && message.type.includes('transcript')) {
+            console.log('Unhandled transcript message:', message);
+          }
           break;
       }
     } catch (error) {
@@ -285,11 +304,8 @@ export function useOpenAIConnection(
       return false;
     }
 
-    // Check if we have a server URL for ephemeral tokens or an API key
-    if (!config.serverUrl && !config.openAIKey) {
-      console.error('Either serverUrl (for ephemeral tokens) or openAIKey is required');
-      return false;
-    }
+    // No longer need to check for serverUrl or openAIKey
+    // We always use Supabase edge function for ephemeral tokens
 
     try {
       // Initialize WebRTC
@@ -358,66 +374,50 @@ export function useOpenAIConnection(
       let authToken: string;
       let model = 'gpt-4o-realtime-preview-2025-06-03';
 
-      // If we have a server URL, fetch ephemeral token
-      if (config.serverUrl) {
-        console.log('Fetching ephemeral token from server...');
-        
-        // Extract base URL from WebSocket URL (remove protocol and query params)
-        let baseUrl = config.serverUrl;
-        if (baseUrl.startsWith('wss://') || baseUrl.startsWith('ws://')) {
-          baseUrl = baseUrl.replace(/^wss?:\/\//, 'https://');
-        }
-        // Remove query parameters
-        const urlParts = baseUrl.split('?');
-        baseUrl = urlParts[0];
-        
-        console.log(`Fetching token from: ${baseUrl}/api/realtime/sessions`);
-        
-        const tokenPayload = {
-          model: model,
-          voice: settings.voice || 'verse'
-        };
-        console.log('Token request payload:', tokenPayload);
-        
-        const tokenResponse = await fetch(`${baseUrl}/api/realtime/sessions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(tokenPayload)
-        });
+      // ALWAYS use Supabase edge function for ephemeral tokens (secure)
+      // Never use API key directly in the browser
+      console.log('Fetching ephemeral token from Supabase edge function...');
+      
+      const tokenPayload = {
+        model: model,
+        voice: settings.voice || 'verse',
+        session_id: sessionId,
+        tenant_id: await getCurrentTenantId()
+      };
+      console.log('Token request payload:', tokenPayload);
+      
+      // Use Supabase edge function
+      console.log('Calling openai-realtime-token edge function...');
+      const { data: tokenData, error: tokenError } = await supabase.functions.invoke('openai-realtime-token', {
+        body: tokenPayload
+      });
 
-        if (!tokenResponse.ok) {
-          const errorText = await tokenResponse.text();
-          throw new Error(`Failed to get ephemeral token (${tokenResponse.status}): ${errorText}`);
-        }
+      console.log('openai-realtime-token response:', { data: tokenData, error: tokenError });
 
-        const tokenData = await tokenResponse.json();
-        
-        if (!tokenData.client_secret?.value) {
-          throw new Error('Invalid token response from server');
-        }
-
-        authToken = tokenData.client_secret.value;
-        
-        // Use the model from the response if provided
-        if (tokenData.model) {
-          model = tokenData.model;
-        }
-        
-        console.log('Successfully obtained ephemeral token');
-        console.log('Token preview (first 20 chars):', authToken.substring(0, 20) + '...');
-        console.log('Token length:', authToken.length);
-      } else {
-        // Fallback to direct API key (not recommended for production)
-        console.warn('Using API key directly - this is not recommended for production');
-        authToken = config.openAIKey!;
+      if (tokenError || !tokenData) {
+        console.error('Failed to get ephemeral token:', { tokenError, tokenData });
+        throw new Error(`Failed to get ephemeral token: ${tokenError?.message || 'Unknown error'}`);
       }
+      
+      if (!tokenData.client_secret?.value) {
+        throw new Error('Invalid token response from edge function');
+      }
+
+      authToken = tokenData.client_secret.value;
+      
+      // Use the model from the response if provided
+      if (tokenData.model) {
+        model = tokenData.model;
+      }
+      
+      console.log('Successfully obtained ephemeral token');
+      console.log('Token preview (first 20 chars):', authToken.substring(0, 20) + '...');
+      console.log('Token length:', authToken.length);
 
       // Log the connection attempt details
       console.log('Attempting to connect to OpenAI Realtime API...');
       console.log(`Model: ${model}`);
-      console.log(`Auth token type: ${config.serverUrl ? 'ephemeral' : 'api_key'}`);
+      console.log(`Auth token type: ephemeral`);
       console.log(`Local SDP offer ready: ${!!pcRef.current.localDescription?.sdp}`);
 
       // Send offer to OpenAI Realtime API with appropriate auth
@@ -491,12 +491,11 @@ export function useOpenAIConnection(
     }
   }, [
     config.disabled,
-    config.openAIKey,
-    config.serverUrl,
     settings.voice,
     initializeWebRTC,
     configureOpenAISession,
-    handleDataChannelMessage
+    handleDataChannelMessage,
+    sessionId
   ]);
 
   // Wrap cleanup to check disabled

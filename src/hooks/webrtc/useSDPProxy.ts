@@ -46,6 +46,9 @@ export function useSDPProxy(
   const sessionIdRef = useRef<string | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   
+  // Track AI response text buffer for accumulating delta messages
+  const aiResponseTextRef = useRef<string>('');
+  
   // Use provided Supabase client or default
   const supabase = config.supabaseClient || defaultSupabaseClient;
 
@@ -125,14 +128,19 @@ export function useSDPProxy(
         case 'response.audio_transcript.done':
           // Final transcript
           if (data.transcript) {
+            // Save the final complete transcript
             saveTranscript(data.transcript, 'ai');
+            // Reset the buffer for the next response
+            aiResponseTextRef.current = '';
           }
           break;
           
         case 'response.audio_transcript.delta':
-          // Incremental transcript
-          if (data.delta) {
-            saveTranscript(data.delta, 'ai');
+          // Incremental transcript - the field is 'text' not 'delta'
+          if (data.text) {
+            // Accumulate AI response text
+            aiResponseTextRef.current += data.text;
+            // Don't save deltas - wait for the complete transcript in 'done' event
           }
           break;
           
