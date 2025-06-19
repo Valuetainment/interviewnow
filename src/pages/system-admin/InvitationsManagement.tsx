@@ -289,10 +289,22 @@ export const SystemAdminInvitations: React.FC = () => {
             Invite new tenant organizations to InterviewNow
           </p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <Send className="mr-2 h-4 w-4" />
-          Send Invitation
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => fetchInvitations()}
+            disabled={loading}
+          >
+            <RefreshCw
+              className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </Button>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Send className="mr-2 h-4 w-4" />
+            Send Invitation
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
