@@ -45,8 +45,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       } else {
         setSession(data.session);
         setUser(data.session?.user || null);
-        setTenantId(data.session?.user?.app_metadata?.tenant_id || null);
-        setRole(data.session?.user?.app_metadata?.role || null);
+
+        // Try to get tenant_id and role from app_metadata first
+        const appMetadataTenantId = data.session?.user?.app_metadata?.tenant_id;
+        const appMetadataRole = data.session?.user?.app_metadata?.role;
+
+        if (data.session?.user) {
+          // If role or tenant_id not in app_metadata, fetch from database
+          if (!appMetadataRole || !appMetadataTenantId) {
+            const { data: userData, error: userError } = await supabase
+              .from("users")
+              .select("tenant_id, role")
+              .eq("id", data.session.user.id)
+              .single();
+
+            if (userError) {
+              console.error("Error fetching user data:", userError);
+              setTenantId(appMetadataTenantId || null);
+              setRole(appMetadataRole || null);
+            } else if (userData) {
+              console.log("Fetched user data from database:", userData);
+              setTenantId(userData.tenant_id || appMetadataTenantId || null);
+              setRole(userData.role || appMetadataRole || null);
+            }
+          } else {
+            setTenantId(appMetadataTenantId);
+            setRole(appMetadataRole);
+          }
+        } else {
+          setTenantId(null);
+          setRole(null);
+        }
       }
 
       setIsLoading(false);
@@ -68,29 +97,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setSession(newSession);
         setUser(newSession?.user || null);
 
-        // If tenantId is not in app_metadata, try to fetch it from the database
+        // Get metadata values
         const userTenantId = newSession?.user?.app_metadata?.tenant_id;
-        if (newSession?.user && !userTenantId) {
-          console.log(
-            "Tenant ID not found in app_metadata, checking database..."
-          );
-          // Fetch tenant ID from users table
-          supabase
-            .from("users")
-            .select("tenant_id, role")
-            .eq("id", newSession.user.id)
-            .single()
-            .then(({ data, error }) => {
-              if (error) {
-                console.error("Error fetching user data:", error);
-              } else if (data) {
-                console.log("Found user data in database:", data);
-                setTenantId(data.tenant_id);
-                setRole(data.role);
-              }
-            });
+        const userRole = newSession?.user?.app_metadata?.role;
+
+        if (newSession?.user) {
+          // If role or tenantId is not in app_metadata, try to fetch from database
+          if (!userRole || !userTenantId) {
+            console.log(
+              "Role or Tenant ID not found in app_metadata, checking database..."
+            );
+            // Fetch from users table
+            supabase
+              .from("users")
+              .select("tenant_id, role")
+              .eq("id", newSession.user.id)
+              .single()
+              .then(({ data, error }) => {
+                if (error) {
+                  console.error("Error fetching user data:", error);
+                  // Set whatever we have from app_metadata
+                  setTenantId(userTenantId || null);
+                  setRole(userRole || null);
+                } else if (data) {
+                  console.log("Found user data in database:", data);
+                  setTenantId(data.tenant_id || userTenantId || null);
+                  setRole(data.role || userRole || null);
+                }
+              });
+          } else {
+            // We have both from app_metadata
+            setTenantId(userTenantId);
+            setRole(userRole);
+          }
         } else {
-          setTenantId(userTenantId);
+          // No user, clear everything
+          setTenantId(null);
+          setRole(null);
         }
 
         setIsLoading(false);

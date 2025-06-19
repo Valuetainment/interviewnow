@@ -16,7 +16,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const { user, role, isLoading, isSystemAdmin } = useAuth();
 
-  if (isLoading) {
+  // Wait for auth state to be fully loaded, including role data
+  // If user exists but role is still null, keep loading
+  if (isLoading || (user && role === null)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
