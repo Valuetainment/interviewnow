@@ -180,6 +180,20 @@ export const SystemAdminInvitations: React.FC = () => {
   };
 
   const resendInvitation = async (invitation: TenantInvitation) => {
+    // Prevent resending if invitation has already been accepted
+    if (invitation.accepted_at) {
+      toast.error("Cannot resend an invitation that has already been accepted");
+      return;
+    }
+
+    // Check if invitation has expired
+    if (new Date(invitation.expires_at) < new Date()) {
+      toast.error(
+        "Cannot resend an expired invitation. Please create a new invitation instead."
+      );
+      return;
+    }
+
     try {
       const invitationUrl = `${window.location.origin}/onboarding?code=${invitation.company_code}`;
 
@@ -405,37 +419,42 @@ export const SystemAdminInvitations: React.FC = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              copyInvitationLink(invitation.company_code)
-                            }
-                            title="Copy invitation link"
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
                           {!invitation.accepted_at && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => resendInvitation(invitation)}
-                                title="Resend invitation"
-                              >
-                                <RefreshCw className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => deleteInvitation(invitation.id)}
-                                className="text-red-600 hover:text-red-700"
-                                title="Delete invitation"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                copyInvitationLink(invitation.company_code)
+                              }
+                              title="Copy invitation link"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
                           )}
+                          {!invitation.accepted_at &&
+                            new Date(invitation.expires_at) > new Date() && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => resendInvitation(invitation)}
+                                  title="Resend invitation"
+                                >
+                                  <RefreshCw className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    deleteInvitation(invitation.id)
+                                  }
+                                  className="text-red-600 hover:text-red-700"
+                                  title="Delete invitation"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
                         </div>
                       </TableCell>
                     </TableRow>
