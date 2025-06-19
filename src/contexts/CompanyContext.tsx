@@ -3,14 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useInterviewerAccess } from "@/hooks/useInterviewerAccess";
 import { toast } from "sonner";
-
-interface Company {
-  id: string;
-  name: string;
-  logo_url?: string;
-  created_at: string;
-  updated_at: string;
-}
+import { Company } from "@/types/company";
 
 interface CompanyContextType {
   companies: Company[];
@@ -44,12 +37,14 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const fetchCompanies = async () => {
     if (!tenantId) {
+      console.log("CompanyContext: No tenantId, skipping fetch");
       setLoading(false);
       return;
     }
 
     // Wait for interviewer access to load if user is an interviewer
     if (isTenantInterviewer && accessLoading) {
+      console.log("CompanyContext: Waiting for interviewer access to load");
       return;
     }
 
@@ -65,10 +60,18 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
       // If user is a tenant interviewer, filter by accessible companies
       if (isTenantInterviewer) {
         const accessibleCompanyIds = getAccessibleCompanyIds();
+        console.log(
+          "CompanyContext: Interviewer accessible companies:",
+          accessibleCompanyIds
+        );
+
         if (accessibleCompanyIds.length > 0) {
           query = query.in("id", accessibleCompanyIds);
         } else {
           // No accessible companies, return empty
+          console.log(
+            "CompanyContext: No accessible companies for interviewer"
+          );
           setCompanies([]);
           setLoading(false);
           return;
@@ -79,16 +82,31 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (error) throw error;
 
-      setCompanies(data || []);
+      console.log("CompanyContext: Fetched companies:", data);
+
+      // Transform data to ensure compatibility with Company type
+      const transformedData = (data || []).map((company) => ({
+        ...company,
+        benefits_data: company.benefits_data || { description: "", items: [] },
+        values_data: company.values_data || { description: "", items: [] },
+        culture: company.culture || null,
+        story: company.story || null,
+      })) as Company[];
+
+      setCompanies(transformedData);
 
       // Auto-select a company if none is selected
-      if (data && data.length > 0) {
+      if (transformedData && transformedData.length > 0) {
         // If no company is selected, or the selected company is no longer in the list
         if (
           !selectedCompany ||
-          !data.find((c) => c.id === selectedCompany.id)
+          !transformedData.find((c) => c.id === selectedCompany.id)
         ) {
-          setSelectedCompany(data[0]);
+          console.log(
+            "CompanyContext: Auto-selecting first company:",
+            transformedData[0]
+          );
+          setSelectedCompany(transformedData[0]);
         }
       }
     } catch (err) {

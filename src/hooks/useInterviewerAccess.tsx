@@ -33,12 +33,14 @@ export const useInterviewerAccess = () => {
   const fetchAccessibleCompanies = async () => {
     try {
       setIsLoading(true);
+      console.log("useInterviewerAccess: Fetching for user:", user?.id);
+
       const { data, error } = await supabase
         .from("interviewer_company_access")
         .select(
           `
           company_id,
-          granted_at,
+          created_at,
           granted_by,
           companies (
             id,
@@ -48,8 +50,22 @@ export const useInterviewerAccess = () => {
         )
         .eq("user_id", user!.id);
 
-      if (error) throw error;
-      setAccessibleCompanies(data || []);
+      if (error) {
+        console.error("useInterviewerAccess: Query error:", error);
+        throw error;
+      }
+
+      console.log("useInterviewerAccess: Raw data:", data);
+
+      // Transform the data to match the expected structure
+      const transformedData = (data || []).map((item) => ({
+        ...item,
+        granted_at: item.created_at,
+        company: item.companies,
+      }));
+
+      console.log("useInterviewerAccess: Transformed data:", transformedData);
+      setAccessibleCompanies(transformedData);
     } catch (err) {
       setError(err as Error);
       console.error("Error fetching accessible companies:", err);

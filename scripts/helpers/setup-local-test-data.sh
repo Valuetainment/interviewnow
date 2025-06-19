@@ -56,11 +56,14 @@ echo ""
 echo "Creating Tenant Admins..."
 create_user "admin@techcorp.com" "TestPassword123!" "TechCorp Admin"
 create_user "admin@innovatetech.com" "TestPassword123!" "InnovateTech Admin"
+create_user "admin@greenfuture.com" "TestPassword123!" "GreenFuture Admin"
 
 echo ""
 echo "Creating Tenant Interviewers..."
 create_user "interviewer@techcorp.com" "TestPassword123!" "TechCorp Interviewer"
 create_user "interviewer@innovatetech.com" "TestPassword123!" "InnovateTech Interviewer"
+create_user "interviewer@greenfuture.com" "TestPassword123!" "GreenFuture Interviewer"
+create_user "interviewer.all@testcompany.com" "TestPassword123!" "Multi-Company Interviewer"
 
 echo ""
 echo "NOTE: Candidates are created without auth.users entries (no login capability)"
@@ -94,7 +97,7 @@ SELECT
     NOW() as created_at,
     NOW() as updated_at
 FROM auth.users au
-WHERE au.email IN ('admin@techcorp.com', 'admin@innovatetech.com')
+WHERE au.email IN ('admin@techcorp.com', 'admin@innovatetech.com', 'admin@greenfuture.com')
 ON CONFLICT (id) DO UPDATE
 SET role = 'tenant_admin',
     tenant_id = 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0'::uuid,
@@ -109,7 +112,7 @@ SELECT
     NOW() as created_at,
     NOW() as updated_at
 FROM auth.users au
-WHERE au.email IN ('interviewer@techcorp.com', 'interviewer@innovatetech.com')
+WHERE au.email IN ('interviewer@techcorp.com', 'interviewer@innovatetech.com', 'interviewer@greenfuture.com', 'interviewer.all@testcompany.com')
 ON CONFLICT (id) DO UPDATE
 SET role = 'tenant_interviewer',
     tenant_id = 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0'::uuid,
@@ -120,7 +123,7 @@ echo ""
 echo "Step 3: Creating interviewer company access entries..."
 
 PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres << EOF
--- Grant TechCorp interviewer access to TechCorp Solutions
+-- Grant TechCorp interviewer access to TechCorp Solutions only
 INSERT INTO public.interviewer_company_access (user_id, company_id, tenant_id, granted_by, created_at)
 SELECT 
     u.id as user_id,
@@ -155,6 +158,82 @@ CROSS JOIN (
 ) admin
 WHERE au.email = 'interviewer@innovatetech.com'
 ON CONFLICT (user_id, company_id) DO NOTHING;
+
+-- Grant GreenFuture interviewer access to GreenFuture Technologies
+INSERT INTO public.interviewer_company_access (user_id, company_id, tenant_id, granted_by, created_at)
+SELECT 
+    u.id as user_id,
+    'c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3'::uuid as company_id,
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0'::uuid as tenant_id,
+    admin.id as granted_by,
+    NOW() as created_at
+FROM public.users u
+JOIN auth.users au ON u.id = au.id
+CROSS JOIN (
+    SELECT u2.id FROM public.users u2
+    JOIN auth.users au2 ON u2.id = au2.id
+    WHERE au2.email = 'admin@greenfuture.com'
+) admin
+WHERE au.email = 'interviewer@greenfuture.com'
+ON CONFLICT (user_id, company_id) DO NOTHING;
+
+-- Grant multi-company interviewer access to ALL companies
+-- TechCorp Solutions
+INSERT INTO public.interviewer_company_access (user_id, company_id, tenant_id, granted_by, created_at)
+SELECT 
+    u.id as user_id,
+    'c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1'::uuid as company_id,
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0'::uuid as tenant_id,
+    admin.id as granted_by,
+    NOW() as created_at
+FROM public.users u
+JOIN auth.users au ON u.id = au.id
+CROSS JOIN (
+    SELECT u2.id FROM public.users u2
+    JOIN auth.users au2 ON u2.id = au2.id
+    WHERE au2.email = 'admin@techcorp.com'
+    LIMIT 1
+) admin
+WHERE au.email = 'interviewer.all@testcompany.com'
+ON CONFLICT (user_id, company_id) DO NOTHING;
+
+-- InnovateTech Labs
+INSERT INTO public.interviewer_company_access (user_id, company_id, tenant_id, granted_by, created_at)
+SELECT 
+    u.id as user_id,
+    'c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2'::uuid as company_id,
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0'::uuid as tenant_id,
+    admin.id as granted_by,
+    NOW() as created_at
+FROM public.users u
+JOIN auth.users au ON u.id = au.id
+CROSS JOIN (
+    SELECT u2.id FROM public.users u2
+    JOIN auth.users au2 ON u2.id = au2.id
+    WHERE au2.email = 'admin@innovatetech.com'
+    LIMIT 1
+) admin
+WHERE au.email = 'interviewer.all@testcompany.com'
+ON CONFLICT (user_id, company_id) DO NOTHING;
+
+-- GreenFuture Technologies
+INSERT INTO public.interviewer_company_access (user_id, company_id, tenant_id, granted_by, created_at)
+SELECT 
+    u.id as user_id,
+    'c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3'::uuid as company_id,
+    'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0'::uuid as tenant_id,
+    admin.id as granted_by,
+    NOW() as created_at
+FROM public.users u
+JOIN auth.users au ON u.id = au.id
+CROSS JOIN (
+    SELECT u2.id FROM public.users u2
+    JOIN auth.users au2 ON u2.id = au2.id
+    WHERE au2.email = 'admin@greenfuture.com'
+    LIMIT 1
+) admin
+WHERE au.email = 'interviewer.all@testcompany.com'
+ON CONFLICT (user_id, company_id) DO NOTHING;
 EOF
 
 echo ""
@@ -165,19 +244,28 @@ PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres << EOF
 UPDATE public.candidates
 SET auth_id = NULL,
     auth_email = NULL
-WHERE email IN ('john.smith@example.com', 'sarah.johnson@example.com', 'michael.chen@example.com');
+WHERE email IN ('john.smith@example.com', 'sarah.johnson@example.com', 'michael.chen@example.com',
+                'alex.kumar@example.com', 'priya.patel@example.com', 'dr.hassan@example.com',
+                'lisa.wong@example.com', 'maria.gonzalez@example.com', 'james.oconnor@example.com',
+                'rachel.kim@example.com', 'andre.silva@example.com');
 
 -- Clean up any auth.users entries for candidates (they shouldn't be able to login)
 DELETE FROM auth.users
 WHERE email IN ('john.smith@example.com', 'sarah.johnson@example.com', 'michael.chen@example.com', 
-                'emily.rodriguez@example.com', 'david.park@example.com', 'sophia.zhang@example.com');
+                'emily.rodriguez@example.com', 'david.park@example.com', 'sophia.zhang@example.com',
+                'alex.kumar@example.com', 'priya.patel@example.com', 'dr.hassan@example.com',
+                'lisa.wong@example.com', 'maria.gonzalez@example.com', 'james.oconnor@example.com',
+                'rachel.kim@example.com', 'andre.silva@example.com');
 
 -- Clean up any public.users entries for candidates
 DELETE FROM public.users
 WHERE id IN (
     SELECT auth_id FROM public.candidates 
     WHERE email IN ('john.smith@example.com', 'sarah.johnson@example.com', 'michael.chen@example.com',
-                    'emily.rodriguez@example.com', 'david.park@example.com', 'sophia.zhang@example.com')
+                    'emily.rodriguez@example.com', 'david.park@example.com', 'sophia.zhang@example.com',
+                    'alex.kumar@example.com', 'priya.patel@example.com', 'dr.hassan@example.com',
+                    'lisa.wong@example.com', 'maria.gonzalez@example.com', 'james.oconnor@example.com',
+                    'rachel.kim@example.com', 'andre.silva@example.com')
     AND auth_id IS NOT NULL
 );
 EOF
@@ -256,7 +344,8 @@ PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres -t -c \
      LEFT JOIN public.users pu ON u.id = pu.id 
      LEFT JOIN public.tenants t ON pu.tenant_id = t.id 
      WHERE u.email IN ('system.admin@interviewnow.ai', 'admin@techcorp.com', 'admin@innovatetech.com', 
-                       'interviewer@techcorp.com', 'interviewer@innovatetech.com')
+                       'admin@greenfuture.com', 'interviewer@techcorp.com', 'interviewer@innovatetech.com',
+                       'interviewer@greenfuture.com', 'interviewer.all@testcompany.com')
      ORDER BY 
         CASE pu.role 
             WHEN 'system_admin' THEN 1
@@ -285,7 +374,8 @@ PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres -t -c \
             ELSE 'Has auth access (ERROR!)'
         END
      FROM public.candidates c
-     WHERE c.email IN ('john.smith@example.com', 'sarah.johnson@example.com', 'michael.chen@example.com')
+     WHERE c.email IN ('john.smith@example.com', 'sarah.johnson@example.com', 'michael.chen@example.com',
+                       'alex.kumar@example.com', 'maria.gonzalez@example.com')
      ORDER BY c.email;" | sed 's/^[ \t]*/  /'
 
 echo ""
@@ -298,14 +388,20 @@ echo ""
 echo "  TENANT ADMINS:"
 echo "    - admin@techcorp.com (password: TestPassword123!)"
 echo "    - admin@innovatetech.com (password: TestPassword123!)"
+echo "    - admin@greenfuture.com (password: TestPassword123!)"
 echo ""
 echo "  TENANT INTERVIEWERS:"
-echo "    - interviewer@techcorp.com (password: TestPassword123!) - Access to: TechCorp Solutions"
+echo "    - interviewer@techcorp.com (password: TestPassword123!) - Access to: TechCorp Solutions only"
 echo "    - interviewer@innovatetech.com (password: TestPassword123!) - Access to: InnovateTech Labs"
+echo "    - interviewer@greenfuture.com (password: TestPassword123!) - Access to: GreenFuture Technologies"
+echo "    - interviewer.all@testcompany.com (password: TestPassword123!) - Access to: ALL 3 companies"
 echo ""
 echo "Candidates (no login access):"
 echo "  - john.smith@example.com"
 echo "  - sarah.johnson@example.com"
 echo "  - michael.chen@example.com"
+echo "  - alex.kumar@example.com"
+echo "  - maria.gonzalez@example.com"
+echo "  ... and others"
 echo ""
 echo "You can now log in with the appropriate user to test different access levels." 
