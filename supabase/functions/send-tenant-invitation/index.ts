@@ -46,6 +46,12 @@ serve(async (req: Request) => {
     const { to, tenantName, invitationUrl, companyCode }: InvitationRequest =
       await req.json();
 
+    // Get Resend API key from environment
+    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+    if (!RESEND_API_KEY) {
+      throw new Error("RESEND_API_KEY is not configured");
+    }
+
     // Email HTML template
     const emailHtml = `
       <!DOCTYPE html>
@@ -142,29 +148,37 @@ serve(async (req: Request) => {
       </html>
     `;
 
-    // For development, we'll just log the email
-    // In production, you would integrate with an email service like SendGrid, Resend, etc.
-    console.log("Sending invitation email to:", to);
-    console.log("Tenant:", tenantName);
-    console.log("Company Code:", companyCode);
-    console.log("Invitation URL:", invitationUrl);
-
-    // TODO: Integrate with actual email service
-    // Example with Resend (you would need to add the API key to your env vars):
-    /*
-    const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
-    await resend.emails.send({
-      from: 'InterviewNow <noreply@interviewnow.com>',
-      to: to,
-      subject: `You're invited to join ${tenantName} on InterviewNow`,
-      html: emailHtml,
+    // Send email using Resend API
+    const emailResponse = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: "InterviewNow <noreply@vthire.ai>", // TODO: You should change this to your verified domain
+        to: [to],
+        subject: `You're invited to join ${tenantName} on InterviewNow`,
+        html: emailHtml,
+      }),
     });
-    */
+
+    if (!emailResponse.ok) {
+      const errorData = await emailResponse.json();
+      console.error("Resend API error:", errorData);
+      throw new Error(
+        `Failed to send email: ${errorData.message || "Unknown error"}`
+      );
+    }
+
+    const emailResult = await emailResponse.json();
+    console.log("Email sent successfully:", emailResult);
 
     return new Response(
       JSON.stringify({
         success: true,
         message: "Invitation email sent successfully",
+        emailId: emailResult.id,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
