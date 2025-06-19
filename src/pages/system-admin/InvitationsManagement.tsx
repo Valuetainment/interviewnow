@@ -117,21 +117,6 @@ export const SystemAdminInvitations: React.FC = () => {
       const companyCode = generateCompanyCode();
       const invitationUrl = `${window.location.origin}/onboarding?code=${companyCode}`;
 
-      // Create invitation record
-      const { data: invitation, error: inviteError } = await supabase
-        .from("tenant_invitations")
-        .insert({
-          email: formData.email,
-          tenant_name: formData.tenant_name,
-          company_code: companyCode,
-          tenancy_type: formData.tenancy_type,
-          invited_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (inviteError) throw inviteError;
-
       // Send email via edge function
       const { error: emailError } = await supabase.functions.invoke(
         "send-tenant-invitation",
@@ -145,9 +130,58 @@ export const SystemAdminInvitations: React.FC = () => {
         }
       );
 
-      if (emailError) throw emailError;
+      if (emailError) {
+        throw new Error("Failed to send invitation email");
+      }
 
-      toast.success("Invitation sent successfully!");
+      const { data: emailResult } = await supabase.functions.invoke(
+        "send-tenant-invitation",
+        {
+          body: {
+            to: formData.email,
+            tenantName: formData.tenant_name,
+            invitationUrl,
+            companyCode,
+          },
+        }
+      );
+
+      // Only create the invitation record if email was sent successfully
+      const { data: invitation, error: inviteError } = await supabase
+        .from("tenant_invitations")
+        .insert({
+          email: formData.email,
+          tenant_name: formData.tenant_name,
+          company_code: companyCode,
+          tenancy_type: formData.tenancy_type,
+          invited_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (inviteError) {
+        // Email was sent but database insert failed
+        console.error(
+          "Email sent but failed to save invitation record:",
+          inviteError
+        );
+        toast.warning(
+          "Invitation email sent, but failed to save record. The recipient can still use the invitation link."
+        );
+      } else {
+        // Show appropriate success message based on development mode
+        if (
+          emailResult?.developmentMode &&
+          emailResult?.actualRecipient !== formData.email
+        ) {
+          toast.success(
+            `Invitation sent to ${emailResult.actualRecipient} (development mode - intended for ${formData.email})`
+          );
+        } else {
+          toast.success("Invitation sent successfully!");
+        }
+      }
+
       setIsCreateDialogOpen(false);
       resetForm();
       fetchInvitations();
