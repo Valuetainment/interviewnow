@@ -839,7 +839,7 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({
       {/* Activity and Upcoming */}
       <div className="grid gap-6 grid-cols-1 md:grid-cols-8">
         {/* Recent Candidate Activity */}
-        <Card className="md:col-span-5">
+        <Card className="md:col-span-5 flex flex-col">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Recent Candidate Activity</CardTitle>
@@ -859,17 +859,27 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({
               </DropdownMenuContent>
             </DropdownMenu>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1">
             <div className="space-y-0">
-              {recentActivities.map((activity, index) => (
-                <React.Fragment key={`${activity.candidate.name}-${index}`}>
-                  <RecentCandidateActivity {...activity} />
-                  {index < recentActivities.length - 1 && <Separator />}
-                </React.Fragment>
-              ))}
+              {recentActivities.length > 0 ? (
+                recentActivities.map((activity, index) => (
+                  <React.Fragment key={`${activity.candidate.name}-${index}`}>
+                    <RecentCandidateActivity {...activity} />
+                    {index < recentActivities.length - 1 && <Separator />}
+                  </React.Fragment>
+                ))
+              ) : (
+                <div className="py-6 text-center text-muted-foreground">
+                  <Users className="mx-auto h-8 w-8 opacity-50" />
+                  <p className="mt-2">No recent candidate activity</p>
+                  <p className="text-sm mt-1">
+                    Interview activity will appear here
+                  </p>
+                </div>
+              )}
             </div>
           </CardContent>
-          <CardFooter className="pt-0">
+          <CardFooter>
             <Button
               variant="outline"
               className="w-full"
@@ -881,12 +891,12 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({
         </Card>
 
         {/* Upcoming Interviews */}
-        <Card className="md:col-span-3">
+        <Card className="md:col-span-3 flex flex-col">
           <CardHeader>
             <CardTitle>Upcoming Interviews</CardTitle>
             <CardDescription>Scheduled for the next 7 days</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1">
             <div className="space-y-0">
               {upcomingInterviews.length > 0 ? (
                 upcomingInterviews.map((interview, index) => (
@@ -899,11 +909,14 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({
                 <div className="py-6 text-center text-muted-foreground">
                   <CalendarIcon className="mx-auto h-8 w-8 opacity-50" />
                   <p className="mt-2">No upcoming interviews</p>
+                  <p className="text-sm mt-1">
+                    Scheduled interviews will appear here
+                  </p>
                 </div>
               )}
             </div>
           </CardContent>
-          <CardFooter className="pt-0">
+          <CardFooter>
             <Button
               variant="outline"
               className="w-full"
@@ -924,23 +937,38 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({
             <CardDescription>Monthly interview volume</CardDescription>
           </CardHeader>
           <CardContent className="h-[250px]">
-            <div className="flex h-full justify-between items-end pb-2">
-              {monthlyStats.map((stat) => {
-                const maxCount = Math.max(
-                  ...monthlyStats.map((s) => s.count),
-                  1
-                );
-                return (
-                  <div key={stat.month} className="flex flex-col items-center">
+            {monthlyStats.some((stat) => stat.count > 0) ? (
+              <div className="flex h-full justify-between items-end pb-2">
+                {monthlyStats.map((stat) => {
+                  const maxCount = Math.max(
+                    ...monthlyStats.map((s) => s.count),
+                    1
+                  );
+                  return (
                     <div
-                      className="w-12 bg-primary rounded-t-sm"
-                      style={{ height: `${(stat.count / maxCount) * 200}px` }}
-                    ></div>
-                    <div className="mt-2 text-xs">{stat.month}</div>
-                  </div>
-                );
-              })}
-            </div>
+                      key={stat.month}
+                      className="flex flex-col items-center"
+                    >
+                      <div
+                        className="w-12 bg-primary rounded-t-sm"
+                        style={{ height: `${(stat.count / maxCount) * 200}px` }}
+                      ></div>
+                      <div className="mt-2 text-xs">{stat.month}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center text-muted-foreground">
+                <div className="text-center">
+                  <BarChart3 className="mx-auto h-8 w-8 opacity-50" />
+                  <p className="mt-2">No interview data</p>
+                  <p className="text-sm mt-1">
+                    Complete interviews to see trends
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
           <CardFooter>
             <Button
@@ -964,20 +992,32 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({
             <CardTitle>Top Positions</CardTitle>
             <CardDescription>Most active interview positions</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {topPositions.map((position, index) => (
-                <div key={position.title}>
-                  <div className="mb-1 flex items-center justify-between text-sm">
-                    <span>{position.title}</span>
-                    <span className="font-medium">
-                      {position.count} interviews
-                    </span>
+          <CardContent className="h-[250px]">
+            {topPositions.length > 0 ? (
+              <div className="space-y-6">
+                {topPositions.map((position, index) => (
+                  <div key={position.title}>
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span>{position.title}</span>
+                      <span className="font-medium">
+                        {position.count} interviews
+                      </span>
+                    </div>
+                    <Progress value={position.percentage} className="h-2" />
                   </div>
-                  <Progress value={position.percentage} className="h-2" />
+                ))}
+              </div>
+            ) : (
+              <div className="flex h-full items-center justify-center text-muted-foreground">
+                <div className="text-center">
+                  <TrendingUp className="mx-auto h-8 w-8 opacity-50" />
+                  <p className="mt-2">No position data</p>
+                  <p className="text-sm mt-1">
+                    Create positions to track activity
+                  </p>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </CardContent>
           <CardFooter>
             <Button
@@ -1001,43 +1041,53 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {recentTranscripts.map((transcript, index) => (
-              <Card key={index} className="overflow-hidden">
-                <div className="p-4">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <h4 className="text-sm font-medium">
-                        {transcript.candidateName}
-                      </h4>
+          {recentTranscripts.length > 0 ? (
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {recentTranscripts.map((transcript, index) => (
+                <Card key={index} className="overflow-hidden">
+                  <div className="p-4">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <h4 className="text-sm font-medium">
+                          {transcript.candidateName}
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          {transcript.position}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 space-y-1">
                       <p className="text-xs text-muted-foreground">
-                        {transcript.position}
+                        Duration: {transcript.duration} minutes
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Word count: {transcript.wordCount}
                       </p>
                     </div>
                   </div>
-                  <div className="mt-3 space-y-1">
-                    <p className="text-xs text-muted-foreground">
-                      Duration: {transcript.duration} minutes
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Word count: {transcript.wordCount}
-                    </p>
+                  <div className="bg-muted px-4 py-2 flex justify-between">
+                    <span className="text-xs">{transcript.date}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-0 text-xs text-primary"
+                    >
+                      View
+                    </Button>
                   </div>
-                </div>
-                <div className="bg-muted px-4 py-2 flex justify-between">
-                  <span className="text-xs">{transcript.date}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-auto p-0 text-xs text-primary"
-                  >
-                    View
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              <FileText className="mx-auto h-8 w-8 opacity-50" />
+              <p className="mt-2">No transcripts available</p>
+              <p className="text-sm mt-1">
+                Completed interviews will appear here
+              </p>
+            </div>
+          )}
         </CardContent>
         <CardFooter>
           <Button
