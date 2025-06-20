@@ -205,8 +205,8 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({
   const [metrics, setMetrics] = useState({
     totalInterviews: 0,
     upcomingInterviews: 0,
-    avgDuration: 45,
-    completionRate: 85,
+    avgDuration: 0,
+    completionRate: 0,
     lastMonthInterviews: 0,
     lastMonthAvgDuration: 0,
     thisMonthInterviews: 0,

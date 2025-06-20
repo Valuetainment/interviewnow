@@ -72,7 +72,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
   );
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, refreshUserData } = useAuth();
 
   // Get company code from URL if present
   const urlCompanyCode = searchParams.get("code");
@@ -269,17 +269,35 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
                 "Onboarding returned error:",
                 onboardingResult.error
               );
+            } else if (onboardingResult?.success) {
+              // Use the data from onboarding result directly
+              const { tenant_id, role } = onboardingResult;
+
+              // Refresh user data to ensure auth context is updated
+              await refreshUserData(authData.user.id);
+
+              // Also refresh the auth session to get updated metadata
+              await supabase.auth.refreshSession();
+
+              // Small delay to ensure auth state propagates
+              await new Promise((resolve) => setTimeout(resolve, 500));
+
+              // Navigate with state so Dashboard knows we're coming from onboarding
+              navigate("/dashboard", {
+                state: {
+                  fromOnboarding: true,
+                  tenantId: tenant_id,
+                  role: role,
+                },
+              });
+
+              toast.success("Account created successfully!");
+              return;
             }
           }
 
-          toast.success("Account created successfully!");
-          // Navigate based on role
-          if (userRole === "tenant_admin") {
-            navigate("/dashboard");
-          } else {
-            // For interviewers, go to dashboard
-            navigate("/dashboard");
-          }
+          // Fallback navigation if onboarding didn't return expected data
+          navigate("/dashboard");
         } else if (authData.user) {
           // No company code - regular signup
           const { error: userError } = await supabase.from("users").insert([

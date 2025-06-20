@@ -130,6 +130,14 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   useEffect(() => {
+    // Don't fetch if we're waiting for access to load for interviewers
+    if (isTenantInterviewer && accessLoading) {
+      console.log(
+        "CompanyContext: Waiting for interviewer access to finish loading"
+      );
+      return;
+    }
+
     fetchCompanies();
   }, [tenantId, isTenantInterviewer, accessLoading]);
 

@@ -18,6 +18,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  refreshUserData: (userId?: string) => Promise<void>;
 }
 
 // Create the authentication context
@@ -126,6 +127,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
                   setRole(userRole || null);
                 } else if (data) {
                   console.log("Found user data in database:", data);
+                  console.log(
+                    "Setting tenantId:",
+                    data.tenant_id || userTenantId || null
+                  );
+                  console.log("Setting role:", data.role || userRole || null);
                   setTenantId(data.tenant_id || userTenantId || null);
                   setRole(data.role || userRole || null);
                 } else {
@@ -155,6 +161,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       authListener.subscription.unsubscribe();
     };
   }, []);
+
+  // Function to refresh user data from database
+  const refreshUserData = async (userId?: string) => {
+    const targetUserId = userId || user?.id || session?.user?.id;
+    if (!targetUserId) {
+      console.error("No user ID available for refreshing data");
+      return;
+    }
+
+    console.log("Refreshing user data for user:", targetUserId);
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("tenant_id, role")
+      .eq("id", targetUserId)
+      .maybeSingle();
+
+    if (userError) {
+      console.error("Error refreshing user data:", userError);
+    } else if (userData) {
+      console.log("Refreshed user data:", userData);
+      setTenantId(userData.tenant_id);
+      setRole(userData.role);
+    } else {
+      console.log("No user data found when refreshing");
+    }
+  };
 
   // Sign in with email/password
   const signIn = async (email: string, password: string) => {
@@ -245,6 +277,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     signUp,
     signOut,
     resetPassword,
+    refreshUserData,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

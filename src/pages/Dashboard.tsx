@@ -25,7 +25,7 @@ import {
   XCircle,
   Loader2,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardInterviews from "@/components/dashboard/DashboardInterviews";
@@ -132,69 +132,100 @@ const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [checkingCompanies, setCheckingCompanies] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
   const { role, tenantId } = useAuth();
 
+  // Check if we're coming from onboarding with state data
+  const fromOnboarding = location.state?.fromOnboarding;
+  const onboardingRole = location.state?.role;
+  const onboardingTenantId = location.state?.tenantId;
+
+  // Use onboarding data if available, otherwise use auth context
+  const effectiveRole = fromOnboarding ? onboardingRole : role;
+  const effectiveTenantId = fromOnboarding ? onboardingTenantId : tenantId;
+
+  console.log("Dashboard state:", {
+    fromOnboarding,
+    onboardingRole,
+    onboardingTenantId,
+    authRole: role,
+    authTenantId: tenantId,
+    effectiveRole,
+    effectiveTenantId,
+  });
+
   useEffect(() => {
-    console.log("Dashboard mounted - Role:", role, "TenantId:", tenantId);
+    console.log(
+      "Dashboard mounted - Role:",
+      effectiveRole,
+      "TenantId:",
+      effectiveTenantId
+    );
+
+    // Clear location state after using it
+    if (fromOnboarding) {
+      window.history.replaceState({}, document.title);
+    }
 
     // Wait for auth to be ready before checking companies
     const checkAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session) {
+      // If we have role/tenantId from onboarding or auth context, proceed
+      if (effectiveRole !== null && effectiveTenantId !== null) {
         await checkForCompanies();
-      } else {
-        // No session, user will be redirected by auth guard
-        setCheckingCompanies(false);
-      }
-    };
-
-    checkAuth();
-  }, [navigate, role, tenantId]);
-
-  const checkForCompanies = async () => {
-    try {
-      // First check if user is a system admin
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("role, tenant_id, id")
-        .single();
-
-      console.log("User data:", userData);
-
-      if (userError) {
-        console.error("Error checking user role:", userError);
-        setCheckingCompanies(false);
         return;
       }
 
+      // If we don't have role/tenantId yet, the auth context is still loading
+      // This prevents the 406 error when the user record doesn't exist yet
+      if (role === null && tenantId === null) {
+        // Check if we have a session at all
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session) {
+          // No session, user will be redirected by auth guard
+          setCheckingCompanies(false);
+          return;
+        }
+
+        // We have a session but no role/tenantId yet, wait a bit
+        console.log("Waiting for auth context to load role/tenantId...");
+        setTimeout(() => {
+          // Re-trigger the effect by changing a dependency
+          // Since role/tenantId will eventually be set by useAuth, this effect will re-run
+        }, 100);
+        return;
+      }
+
+      // Now we have role/tenantId from auth context, safe to check companies
+      await checkForCompanies();
+    };
+
+    checkAuth();
+  }, [navigate, role, tenantId, effectiveRole, effectiveTenantId]);
+
+  const checkForCompanies = async () => {
+    try {
+      // Use effective role/tenantId instead of querying again
+      console.log(
+        "Checking companies with role:",
+        effectiveRole,
+        "tenantId:",
+        effectiveTenantId
+      );
+
       // System admins don't need companies
-      if (userData?.role === "system_admin") {
+      if (effectiveRole === "system_admin") {
         console.log("User is system admin, skipping company check");
         setCheckingCompanies(false);
         return;
       }
 
-      // For tenant interviewers, check if they have access to any companies
-      if (userData?.role === "tenant_interviewer") {
-        const { data: accessData, error: accessError } = await supabase
-          .from("interviewer_company_access")
-          .select("company_id")
-          .eq("user_id", userData.id)
-          .limit(1);
-
-        if (accessError) {
-          console.error("Error checking interviewer access:", accessError);
-          setCheckingCompanies(false);
-          return;
-        }
-
-        if (!accessData || accessData.length === 0) {
-          console.log("Interviewer has no company access");
-          // Don't redirect interviewers to company setup, they can't create companies
-          // The dashboard will show but with limited/no data
-        }
+      // For tenant interviewers, they can't create companies
+      if (effectiveRole === "tenant_interviewer") {
+        console.log("User is interviewer, they cannot create companies");
+        // Don't redirect interviewers to company setup
         setCheckingCompanies(false);
         return;
       }
@@ -203,8 +234,8 @@ const Dashboard: React.FC = () => {
       let query = supabase.from("companies").select("id");
 
       // Filter by tenant_id if user has one
-      if (userData?.tenant_id) {
-        query = query.eq("tenant_id", userData.tenant_id);
+      if (effectiveTenantId) {
+        query = query.eq("tenant_id", effectiveTenantId);
       }
 
       const { data: companies, error } = await query.limit(1);
@@ -212,7 +243,7 @@ const Dashboard: React.FC = () => {
       console.log("Company check result:", {
         companies,
         error,
-        tenant_id: userData?.tenant_id,
+        tenant_id: effectiveTenantId,
       });
 
       if (error) {
@@ -223,7 +254,7 @@ const Dashboard: React.FC = () => {
 
       if (!companies || companies.length === 0) {
         // Only redirect tenant admins to company setup
-        if (userData?.role === "tenant_admin") {
+        if (effectiveRole === "tenant_admin") {
           console.log(
             "No companies found for tenant admin, redirecting to setup wizard..."
           );

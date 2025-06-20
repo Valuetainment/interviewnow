@@ -387,6 +387,55 @@ All tables have RLS policies that ensure:
 ## Helper Functions
 - `is_system_admin()`: Returns true if the current user is a system admin
 
+## Important Database Functions
+
+### complete_tenant_onboarding
+Handles the onboarding process for users accepting invitations. Updates both public.users and auth.users metadata to ensure JWT tokens contain correct tenant_id and role.
+
+**Overloaded versions:**
+
+1. **For new tenant creation (system admin invitations):**
+   - **Parameters:**
+     - `p_user_id` (uuid): The authenticated user's ID
+     - `p_invitation_id` (uuid): The invitation ID
+     - `p_tenant_name` (text): Name for the new tenant
+     - `p_tenancy_type` (text): Type of tenancy (enterprise/self-service)
+   - **Returns:** jsonb with success status and tenant_id
+
+2. **For joining existing tenant (tenant admin/interviewer invitations):**
+   - **Parameters:**
+     - `p_company_code` (text): The invitation code
+   - **Returns:** json with success status, tenant_id, tenant_name, and role
+   - **Key features:**
+     - Validates invitation and email match
+     - Creates/updates public.users record
+     - Creates interviewer company access entries if applicable
+     - Updates auth.users metadata for proper JWT tokens
+
+### add_tenant_user
+Creates invitations for new users to join a tenant.
+
+- **Parameters:**
+  - `p_email` (text): Email of user to invite
+  - `p_role` (text): Role to assign (tenant_admin or tenant_interviewer)
+  - `p_send_invite` (boolean): Whether to send invitation (default: true)
+  - `p_company_ids` (uuid[]): Company access for interviewers (optional)
+- **Returns:** json with invitation code or error
+
+### get_tenant_users
+Securely retrieves all users within a tenant.
+
+- **Parameters:**
+  - `p_tenant_id` (uuid): The tenant ID
+- **Returns:** Table of user data with email, role, created_at
+
+### get_tenant_interviewers
+Retrieves all interviewers within a tenant.
+
+- **Parameters:**
+  - `p_tenant_id` (uuid): The tenant ID
+- **Returns:** Table of interviewer data
+
 ## Indexes
 Key indexes are created on:
 - tenant_id (all tables)
