@@ -53,11 +53,8 @@ interface Company {
 interface InterviewerAccess {
   user_id: string;
   company_id: string;
-  granted_at: string;
+  created_at: string;
   granted_by: string;
-  users: {
-    email: string;
-  };
   companies: {
     name: string;
   };
@@ -148,23 +145,11 @@ export const InterviewerAccessManagement: React.FC = () => {
     if (error) {
       console.error("Error fetching access list:", error);
       toast.error("Failed to load access list");
-    } else {
-      // Get user emails from interviewers list
-      const emailMap: Record<string, string> = {};
-      interviewers.forEach((interviewer) => {
-        emailMap[interviewer.id] = interviewer.email;
-      });
-
-      // Transform the data to have the email at the expected location
-      const transformedData = (data || []).map((access) => ({
-        ...access,
-        granted_at: access.created_at,
-        users: {
-          email: emailMap[access.user_id] || "Unknown",
-        },
-      }));
-      setAccessList(transformedData);
+      return;
     }
+
+    // We'll update access list and then map emails from the interviewers array
+    setAccessList(data || []);
   };
 
   const handleGrantAccess = async () => {
@@ -233,6 +218,17 @@ export const InterviewerAccessManagement: React.FC = () => {
       .filter((access) => access.user_id === interviewerId)
       .map((access) => access.companies.name)
       .join(", ");
+  };
+
+  const getInterviewerEmail = (userId: string) => {
+    const interviewer = interviewers.find((i) => i.id === userId);
+    return interviewer?.email || "Unknown";
+  };
+
+  const getGrantedByEmail = async (grantedById: string) => {
+    // For now, we'll show "Admin" for granted_by since we can't easily get all user emails
+    // This could be improved by fetching admin users separately or using a database function
+    return "Admin";
   };
 
   return (
@@ -378,7 +374,9 @@ export const InterviewerAccessManagement: React.FC = () => {
                   ) : (
                     accessList.map((access) => (
                       <TableRow key={`${access.user_id}-${access.company_id}`}>
-                        <TableCell>{access.users.email}</TableCell>
+                        <TableCell>
+                          {getInterviewerEmail(access.user_id)}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -386,10 +384,10 @@ export const InterviewerAccessManagement: React.FC = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {format(new Date(access.granted_at), "MMM d, yyyy")}
+                          {format(new Date(access.created_at), "MMM d, yyyy")}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">System</Badge>
+                          <Badge variant="outline">Admin</Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
