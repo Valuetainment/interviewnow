@@ -326,21 +326,21 @@ const Transcripts: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Interview List */}
           <div className="lg:col-span-1">
-            <Card>
+            <Card className="h-full flex flex-col">
               <CardHeader>
                 <CardTitle>Completed Interviews</CardTitle>
                 <CardDescription>
                   Select an interview to view the transcript
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="flex-1">
+                <div className="space-y-4 h-full">
                   {loading ? (
-                    <div className="flex items-center justify-center p-8">
+                    <div className="flex items-center justify-center h-full min-h-[400px]">
                       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
                   ) : error ? (
-                    <div className="p-8 text-center text-red-600">
+                    <div className="flex items-center justify-center h-full min-h-[400px] text-center text-red-600">
                       <p>{error}</p>
                     </div>
                   ) : filteredSessions.length > 0 ? (
@@ -386,9 +386,12 @@ const Transcripts: React.FC = () => {
                       </div>
                     ))
                   ) : (
-                    <div className="p-8 text-center text-muted-foreground">
-                      <FileText className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                      <p>No interviews found matching your filters</p>
+                    <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center text-muted-foreground">
+                      <FileText className="mx-auto h-12 w-12 mb-4 opacity-30" />
+                      <p className="mb-2">No interviews found</p>
+                      <p className="text-sm">
+                        Complete interviews will appear here
+                      </p>
                     </div>
                   )}
                 </div>
@@ -398,7 +401,7 @@ const Transcripts: React.FC = () => {
 
           {/* Transcript View */}
           <div className="lg:col-span-2">
-            <Card className="h-full">
+            <Card className="h-full flex flex-col">
               <CardHeader>
                 <CardTitle>
                   {selectedSession
@@ -419,7 +422,7 @@ const Transcripts: React.FC = () => {
                     : "Select an interview to view transcript"}
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1">
                 {selectedSession ? (
                   <div className="space-y-6">
                     {/* Summary */}
@@ -506,7 +509,7 @@ const Transcripts: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-64 text-center text-muted-foreground">
+                  <div className="flex flex-col items-center justify-center min-h-[400px] text-center text-muted-foreground">
                     <FileText className="h-12 w-12 mb-4 opacity-30" />
                     <p className="mb-2">
                       Select an interview from the list to view its transcript
