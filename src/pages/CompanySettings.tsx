@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -73,6 +74,9 @@ interface PendingInvitation {
 const CompanySettings = () => {
   const { toast } = useToast();
   const { isTenantAdmin, tenantId, user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [companyName, setCompanyName] = useState("InterviewAI");
   const [companyEmail, setCompanyEmail] = useState("contact@interviewai.com");
   const [loading, setLoading] = useState(false);
@@ -99,8 +103,19 @@ const CompanySettings = () => {
     []
   );
 
-  // Tab states
-  const [activeTab, setActiveTab] = useState("profile");
+  // Tab states - Initialize from URL hash or default to "profile"
+  const getInitialTab = () => {
+    const hash = location.hash.replace("#", "");
+    const validTabs = ["profile", "users", "billing", "settings"];
+    return validTabs.includes(hash) ? hash : "profile";
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialTab());
+
+  // Update URL hash when tab changes
+  useEffect(() => {
+    navigate(`#${activeTab}`, { replace: true });
+  }, [activeTab, navigate]);
 
   // Fetch tenant users when component mounts or when we're on the users tab
   useEffect(() => {
@@ -542,7 +557,7 @@ const CompanySettings = () => {
         </h1>
 
         <Tabs
-          defaultValue="profile"
+          value={activeTab}
           className="space-y-6"
           onValueChange={setActiveTab}
         >

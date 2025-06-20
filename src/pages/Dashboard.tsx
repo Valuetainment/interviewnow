@@ -129,11 +129,24 @@ const QuickStatCard = ({
 );
 
 const Dashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState("overview");
-  const [checkingCompanies, setCheckingCompanies] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
   const { role, tenantId, isTenantAdmin, isSystemAdmin } = useAuth();
+
+  // Tab states - Initialize from URL hash or default to "overview"
+  const getInitialTab = () => {
+    const hash = location.hash.replace("#", "");
+    const validTabs = ["overview", "interviews", "invitations", "statistics"];
+    return validTabs.includes(hash) ? hash : "overview";
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialTab());
+  const [checkingCompanies, setCheckingCompanies] = useState(true);
+
+  // Update URL hash when tab changes
+  useEffect(() => {
+    navigate(`#${activeTab}`, { replace: true });
+  }, [activeTab, navigate]);
 
   // Check if we're coming from onboarding with state data
   const fromOnboarding = location.state?.fromOnboarding;
@@ -328,7 +341,6 @@ const Dashboard: React.FC = () => {
       </div>
 
       <Tabs
-        defaultValue="overview"
         value={activeTab}
         onValueChange={setActiveTab}
         className="space-y-6"
