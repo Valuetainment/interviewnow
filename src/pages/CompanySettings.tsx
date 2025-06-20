@@ -280,9 +280,10 @@ const CompanySettings = () => {
             body: {
               to: newUserEmail,
               inviterName:
-                userData?.user?.user_metadata?.full_name ||
-                userData?.user?.email ||
-                "A team member",
+                userData?.user?.user_metadata?.first_name &&
+                userData?.user?.user_metadata?.last_name
+                  ? `${userData.user.user_metadata.first_name} ${userData.user.user_metadata.last_name}`
+                  : userData?.user?.email || "A team member",
               tenantName: tenantData?.name || "your organization",
               invitationUrl: invitationLink,
               companyCode: data.invitation_code,
