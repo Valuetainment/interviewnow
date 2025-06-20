@@ -1,41 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  LineChart, 
-  Line, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
-  Cell
-} from 'recharts';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { TrendingUp, BarChart3, PieChartIcon, Target } from "lucide-react";
 
 // Colors for the pie chart
 const STATUS_COLORS = {
-  completed: '#10b981',
-  scheduled: '#3b82f6',
-  in_progress: '#f59e0b',
-  cancelled: '#ef4444'
+  completed: "#10b981",
+  scheduled: "#3b82f6",
+  in_progress: "#f59e0b",
+  cancelled: "#ef4444",
 };
 
 const DashboardStatistics: React.FC = () => {
   const { tenantId } = useAuth();
-  const [selectedPosition, setSelectedPosition] = useState('all');
+  const [selectedPosition, setSelectedPosition] = useState("all");
   const [loading, setLoading] = useState(true);
   const [positions, setPositions] = useState<any[]>([]);
   const [metrics, setMetrics] = useState({
     totalInterviews: 0,
     avgDuration: 0,
     avgScore: 0,
-    completionRate: 0
+    completionRate: 0,
   });
   const [weeklyData, setWeeklyData] = useState<any[]>([]);
   const [scoreDistribution, setScoreDistribution] = useState<any[]>([]);
@@ -57,10 +70,10 @@ const DashboardStatistics: React.FC = () => {
         fetchWeeklyData(),
         fetchScoreDistribution(),
         fetchStatusBreakdown(),
-        fetchCompetencyScores()
+        fetchCompetencyScores(),
       ]);
     } catch (error) {
-      console.error('Error fetching statistics:', error);
+      console.error("Error fetching statistics:", error);
     } finally {
       setLoading(false);
     }
@@ -68,38 +81,38 @@ const DashboardStatistics: React.FC = () => {
 
   const fetchPositions = async () => {
     const { data, error } = await supabase
-      .from('positions')
-      .select('id, title')
-      .eq('tenant_id', tenantId)
-      .order('title');
-    
+      .from("positions")
+      .select("id, title")
+      .eq("tenant_id", tenantId)
+      .order("title");
+
     if (!error && data) {
-      setPositions([{ id: 'all', title: 'All Positions' }, ...data]);
+      setPositions([{ id: "all", title: "All Positions" }, ...data]);
     }
   };
 
   const fetchMetrics = async () => {
     let query = supabase
-      .from('interview_sessions')
-      .select('*', { count: 'exact' })
-      .eq('tenant_id', tenantId);
+      .from("interview_sessions")
+      .select("*", { count: "exact" })
+      .eq("tenant_id", tenantId);
 
-    if (selectedPosition !== 'all') {
-      query = query.eq('position_id', selectedPosition);
+    if (selectedPosition !== "all") {
+      query = query.eq("position_id", selectedPosition);
     }
 
     const { count: totalCount } = await query;
 
     // Get completed interviews for duration calculation
     let completedQuery = supabase
-      .from('interview_sessions')
-      .select('start_time, end_time')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'completed')
-      .not('end_time', 'is', null);
+      .from("interview_sessions")
+      .select("start_time, end_time")
+      .eq("tenant_id", tenantId)
+      .eq("status", "completed")
+      .not("end_time", "is", null);
 
-    if (selectedPosition !== 'all') {
-      completedQuery = completedQuery.eq('position_id', selectedPosition);
+    if (selectedPosition !== "all") {
+      completedQuery = completedQuery.eq("position_id", selectedPosition);
     }
 
     const { data: completedInterviews } = await completedQuery;
@@ -107,44 +120,92 @@ const DashboardStatistics: React.FC = () => {
     let avgDuration = 0;
     if (completedInterviews && completedInterviews.length > 0) {
       const totalDuration = completedInterviews.reduce((acc, session) => {
-        const duration = new Date(session.end_time).getTime() - new Date(session.start_time).getTime();
+        const duration =
+          new Date(session.end_time).getTime() -
+          new Date(session.start_time).getTime();
         return acc + duration;
       }, 0);
-      avgDuration = Math.round(totalDuration / completedInterviews.length / 60000);
+      avgDuration = Math.round(
+        totalDuration / completedInterviews.length / 60000
+      );
     }
 
     // Calculate completion rate
     let scheduledQuery = supabase
-      .from('interview_sessions')
-      .select('*', { count: 'exact' })
-      .eq('tenant_id', tenantId)
-      .in('status', ['scheduled', 'completed']);
+      .from("interview_sessions")
+      .select("*", { count: "exact" })
+      .eq("tenant_id", tenantId)
+      .in("status", ["scheduled", "completed"]);
 
-    if (selectedPosition !== 'all') {
-      scheduledQuery = scheduledQuery.eq('position_id', selectedPosition);
+    if (selectedPosition !== "all") {
+      scheduledQuery = scheduledQuery.eq("position_id", selectedPosition);
     }
 
     const { count: scheduledCount } = await scheduledQuery;
 
-    const completionRate = scheduledCount > 0 
-      ? Math.round((completedInterviews?.length || 0) / scheduledCount * 100)
-      : 0;
+    const completionRate =
+      scheduledCount > 0
+        ? Math.round(
+            ((completedInterviews?.length || 0) / scheduledCount) * 100
+          )
+        : 0;
 
-    // Mock average score for now (would need assessment data)
-    const avgScore = completedInterviews?.length > 0 ? 7.5 : 0;
+    // Calculate average score from actual assessments
+    let avgScore = 0;
+    if (completedInterviews && completedInterviews.length > 0) {
+      let assessmentQuery = supabase
+        .from("candidate_assessments")
+        .select("weighted_score")
+        .eq("tenant_id", tenantId);
+
+      if (selectedPosition !== "all") {
+        assessmentQuery = supabase
+          .from("candidate_assessments")
+          .select(
+            `
+            weighted_score,
+            interview_sessions!inner(position_id, status)
+          `
+          )
+          .eq("tenant_id", tenantId)
+          .eq("interview_sessions.position_id", selectedPosition)
+          .eq("interview_sessions.status", "completed");
+      } else {
+        assessmentQuery = supabase
+          .from("candidate_assessments")
+          .select(
+            `
+            weighted_score,
+            interview_sessions!inner(status)
+          `
+          )
+          .eq("tenant_id", tenantId)
+          .eq("interview_sessions.status", "completed");
+      }
+
+      const { data: assessments } = await assessmentQuery;
+
+      if (assessments && assessments.length > 0) {
+        const totalScore = assessments.reduce(
+          (acc, assessment) => acc + (assessment.weighted_score || 0),
+          0
+        );
+        avgScore = totalScore / assessments.length;
+      }
+    }
 
     setMetrics({
       totalInterviews: totalCount || 0,
       avgDuration,
       avgScore,
-      completionRate
+      completionRate,
     });
   };
 
   const fetchWeeklyData = async () => {
     const weeks = [];
     const now = new Date();
-    
+
     for (let i = 3; i >= 0; i--) {
       const weekStart = new Date(now);
       weekStart.setDate(weekStart.getDate() - (i + 1) * 7);
@@ -152,21 +213,21 @@ const DashboardStatistics: React.FC = () => {
       weekEnd.setDate(weekEnd.getDate() - i * 7);
 
       let query = supabase
-        .from('interview_sessions')
-        .select('*', { count: 'exact' })
-        .eq('tenant_id', tenantId)
-        .gte('created_at', weekStart.toISOString())
-        .lt('created_at', weekEnd.toISOString());
+        .from("interview_sessions")
+        .select("*", { count: "exact" })
+        .eq("tenant_id", tenantId)
+        .gte("created_at", weekStart.toISOString())
+        .lt("created_at", weekEnd.toISOString());
 
-      if (selectedPosition !== 'all') {
-        query = query.eq('position_id', selectedPosition);
+      if (selectedPosition !== "all") {
+        query = query.eq("position_id", selectedPosition);
       }
 
       const { count } = await query;
 
       weeks.push({
         week: `Week ${4 - i}`,
-        value: count || 0
+        value: count || 0,
       });
     }
 
@@ -174,39 +235,81 @@ const DashboardStatistics: React.FC = () => {
   };
 
   const fetchScoreDistribution = async () => {
-    // Mock data for score distribution (would need actual assessment scores)
+    // Fetch actual assessment scores from database
+    let query = supabase
+      .from("candidate_assessments")
+      .select("weighted_score")
+      .eq("tenant_id", tenantId);
+
+    if (selectedPosition !== "all") {
+      // Need to join with interview_sessions to filter by position
+      query = supabase
+        .from("candidate_assessments")
+        .select(
+          `
+          weighted_score,
+          interview_sessions!inner(position_id)
+        `
+        )
+        .eq("tenant_id", tenantId)
+        .eq("interview_sessions.position_id", selectedPosition);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error fetching score distribution:", error);
+      setScoreDistribution([]);
+      return;
+    }
+
+    // Initialize distribution buckets
     const distribution = [
-      { range: '1-2', count: 0 },
-      { range: '3-4', count: 2 },
-      { range: '5-6', count: 5 },
-      { range: '7-8', count: 8 },
-      { range: '9-10', count: 3 },
+      { range: "1-2", count: 0 },
+      { range: "3-4", count: 0 },
+      { range: "5-6", count: 0 },
+      { range: "7-8", count: 0 },
+      { range: "9-10", count: 0 },
     ];
+
+    // Count scores in each range
+    if (data && data.length > 0) {
+      data.forEach((assessment) => {
+        const score = assessment.weighted_score;
+        if (score >= 1 && score <= 2) distribution[0].count++;
+        else if (score > 2 && score <= 4) distribution[1].count++;
+        else if (score > 4 && score <= 6) distribution[2].count++;
+        else if (score > 6 && score <= 8) distribution[3].count++;
+        else if (score > 8 && score <= 10) distribution[4].count++;
+      });
+    }
+
     setScoreDistribution(distribution);
   };
 
   const fetchStatusBreakdown = async () => {
-    const statuses = ['completed', 'scheduled', 'in_progress', 'cancelled'];
+    const statuses = ["completed", "scheduled", "in_progress", "cancelled"];
     const breakdown = [];
 
     for (const status of statuses) {
       let query = supabase
-        .from('interview_sessions')
-        .select('*', { count: 'exact' })
-        .eq('tenant_id', tenantId)
-        .eq('status', status);
+        .from("interview_sessions")
+        .select("*", { count: "exact" })
+        .eq("tenant_id", tenantId)
+        .eq("status", status);
 
-      if (selectedPosition !== 'all') {
-        query = query.eq('position_id', selectedPosition);
+      if (selectedPosition !== "all") {
+        query = query.eq("position_id", selectedPosition);
       }
 
       const { count } = await query;
-      
+
       if (count && count > 0) {
         breakdown.push({
-          name: status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' '),
+          name:
+            status.charAt(0).toUpperCase() + status.slice(1).replace("_", " "),
           value: count,
-          color: STATUS_COLORS[status as keyof typeof STATUS_COLORS]
+          color: STATUS_COLORS[status as keyof typeof STATUS_COLORS],
         });
       }
     }
@@ -215,31 +318,80 @@ const DashboardStatistics: React.FC = () => {
   };
 
   const fetchCompetencyScores = async () => {
-    if (selectedPosition === 'all') {
+    if (selectedPosition === "all") {
       setCompetencyScores([]);
       return;
     }
 
     const { data: competencies } = await supabase
-      .from('position_competencies')
-      .select(`
+      .from("position_competencies")
+      .select(
+        `
         weight,
         competencies (
           id,
           name
         )
-      `)
-      .eq('position_id', selectedPosition)
-      .eq('tenant_id', tenantId);
+      `
+      )
+      .eq("position_id", selectedPosition)
+      .eq("tenant_id", tenantId);
 
-    if (competencies) {
-      // Mock scores for demonstration (would need actual assessment data)
-      const scores = competencies.map(comp => ({
-        name: comp.competencies?.name || 'Unknown',
-        score: Math.floor(Math.random() * 3) + 6, // Random score between 6-8
-        weight: comp.weight
-      }));
-      setCompetencyScores(scores);
+    if (competencies && competencies.length > 0) {
+      // Fetch actual competency scores from assessments
+      const { data: assessments } = await supabase
+        .from("candidate_assessments")
+        .select(
+          `
+          details,
+          interview_sessions!inner(position_id)
+        `
+        )
+        .eq("tenant_id", tenantId)
+        .eq("interview_sessions.position_id", selectedPosition);
+
+      if (assessments && assessments.length > 0) {
+        // Calculate average score for each competency
+        const competencyAverages: Record<
+          string,
+          { total: number; count: number }
+        > = {};
+
+        assessments.forEach((assessment) => {
+          const details = assessment.details as any;
+          if (details?.competencyScores) {
+            Object.entries(details.competencyScores).forEach(
+              ([competencyId, score]) => {
+                if (!competencyAverages[competencyId]) {
+                  competencyAverages[competencyId] = { total: 0, count: 0 };
+                }
+                competencyAverages[competencyId].total += score as number;
+                competencyAverages[competencyId].count += 1;
+              }
+            );
+          }
+        });
+
+        // Map competencies with their average scores
+        const scores = competencies
+          .map((comp) => {
+            const competencyId = comp.competencies?.id;
+            const avgData = competencyAverages[competencyId];
+            return {
+              name: comp.competencies?.name || "Unknown",
+              score: avgData ? avgData.total / avgData.count : 0,
+              weight: comp.weight,
+            };
+          })
+          .filter((score) => score.score > 0); // Only show competencies with scores
+
+        setCompetencyScores(scores);
+      } else {
+        // No assessment data available
+        setCompetencyScores([]);
+      }
+    } else {
+      setCompetencyScores([]);
     }
   };
 
@@ -253,7 +405,7 @@ const DashboardStatistics: React.FC = () => {
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-8">
       {/* Filter by position */}
@@ -272,92 +424,131 @@ const DashboardStatistics: React.FC = () => {
           </SelectContent>
         </Select>
       </div>
-      
+
       {/* Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Interviews</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Interviews
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline">
-              <div className="text-3xl font-bold">{metrics.totalInterviews}</div>
+              <div className="text-3xl font-bold">
+                {metrics.totalInterviews}
+              </div>
               <div className="ml-2 text-xs text-muted-foreground">
-                {selectedPosition === 'all' ? 'All positions' : 'This position'}
+                {selectedPosition === "all" ? "All positions" : "This position"}
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Avg. Interview Duration</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Avg. Interview Duration
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col">
-              <div className="text-3xl font-bold">{metrics.avgDuration} min</div>
-              <div className="text-xs text-muted-foreground">For completed interviews</div>
+              <div className="text-3xl font-bold">
+                {metrics.avgDuration} min
+              </div>
+              <div className="text-xs text-muted-foreground">
+                For completed interviews
+              </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Avg. Assessment Score</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Avg. Assessment Score
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col">
-              <div className="text-3xl font-bold">{metrics.avgScore.toFixed(1)}</div>
-              <div className="text-xs text-muted-foreground">Out of 10 points</div>
+              <div className="text-3xl font-bold">
+                {metrics.avgScore.toFixed(1)}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Out of 10 points
+              </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Completion Rate</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Completion Rate
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col">
-              <div className="text-3xl font-bold">{metrics.completionRate}%</div>
-              <div className="text-xs text-muted-foreground">Of all scheduled interviews</div>
+              <div className="text-3xl font-bold">
+                {metrics.completionRate}%
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Of all scheduled interviews
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
-      
+
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Interviews over time */}
         <Card>
           <CardHeader>
             <CardTitle>Interviews Over Time</CardTitle>
-            <CardDescription>Number of interviews conducted weekly</CardDescription>
+            <CardDescription>
+              Number of interviews conducted weekly
+            </CardDescription>
           </CardHeader>
           <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={weeklyData}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="week" />
-                <YAxis />
-                <Tooltip />
-                <Line 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="#8b5cf6" 
-                  name="Interviews"
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {weeklyData.every((week) => week.value === 0) ? (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <div className="rounded-full bg-muted p-3 mb-4">
+                  <TrendingUp className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold text-lg mb-2">
+                  No Interview Data
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Start conducting interviews to see weekly trends and analytics
+                  here
+                </p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={weeklyData}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="week" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#8b5cf6"
+                    name="Interviews"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
-        
+
         {/* Assessment score distribution */}
         <Card>
           <CardHeader>
@@ -365,63 +556,91 @@ const DashboardStatistics: React.FC = () => {
             <CardDescription>Distribution of candidate scores</CardDescription>
           </CardHeader>
           <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={scoreDistribution}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="range" />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Bar 
-                  dataKey="count" 
-                  fill="#8b5cf6" 
-                  name="Candidates"
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            {scoreDistribution.every((item) => item.count === 0) ? (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <div className="rounded-full bg-muted p-3 mb-4">
+                  <BarChart3 className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold text-lg mb-2">
+                  No Assessment Scores
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Complete interviews with assessments to see score distribution
+                  analytics
+                </p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={scoreDistribution}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="range" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#8b5cf6" name="Candidates" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
-        
+
         {/* Interview status breakdown */}
         <Card>
           <CardHeader>
             <CardTitle>Interview Status Breakdown</CardTitle>
             <CardDescription>Current status of all interviews</CardDescription>
           </CardHeader>
-          <CardContent className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={statusBreakdown}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  paddingAngle={4}
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {statusBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+          <CardContent className="h-96">
+            {statusBreakdown.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <div className="rounded-full bg-muted p-3 mb-4">
+                  <PieChartIcon className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold text-lg mb-2">
+                  No Interview Status Data
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Schedule and conduct interviews to see status breakdown
+                  analytics
+                </p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusBreakdown}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    paddingAngle={4}
+                    dataKey="value"
+                    label={({ name, percent }) =>
+                      `${name} ${(percent * 100).toFixed(0)}%`
+                    }
+                  >
+                    {statusBreakdown.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
-        
+
         {/* Competency scores by position */}
         <Card>
           <CardHeader>
             <CardTitle>Competency Scores</CardTitle>
             <CardDescription>
-              {selectedPosition === 'all' 
-                ? 'Select a specific position to view competency scores'
-                : 'Average scores for this position'}
+              {selectedPosition === "all"
+                ? "Select a specific position to view competency scores"
+                : "Average scores for this position"}
             </CardDescription>
           </CardHeader>
           <CardContent className="h-96">
@@ -433,21 +652,32 @@ const DashboardStatistics: React.FC = () => {
                   layout="horizontal"
                 >
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                  <XAxis
+                    dataKey="name"
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
                   <YAxis domain={[0, 10]} />
                   <Tooltip />
-                  <Bar 
-                    dataKey="score" 
-                    fill="#8b5cf6" 
-                    name="Score"
-                  />
+                  <Bar dataKey="score" fill="#8b5cf6" name="Score" />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                {selectedPosition === 'all' 
-                  ? 'Select a specific position to view competency scores'
-                  : 'No competency data available for this position'}
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <div className="rounded-full bg-muted p-3 mb-4">
+                  <Target className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold text-lg mb-2">
+                  {selectedPosition === "all"
+                    ? "Select a Position"
+                    : "No Competency Data"}
+                </h3>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  {selectedPosition === "all"
+                    ? "Choose a specific position from the filter above to view competency scores"
+                    : "Complete interviews with assessments to see competency score analytics"}
+                </p>
               </div>
             )}
           </CardContent>
