@@ -133,7 +133,7 @@ const Dashboard: React.FC = () => {
   const [checkingCompanies, setCheckingCompanies] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
-  const { role, tenantId } = useAuth();
+  const { role, tenantId, isTenantAdmin, isSystemAdmin } = useAuth();
 
   // Check if we're coming from onboarding with state data
   const fromOnboarding = location.state?.fromOnboarding;
@@ -317,12 +317,14 @@ const Dashboard: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <div className="flex items-center space-x-2">
-          <Button onClick={() => navigate("/companies/new")}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Company
-          </Button>
-        </div>
+        {(isTenantAdmin || isSystemAdmin) && (
+          <div className="flex items-center space-x-2">
+            <Button onClick={() => navigate("/companies/new")}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Company
+            </Button>
+          </div>
+        )}
       </div>
 
       <Tabs

@@ -1,13 +1,27 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import CompanyForm from "@/components/companies/CompanyForm";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { Company } from "@/types/company";
+import { useAuth } from "@/hooks/useAuth";
 
 const NewCompany: React.FC = () => {
   const navigate = useNavigate();
+  const { isTenantAdmin, isSystemAdmin } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  useEffect(() => {
+    // Redirect if user doesn't have permission to create companies
+    if (!isTenantAdmin && !isSystemAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have permission to create companies",
+        variant: "destructive",
+      });
+      navigate("/dashboard");
+    }
+  }, [isTenantAdmin, isSystemAdmin, navigate]);
 
   const handleSubmit = async (
     data: Omit<Company, "id" | "tenant_id" | "created_at" | "updated_at">
