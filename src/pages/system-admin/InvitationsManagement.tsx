@@ -108,6 +108,95 @@ export const SystemAdminInvitations: React.FC = () => {
     try {
       setSendingInvitation(true);
 
+      // Validate email and tenant name are not empty
+      if (!formData.email.trim()) {
+        toast.error("Please enter an email address");
+        setSendingInvitation(false);
+        return;
+      }
+
+      if (!formData.tenant_name.trim()) {
+        toast.error("Please enter an organization name");
+        setSendingInvitation(false);
+        return;
+      }
+
+      // Check if tenant name already exists
+      const { data: existingTenants, error: tenantCheckError } = await supabase
+        .from("tenants")
+        .select("name")
+        .ilike("name", formData.tenant_name.trim());
+
+      if (tenantCheckError) {
+        console.error("Error checking existing tenants:", tenantCheckError);
+      } else if (existingTenants && existingTenants.length > 0) {
+        toast.error(
+          `An organization with the name "${formData.tenant_name.trim()}" already exists. Please choose a different name.`
+        );
+        setSendingInvitation(false);
+        return;
+      }
+
+      // Also check if tenant name is already in a pending invitation
+      const { data: pendingTenantInvitations } = await supabase
+        .from("tenant_invitations")
+        .select("*")
+        .ilike("tenant_name", formData.tenant_name.trim())
+        .is("accepted_at", null)
+        .gte("expires_at", new Date().toISOString());
+
+      if (pendingTenantInvitations && pendingTenantInvitations.length > 0) {
+        const inv = pendingTenantInvitations[0];
+        toast.error(
+          `There's already a pending invitation for "${formData.tenant_name.trim()}" sent to ${
+            inv.email
+          }. It expires on ${format(new Date(inv.expires_at), "MMM d, yyyy")}.`
+        );
+        setSendingInvitation(false);
+        return;
+      }
+
+      // Check if email already has any invitation (pending or accepted)
+      const { data: existingInvitations, error: checkError } = await supabase
+        .from("tenant_invitations")
+        .select("*")
+        .eq("email", formData.email.trim().toLowerCase());
+
+      if (checkError) {
+        console.error("Error checking existing invitations:", checkError);
+      } else if (existingInvitations && existingInvitations.length > 0) {
+        // Check for pending invitations
+        const pendingInvitation = existingInvitations.find(
+          (inv) => !inv.accepted_at && new Date(inv.expires_at) > new Date()
+        );
+
+        if (pendingInvitation) {
+          toast.error(
+            `This email already has a pending invitation for ${
+              pendingInvitation.tenant_name
+            }. The invitation expires on ${format(
+              new Date(pendingInvitation.expires_at),
+              "MMM d, yyyy"
+            )}.`
+          );
+          setSendingInvitation(false);
+          return;
+        }
+
+        // Check for accepted invitations
+        const acceptedInvitation = existingInvitations.find(
+          (inv) => inv.accepted_at
+        );
+
+        if (acceptedInvitation) {
+          toast.error(
+            `This email has already been used to create an account for ${acceptedInvitation.tenant_name}.`
+          );
+          setSendingInvitation(false);
+          return;
+        }
+      }
+
       // Get current user
       const {
         data: { user },
@@ -136,8 +225,8 @@ export const SystemAdminInvitations: React.FC = () => {
       const { data: invitation, error: inviteError } = await supabase
         .from("tenant_invitations")
         .insert({
-          email: formData.email,
-          tenant_name: formData.tenant_name,
+          email: formData.email.trim().toLowerCase(), // Normalize email
+          tenant_name: formData.tenant_name.trim(),
           company_code: companyCode,
           tenancy_type: formData.tenancy_type,
           invited_by: user.id,
@@ -486,7 +575,12 @@ export const SystemAdminInvitations: React.FC = () => {
                   setFormData({ ...formData, email: e.target.value })
                 }
                 placeholder="admin@company.com"
+                required
               />
+              <p className="text-xs text-muted-foreground">
+                This email will be used to create the admin account for the
+                organization
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="tenant_name">Organization Name</Label>
@@ -497,7 +591,11 @@ export const SystemAdminInvitations: React.FC = () => {
                   setFormData({ ...formData, tenant_name: e.target.value })
                 }
                 placeholder="Acme Corporation"
+                required
               />
+              <p className="text-xs text-muted-foreground">
+                The name of the organization that will be created
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="tenancy_type">Tenancy Type</Label>
@@ -528,13 +626,15 @@ export const SystemAdminInvitations: React.FC = () => {
             <Button
               onClick={sendInvitation}
               disabled={
-                sendingInvitation || !formData.email || !formData.tenant_name
+                sendingInvitation ||
+                !formData.email.trim() ||
+                !formData.tenant_name.trim()
               }
             >
               {sendingInvitation ? (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Sending...
+                  Validating & Sending...
                 </>
               ) : (
                 <>
