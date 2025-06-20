@@ -41,6 +41,8 @@ import { format } from "date-fns";
 interface TenantInterviewer {
   id: string;
   email: string;
+  first_name?: string;
+  last_name?: string;
   role: string;
   created_at: string;
 }
@@ -105,6 +107,7 @@ export const InterviewerAccessManagement: React.FC = () => {
       const interviewerData = (data || []).map((user: any) => ({
         id: user.id,
         email: user.email,
+        full_name: user.full_name || "",
         role: user.role,
         created_at: user.created_at,
       }));
@@ -225,6 +228,16 @@ export const InterviewerAccessManagement: React.FC = () => {
     return interviewer?.email || "Unknown";
   };
 
+  const getInterviewerName = (userId: string) => {
+    const interviewer = interviewers.find((i) => i.id === userId);
+    if (!interviewer) return "";
+
+    const name = `${interviewer.first_name || ""} ${
+      interviewer.last_name || ""
+    }`.trim();
+    return name || "No name provided";
+  };
+
   const getGrantedByEmail = async (grantedById: string) => {
     // For now, we'll show "Admin" for granted_by since we can't easily get all user emails
     // This could be improved by fetching admin users separately or using a database function
@@ -336,7 +349,14 @@ export const InterviewerAccessManagement: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <UserCheck className="h-4 w-4 text-muted-foreground" />
                       <div>
-                        <p className="font-medium">{interviewer.email}</p>
+                        <p className="font-medium">
+                          {interviewer.first_name || interviewer.last_name
+                            ? `${interviewer.first_name} ${interviewer.last_name}`.trim()
+                            : "No name provided"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {interviewer.email}
+                        </p>
                         <p className="text-sm text-muted-foreground">
                           Companies:{" "}
                           {getInterviewerCompanies(interviewer.id) ||
@@ -375,7 +395,14 @@ export const InterviewerAccessManagement: React.FC = () => {
                     accessList.map((access) => (
                       <TableRow key={`${access.user_id}-${access.company_id}`}>
                         <TableCell>
-                          {getInterviewerEmail(access.user_id)}
+                          <div>
+                            <p className="font-medium">
+                              {getInterviewerName(access.user_id)}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {getInterviewerEmail(access.user_id)}
+                            </p>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">

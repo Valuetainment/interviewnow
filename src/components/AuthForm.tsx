@@ -30,7 +30,8 @@ const loginSchema = z.object({
 
 const signupSchema = z
   .object({
-    name: z.string().min(2, "Name must be at least 2 characters"),
+    firstName: z.string().min(2, "First name must be at least 2 characters"),
+    lastName: z.string().min(2, "Last name must be at least 2 characters"),
     email: z.string().email("Please enter a valid email address"),
     password: z
       .string()
@@ -84,7 +85,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
       mode === "login"
         ? { email: "", password: "", rememberMe: false }
         : {
-            name: "",
+            firstName: "",
+            lastName: "",
             email: "",
             password: "",
             confirmPassword: "",
@@ -145,7 +147,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
         toast.success("Successfully logged in!");
         // signIn already handles navigation based on role
       } else {
-        const { email, password, name, companyCode } = data as SignupFormValues;
+        const { email, password, firstName, lastName, companyCode } =
+          data as SignupFormValues;
 
         // If company code is provided, check both invitation types
         let tenantId: string | null = null;
@@ -208,7 +211,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
             password,
             options: {
               data: {
-                full_name: name,
+                first_name: firstName,
+                last_name: lastName,
               },
             },
           });
@@ -332,7 +336,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
   };
 
   return (
-    <div className="bg-card/50 backdrop-blur-sm p-8 rounded-lg border shadow-sm">
+    <div className="bg-card/50 backdrop-blur-sm p-6 sm:p-10 rounded-lg border shadow-sm">
       {authError && (
         <Alert variant="destructive" className="mb-6">
           <AlertDescription>{authError}</AlertDescription>
@@ -362,26 +366,48 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {mode === "signup" && (
             <>
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Enter your name"
-                          className="pl-10"
-                          {...field}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="First name"
+                            className="pl-10"
+                            {...field}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Last name"
+                            className="pl-10"
+                            {...field}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               {!invitationInfo && (
                 <FormField
