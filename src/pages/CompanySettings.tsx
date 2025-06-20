@@ -13,11 +13,44 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Building, Users, Settings, CreditCard } from "lucide-react";
+import {
+  Building,
+  Users,
+  Settings,
+  CreditCard,
+  Plus,
+  Trash2,
+  Edit,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { InterviewerAccessManagement } from "@/components/settings/InterviewerAccessManagement";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface TenantUser {
   id: string;
@@ -28,12 +61,23 @@ interface TenantUser {
 
 const CompanySettings = () => {
   const { toast } = useToast();
-  const { isTenantAdmin, tenantId } = useAuth();
+  const { isTenantAdmin, tenantId, user } = useAuth();
   const [companyName, setCompanyName] = useState("InterviewAI");
   const [companyEmail, setCompanyEmail] = useState("contact@interviewai.com");
   const [loading, setLoading] = useState(false);
   const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+
+  // Dialog states
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<TenantUser | null>(null);
+
+  // Form states
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserRole, setNewUserRole] = useState("tenant_interviewer");
+  const [editUserRole, setEditUserRole] = useState("");
 
   useEffect(() => {
     if (tenantId) {
@@ -75,6 +119,143 @@ const CompanySettings = () => {
       default:
         return <Badge variant="outline">{role}</Badge>;
     }
+  };
+
+  const handleAddUser = async () => {
+    if (!newUserEmail) {
+      toast({
+        title: "Error",
+        description: "Please enter an email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.rpc("add_tenant_user", {
+        p_email: newUserEmail,
+        p_role: newUserRole,
+        p_send_invite: true,
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: data.message || "User added successfully",
+        });
+        setShowAddDialog(false);
+        setNewUserEmail("");
+        setNewUserRole("tenant_interviewer");
+        fetchTenantUsers();
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to add user",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error adding user:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add user",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditUser = async () => {
+    if (!selectedUser) return;
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.rpc("update_tenant_user", {
+        p_user_id: selectedUser.id,
+        p_role: editUserRole,
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: data.message || "User updated successfully",
+        });
+        setShowEditDialog(false);
+        setSelectedUser(null);
+        setEditUserRole("");
+        fetchTenantUsers();
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to update user",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating user:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update user",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.rpc("delete_tenant_user", {
+        p_user_id: selectedUser.id,
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({
+          title: "Success",
+          description: data.message || "User deleted successfully",
+        });
+        setShowDeleteDialog(false);
+        setSelectedUser(null);
+        fetchTenantUsers();
+      } else {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to delete user",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete user",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openEditDialog = (user: TenantUser) => {
+    setSelectedUser(user);
+    setEditUserRole(user.role);
+    setShowEditDialog(true);
+  };
+
+  const openDeleteDialog = (user: TenantUser) => {
+    setSelectedUser(user);
+    setShowDeleteDialog(true);
   };
 
   const saveCompanyProfile = () => {
@@ -227,10 +408,20 @@ const CompanySettings = () => {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Manage Users</CardTitle>
-                  <CardDescription>
-                    Add, edit, or remove users from your organization
-                  </CardDescription>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <CardTitle>Manage Users</CardTitle>
+                      <CardDescription>
+                        Add, edit, or remove users from your organization
+                      </CardDescription>
+                    </div>
+                    {isTenantAdmin && (
+                      <Button onClick={() => setShowAddDialog(true)}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add User
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="rounded-md border">
@@ -253,20 +444,45 @@ const CompanySettings = () => {
                       </div>
                     ) : (
                       <div className="divide-y">
-                        {tenantUsers.map((user) => (
-                          <div key={user.id} className="p-4">
+                        {tenantUsers.map((tenantUser) => (
+                          <div key={tenantUser.id} className="p-4">
                             <div className="grid grid-cols-4 items-center">
                               <div className="font-medium">
-                                {user.email || "No email"}
+                                {tenantUser.email || "No email"}
                               </div>
-                              <div>{getRoleBadge(user.role)}</div>
+                              <div>{getRoleBadge(tenantUser.role)}</div>
                               <div className="text-sm text-muted-foreground">
-                                {new Date(user.created_at).toLocaleDateString()}
+                                {new Date(
+                                  tenantUser.created_at
+                                ).toLocaleDateString()}
                               </div>
-                              <div className="text-right">
-                                <Button variant="ghost" size="sm">
-                                  Edit
-                                </Button>
+                              <div className="text-right space-x-2">
+                                {isTenantAdmin && (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => openEditDialog(tenantUser)}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        openDeleteDialog(tenantUser)
+                                      }
+                                      disabled={tenantUser.id === user?.id}
+                                      className={
+                                        tenantUser.id === user?.id
+                                          ? "opacity-50"
+                                          : "text-red-600 hover:text-red-700"
+                                      }
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -275,15 +491,6 @@ const CompanySettings = () => {
                     )}
                   </div>
                 </CardContent>
-                <CardFooter>
-                  <Button
-                    onClick={saveUserSettings}
-                    disabled={loading}
-                    className="ml-auto"
-                  >
-                    {loading ? "Saving..." : "Save Changes"}
-                  </Button>
-                </CardFooter>
               </Card>
 
               {/* Interviewer Access Management - Only visible to Tenant Admins */}
@@ -564,6 +771,113 @@ const CompanySettings = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Add User Dialog */}
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New User</DialogTitle>
+            <DialogDescription>
+              Invite a new user to your organization
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="user@example.com"
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <Select value={newUserRole} onValueChange={setNewUserRole}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="tenant_admin">Admin</SelectItem>
+                  <SelectItem value="tenant_interviewer">
+                    Interviewer
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddUser} disabled={loading}>
+              {loading ? "Adding..." : "Add User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user role for {selectedUser?.email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-role">Role</Label>
+              <Select value={editUserRole} onValueChange={setEditUserRole}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="tenant_admin">Admin</SelectItem>
+                  <SelectItem value="tenant_interviewer">
+                    Interviewer
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditUser} disabled={loading}>
+              {loading ? "Updating..." : "Update User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove {selectedUser?.email} from your
+              organization? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDeleteDialog(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              disabled={loading}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {loading ? "Deleting..." : "Delete User"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
