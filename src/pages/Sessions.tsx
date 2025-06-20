@@ -1,17 +1,41 @@
-import React from 'react';
-import { Helmet, HelmetProvider } from 'react-helmet-async';
-import SessionList from '@/components/interview/SessionList';
-import SafeRender from '@/components/SafeRender';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Play, CheckCircle, LayoutList, XCircle } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Helmet, HelmetProvider } from "react-helmet-async";
+import SessionList from "@/components/interview/SessionList";
+import SafeRender from "@/components/SafeRender";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, Play, CheckCircle, LayoutList, XCircle } from "lucide-react";
 
 const Sessions: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Tab states - Initialize from URL hash or default to "all"
+  const getInitialTab = () => {
+    const hash = location.hash.replace("#", "");
+    const validTabs = [
+      "all",
+      "upcoming",
+      "in_progress",
+      "completed",
+      "cancelled",
+    ];
+    return validTabs.includes(hash) ? hash : "all";
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialTab());
+
+  // Update URL hash when tab changes
+  useEffect(() => {
+    navigate(`#${activeTab}`, { replace: true });
+  }, [activeTab, navigate]);
+
   return (
     <>
-    <HelmetProvider>
-      <Helmet>
-        <title>Interview Sessions | AI Interview Insights Platform</title>
-      </Helmet>
+      <HelmetProvider>
+        <Helmet>
+          <title>Interview Sessions | AI Interview Insights Platform</title>
+        </Helmet>
       </HelmetProvider>
       <div className="flex flex-col space-y-6">
         <div>
@@ -20,8 +44,8 @@ const Sessions: React.FC = () => {
             Manage scheduled interviews, view recordings, and analyze results
           </p>
         </div>
-        
-        <Tabs defaultValue="all">
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="all">
               <LayoutList className="h-4 w-4 mr-2" />
@@ -44,31 +68,31 @@ const Sessions: React.FC = () => {
               Cancelled
             </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="all" className="mt-6">
             <SafeRender>
               <SessionList filterStatus="all" />
             </SafeRender>
           </TabsContent>
-          
+
           <TabsContent value="upcoming" className="mt-6">
             <SafeRender>
               <SessionList filterStatus="scheduled" />
             </SafeRender>
           </TabsContent>
-          
+
           <TabsContent value="in_progress" className="mt-6">
             <SafeRender>
               <SessionList filterStatus="in_progress" />
             </SafeRender>
           </TabsContent>
-          
+
           <TabsContent value="completed" className="mt-6">
             <SafeRender>
               <SessionList filterStatus="completed" />
             </SafeRender>
           </TabsContent>
-          
+
           <TabsContent value="cancelled" className="mt-6">
             <SafeRender>
               <SessionList filterStatus="cancelled" />
@@ -80,4 +104,4 @@ const Sessions: React.FC = () => {
   );
 };
 
-export default Sessions; 
+export default Sessions;
