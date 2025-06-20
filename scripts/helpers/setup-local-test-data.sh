@@ -26,6 +26,8 @@ create_user() {
   local email=$1
   local password=$2
   local name=$3
+  local first_name=$4
+  local last_name=$5
   
   echo "Creating $name..."
   
@@ -36,7 +38,11 @@ create_user() {
     -d "{
       \"email\": \"$email\",
       \"password\": \"$password\",
-      \"email_confirm\": true
+      \"email_confirm\": true,
+      \"user_metadata\": {
+        \"first_name\": \"$first_name\",
+        \"last_name\": \"$last_name\"
+      }
     }")
   
   if echo "$response" | grep -q '"id"'; then
@@ -50,20 +56,20 @@ create_user() {
 
 # Create auth users
 echo "Creating System Admin..."
-create_user "system.admin@interviewnow.ai" "TestPassword123!" "System Admin"
+create_user "system.admin@interviewnow.ai" "TestPassword123!" "System Admin" "System" "Administrator"
 
 echo ""
 echo "Creating Tenant Admins..."
-create_user "admin@techcorp.com" "TestPassword123!" "TechCorp Admin"
-create_user "admin@innovatetech.com" "TestPassword123!" "InnovateTech Admin"
-create_user "admin@greenfuture.com" "TestPassword123!" "GreenFuture Admin"
+create_user "admin@techcorp.com" "TestPassword123!" "TechCorp Admin" "Robert" "Johnson"
+create_user "admin@innovatetech.com" "TestPassword123!" "InnovateTech Admin" "Jennifer" "Davis"
+create_user "admin@greenfuture.com" "TestPassword123!" "GreenFuture Admin" "Michael" "Thompson"
 
 echo ""
 echo "Creating Tenant Interviewers..."
-create_user "interviewer@techcorp.com" "TestPassword123!" "TechCorp Interviewer"
-create_user "interviewer@innovatetech.com" "TestPassword123!" "InnovateTech Interviewer"
-create_user "interviewer@greenfuture.com" "TestPassword123!" "GreenFuture Interviewer"
-create_user "interviewer.all@testcompany.com" "TestPassword123!" "Multi-Company Interviewer"
+create_user "interviewer@techcorp.com" "TestPassword123!" "TechCorp Interviewer" "Emma" "Wilson"
+create_user "interviewer@innovatetech.com" "TestPassword123!" "InnovateTech Interviewer" "Daniel" "Martinez"
+create_user "interviewer@greenfuture.com" "TestPassword123!" "GreenFuture Interviewer" "Olivia" "Brown"
+create_user "interviewer.all@testcompany.com" "TestPassword123!" "Multi-Company Interviewer" "James" "Anderson"
 
 echo ""
 echo "NOTE: Candidates are created without auth.users entries (no login capability)"
