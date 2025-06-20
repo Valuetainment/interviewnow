@@ -89,7 +89,7 @@ export const SystemAdminUsersManagement: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editFormData, setEditFormData] = useState({
     role: "",
-    tenant_id: "",
+    tenant_id: "none",
   });
 
   useEffect(() => {
@@ -149,7 +149,7 @@ export const SystemAdminUsersManagement: React.FC = () => {
     setEditingUser(user);
     setEditFormData({
       role: user.role,
-      tenant_id: user.tenant_id || "",
+      tenant_id: user.tenant_id || "none",
     });
     setIsEditDialogOpen(true);
   };
@@ -178,7 +178,8 @@ export const SystemAdminUsersManagement: React.FC = () => {
         .from("users")
         .update({
           role: editFormData.role,
-          tenant_id: editFormData.tenant_id || null,
+          tenant_id:
+            editFormData.tenant_id === "none" ? null : editFormData.tenant_id,
         })
         .eq("id", editingUser.id);
 
@@ -577,7 +578,6 @@ export const SystemAdminUsersManagement: React.FC = () => {
                     <SelectItem value="tenant_interviewer">
                       Interviewer
                     </SelectItem>
-                    <SelectItem value="tenant_candidate">Candidate</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -593,7 +593,7 @@ export const SystemAdminUsersManagement: React.FC = () => {
                     <SelectValue placeholder="Select a tenant" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Tenant</SelectItem>
+                    <SelectItem value="none">No Tenant</SelectItem>
                     {tenants.map((tenant) => (
                       <SelectItem key={tenant.id} value={tenant.id}>
                         {tenant.name}
