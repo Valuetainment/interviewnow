@@ -47,6 +47,15 @@ interface TenantInterviewer {
   created_at: string;
 }
 
+interface TenantUser {
+  id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  role: string;
+  created_at: string;
+}
+
 interface Company {
   id: string;
   name: string;
@@ -65,6 +74,7 @@ interface InterviewerAccess {
 export const InterviewerAccessManagement: React.FC = () => {
   const { tenantId, user } = useAuth();
   const [interviewers, setInterviewers] = useState<TenantInterviewer[]>([]);
+  const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [accessList, setAccessList] = useState<InterviewerAccess[]>([]);
   const [selectedInterviewer, setSelectedInterviewer] = useState<string>("");
@@ -85,6 +95,7 @@ export const InterviewerAccessManagement: React.FC = () => {
       setLoading(true);
       await Promise.all([
         fetchInterviewers(),
+        fetchTenantUsers(),
         fetchCompanies(),
         fetchAccessList(),
       ]);
@@ -113,6 +124,19 @@ export const InterviewerAccessManagement: React.FC = () => {
         created_at: user.created_at,
       }));
       setInterviewers(interviewerData);
+    }
+  };
+
+  const fetchTenantUsers = async () => {
+    // Fetch all tenant users to get admin names for "Granted By" column
+    const { data, error } = await supabase.rpc("get_tenant_users", {
+      p_tenant_id: tenantId,
+    });
+
+    if (error) {
+      console.error("Error fetching tenant users:", error);
+    } else {
+      setTenantUsers(data || []);
     }
   };
 
@@ -239,10 +263,15 @@ export const InterviewerAccessManagement: React.FC = () => {
     return name || "No name provided";
   };
 
-  const getGrantedByEmail = async (grantedById: string) => {
-    // For now, we'll show "Admin" for granted_by since we can't easily get all user emails
-    // This could be improved by fetching admin users separately or using a database function
-    return "Admin";
+  const getGrantedByName = (grantedById: string) => {
+    const grantingUser = tenantUsers.find((u) => u.id === grantedById);
+    if (!grantingUser) return "Unknown";
+
+    const firstName = grantingUser.first_name || "";
+    const lastName = grantingUser.last_name || "";
+    const fullName = `${firstName} ${lastName}`.trim();
+
+    return fullName || grantingUser.email || "Unknown";
   };
 
   return (
@@ -415,7 +444,7 @@ export const InterviewerAccessManagement: React.FC = () => {
                           {format(new Date(access.created_at), "MMM d, yyyy")}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">Admin</Badge>
+                          {getGrantedByName(access.granted_by)}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button

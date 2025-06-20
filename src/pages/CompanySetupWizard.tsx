@@ -23,7 +23,7 @@ import {
   ArrowRight,
   CheckCircle,
   Loader2,
-  Sparkles,
+  Plus,
 } from "lucide-react";
 
 interface CompanyFormData {
@@ -196,6 +196,8 @@ export const CompanySetupWizard: React.FC = () => {
         return formData.mission.trim() !== "" && formData.vision.trim() !== "";
       case 3:
         return (
+          formData.benefits_description.trim() !== "" &&
+          formData.values_description.trim() !== "" &&
           formData.benefits_items.some((item) => item.trim() !== "") &&
           formData.values_items.some((item) => item.trim() !== "")
         );
@@ -393,14 +395,25 @@ export const CompanySetupWizard: React.FC = () => {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-8">
+              {/* Company Benefits Section */}
               <div className="space-y-4">
-                <div>
-                  <Label>Company Benefits</Label>
-                  <p className="text-sm text-gray-500 mb-2">
-                    List the benefits you offer to employees
+                <div className="space-y-2">
+                  <Label className="text-base font-semibold">
+                    Company Benefits
+                  </Label>
+                  <p className="text-sm text-gray-500">
+                    Describe and list the benefits you offer to employees
                   </p>
-                  <Input
+                </div>
+
+                {/* Benefits Description */}
+                <div className="space-y-2">
+                  <Label htmlFor="benefits_description">
+                    Benefits Summary *
+                  </Label>
+                  <Textarea
+                    id="benefits_description"
                     value={formData.benefits_description}
                     onChange={(e) =>
                       setFormData({
@@ -408,17 +421,25 @@ export const CompanySetupWizard: React.FC = () => {
                         benefits_description: e.target.value,
                       })
                     }
-                    placeholder="Brief description of your benefits package"
-                    className="mb-3"
+                    placeholder="Brief overview of your benefits package (e.g., 'We offer comprehensive benefits to support our employees' well-being and growth')"
+                    rows={3}
                   />
+                </div>
+
+                {/* Benefits List */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Benefit Items *</Label>
+                  <p className="text-xs text-gray-500">
+                    Add at least one benefit
+                  </p>
                   {formData.benefits_items.map((item, index) => (
-                    <div key={index} className="flex gap-2 mb-2">
+                    <div key={index} className="flex gap-2">
                       <Input
                         value={item}
                         onChange={(e) =>
                           updateItem("benefits_items", index, e.target.value)
                         }
-                        placeholder="e.g., Health insurance, 401k matching..."
+                        placeholder="e.g., Health insurance, 401k matching, Flexible work hours..."
                       />
                       {formData.benefits_items.length > 1 && (
                         <Button
@@ -437,17 +458,30 @@ export const CompanySetupWizard: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => addItem("benefits_items")}
+                    className="w-full sm:w-auto"
                   >
-                    Add Benefit
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Another Benefit
                   </Button>
                 </div>
+              </div>
 
-                <div>
-                  <Label>Core Values</Label>
-                  <p className="text-sm text-gray-500 mb-2">
-                    What values drive your company culture?
+              <div className="border-t" />
+
+              {/* Core Values Section */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-base font-semibold">Core Values</Label>
+                  <p className="text-sm text-gray-500">
+                    Define the values that drive your company culture
                   </p>
-                  <Input
+                </div>
+
+                {/* Values Description */}
+                <div className="space-y-2">
+                  <Label htmlFor="values_description">Values Statement *</Label>
+                  <Textarea
+                    id="values_description"
                     value={formData.values_description}
                     onChange={(e) =>
                       setFormData({
@@ -455,17 +489,25 @@ export const CompanySetupWizard: React.FC = () => {
                         values_description: e.target.value,
                       })
                     }
-                    placeholder="Brief description of your company values"
-                    className="mb-3"
+                    placeholder="Brief description of what your values mean to your organization (e.g., 'Our values guide every decision we make')"
+                    rows={3}
                   />
+                </div>
+
+                {/* Values List */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Value Items *</Label>
+                  <p className="text-xs text-gray-500">
+                    Add at least one core value
+                  </p>
                   {formData.values_items.map((item, index) => (
-                    <div key={index} className="flex gap-2 mb-2">
+                    <div key={index} className="flex gap-2">
                       <Input
                         value={item}
                         onChange={(e) =>
                           updateItem("values_items", index, e.target.value)
                         }
-                        placeholder="e.g., Innovation, Integrity, Teamwork..."
+                        placeholder="e.g., Innovation, Integrity, Teamwork, Customer First..."
                       />
                       {formData.values_items.length > 1 && (
                         <Button
@@ -484,8 +526,10 @@ export const CompanySetupWizard: React.FC = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => addItem("values_items")}
+                    className="w-full sm:w-auto"
                   >
-                    Add Value
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Another Value
                   </Button>
                 </div>
               </div>
@@ -523,17 +567,6 @@ export const CompanySetupWizard: React.FC = () => {
               )}
             </Button>
           )}
-        </div>
-
-        {/* Skip for now option */}
-        <div className="text-center mt-8">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/dashboard")}
-            className="text-gray-500"
-          >
-            Skip for now (you can set this up later)
-          </Button>
         </div>
       </div>
     </div>
