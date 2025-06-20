@@ -793,11 +793,15 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({
           value={metrics.totalInterviews.toString()}
           description="All time interviews"
           icon={<Users className="h-4 w-4 text-muted-foreground" />}
-          trend={{
-            value: interviewTrend.toString() + "%",
-            direction: interviewTrend > 0 ? "up" : "down",
-            label: interviewTrend > 0 ? "vs last month" : "vs last month",
-          }}
+          trend={
+            interviewTrend !== 0
+              ? {
+                  value: Math.abs(interviewTrend).toString() + "%",
+                  direction: interviewTrend > 0 ? "up" : "down",
+                  label: "vs last month",
+                }
+              : undefined
+          }
         />
 
         <MetricCard
@@ -812,11 +816,15 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({
           value={metrics.avgDuration.toString() + "min"}
           description="Completed interviews"
           icon={<Clock className="h-4 w-4 text-muted-foreground" />}
-          trend={{
-            value: durationTrend.toString() + "min",
-            direction: durationTrend > 0 ? "down" : "up",
-            label: durationTrend > 0 ? "vs last month" : "vs last month",
-          }}
+          trend={
+            durationTrend !== 0
+              ? {
+                  value: Math.abs(durationTrend).toString() + "min",
+                  direction: durationTrend > 0 ? "down" : "up",
+                  label: "vs last month",
+                }
+              : undefined
+          }
         />
 
         <MetricCard
@@ -840,24 +848,9 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({
       <div className="grid gap-6 grid-cols-1 md:grid-cols-8">
         {/* Recent Candidate Activity */}
         <Card className="md:col-span-5 flex flex-col">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Recent Candidate Activity</CardTitle>
-              <CardDescription>Latest candidate interactions</CardDescription>
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => navigate("/candidates")}>
-                  View all candidates
-                </DropdownMenuItem>
-                <DropdownMenuItem>Export activity</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <CardHeader>
+            <CardTitle>Recent Candidate Activity</CardTitle>
+            <CardDescription>Latest candidate interactions</CardDescription>
           </CardHeader>
           <CardContent className="flex-1">
             <div className="space-y-0">
