@@ -95,49 +95,23 @@ export const InterviewerAccessManagement: React.FC = () => {
   };
 
   const fetchInterviewers = async () => {
-    // Check if current user is system admin first
-    const { data: currentUser } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user?.id)
-      .single();
+    // Use the secure function that handles RLS properly
+    const { data, error } = await supabase.rpc("get_tenant_interviewers", {
+      p_tenant_id: tenantId,
+    });
 
-    if (currentUser?.role === "system_admin") {
-      // System admins use the security definer function to bypass RLS
-      const { data, error } = await supabase.rpc("get_users_with_auth");
-
-      if (error) {
-        console.error("Error fetching interviewers:", error);
-        toast.error("Failed to load interviewers");
-      } else {
-        // Filter for tenant_interviewer role and transform the data
-        const interviewerData = (data || [])
-          .filter((user: any) => user.role === "tenant_interviewer")
-          .map((user: any) => ({
-            id: user.id,
-            email: user.email || "Unknown",
-            role: user.role,
-            created_at: user.created_at,
-            tenant_id: user.tenant_id,
-            tenant_name: user.tenant_name,
-          }));
-        setInterviewers(interviewerData);
-      }
+    if (error) {
+      console.error("Error fetching interviewers:", error);
+      toast.error("Failed to load interviewers");
     } else {
-      // Tenant admins can only see users in their tenant
-      const { data, error } = await supabase
-        .from("tenant_users_view")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .eq("role", "tenant_interviewer")
-        .order("created_at");
-
-      if (error) {
-        console.error("Error fetching interviewers:", error);
-        toast.error("Failed to load interviewers");
-      } else {
-        setInterviewers(data || []);
-      }
+      // Transform the data to match the expected format
+      const interviewerData = (data || []).map((user: any) => ({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        created_at: user.created_at,
+      }));
+      setInterviewers(interviewerData);
     }
   };
 

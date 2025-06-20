@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
@@ -16,13 +16,66 @@ import { useToast } from "@/hooks/use-toast";
 import { Building, Users, Settings, CreditCard } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { InterviewerAccessManagement } from "@/components/settings/InterviewerAccessManagement";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+
+interface TenantUser {
+  id: string;
+  email: string;
+  role: string;
+  created_at: string;
+}
 
 const CompanySettings = () => {
   const { toast } = useToast();
-  const { isTenantAdmin } = useAuth();
+  const { isTenantAdmin, tenantId } = useAuth();
   const [companyName, setCompanyName] = useState("InterviewAI");
   const [companyEmail, setCompanyEmail] = useState("contact@interviewai.com");
   const [loading, setLoading] = useState(false);
+  const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+
+  useEffect(() => {
+    if (tenantId) {
+      fetchTenantUsers();
+    }
+  }, [tenantId]);
+
+  const fetchTenantUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      // Use the secure function that handles RLS properly
+      const { data, error } = await supabase.rpc("get_tenant_users", {
+        p_tenant_id: tenantId,
+      });
+
+      if (error) {
+        console.error("Error fetching users:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load users",
+          variant: "destructive",
+        });
+      } else {
+        setTenantUsers(data || []);
+      }
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const getRoleBadge = (role: string) => {
+    switch (role) {
+      case "tenant_admin":
+        return <Badge>Admin</Badge>;
+      case "tenant_interviewer":
+        return <Badge variant="secondary">Interviewer</Badge>;
+      case "tenant_candidate":
+        return <Badge variant="outline">Candidate</Badge>;
+      default:
+        return <Badge variant="outline">{role}</Badge>;
+    }
+  };
 
   const saveCompanyProfile = () => {
     setLoading(true);
@@ -183,38 +236,43 @@ const CompanySettings = () => {
                   <div className="rounded-md border">
                     <div className="p-4">
                       <div className="grid grid-cols-4 font-medium">
-                        <div>Name</div>
                         <div>Email</div>
                         <div>Role</div>
+                        <div>Joined</div>
                         <div className="text-right">Actions</div>
                       </div>
                     </div>
                     <Separator />
-                    <div className="p-4">
-                      <div className="grid grid-cols-4 items-center">
-                        <div>John Doe</div>
-                        <div>john@interviewai.com</div>
-                        <div>Admin</div>
-                        <div className="text-right">
-                          <Button variant="ghost" size="sm">
-                            Edit
-                          </Button>
-                        </div>
+                    {loadingUsers ? (
+                      <div className="p-8 text-center text-muted-foreground">
+                        Loading users...
                       </div>
-                    </div>
-                    <Separator />
-                    <div className="p-4">
-                      <div className="grid grid-cols-4 items-center">
-                        <div>Jane Smith</div>
-                        <div>jane@interviewai.com</div>
-                        <div>Interviewer</div>
-                        <div className="text-right">
-                          <Button variant="ghost" size="sm">
-                            Edit
-                          </Button>
-                        </div>
+                    ) : tenantUsers.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground">
+                        No users found
                       </div>
-                    </div>
+                    ) : (
+                      <div className="divide-y">
+                        {tenantUsers.map((user) => (
+                          <div key={user.id} className="p-4">
+                            <div className="grid grid-cols-4 items-center">
+                              <div className="font-medium">
+                                {user.email || "No email"}
+                              </div>
+                              <div>{getRoleBadge(user.role)}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {new Date(user.created_at).toLocaleDateString()}
+                              </div>
+                              <div className="text-right">
+                                <Button variant="ghost" size="sm">
+                                  Edit
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
                 <CardFooter>
