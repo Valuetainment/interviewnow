@@ -60,6 +60,8 @@ interface TenantUser {
   email: string;
   role: string;
   created_at: string;
+  first_name?: string;
+  last_name?: string;
 }
 
 interface PendingInvitation {
@@ -549,6 +551,24 @@ const CompanySettings = () => {
     setSelectedCompanyIds(newSelection);
   };
 
+  // Helper function to format user display with name and email
+  const formatUserDisplay = (user: TenantUser) => {
+    const firstName = user.first_name || "";
+    const lastName = user.last_name || "";
+    const fullName = `${firstName} ${lastName}`.trim();
+
+    if (fullName) {
+      return (
+        <div className="space-y-1">
+          <div className="font-medium">{fullName}</div>
+          <div className="text-sm text-muted-foreground">{user.email}</div>
+        </div>
+      );
+    } else {
+      return <div className="font-medium">{user.email}</div>;
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
@@ -657,7 +677,7 @@ const CompanySettings = () => {
                   <div className="rounded-md border">
                     <div className="p-4">
                       <div className="grid grid-cols-12 font-medium">
-                        <div className="col-span-5">Email</div>
+                        <div className="col-span-5">User</div>
                         <div className="col-span-3">Role</div>
                         <div className="col-span-2">Joined</div>
                         <div className="col-span-2 text-right">Actions</div>
@@ -677,11 +697,8 @@ const CompanySettings = () => {
                         {tenantUsers.map((tenantUser) => (
                           <div key={tenantUser.id} className="p-4">
                             <div className="grid grid-cols-12 items-center">
-                              <div
-                                className="col-span-5 font-medium truncate pr-4"
-                                title={tenantUser.email}
-                              >
-                                {tenantUser.email || "No email"}
+                              <div className="col-span-5 pr-4">
+                                {formatUserDisplay(tenantUser)}
                               </div>
                               <div className="col-span-3">
                                 {getRoleBadge(tenantUser.role)}

@@ -423,11 +423,11 @@ Creates invitations for new users to join a tenant.
 - **Returns:** json with invitation code or error
 
 ### get_tenant_users
-Securely retrieves all users within a tenant.
+Securely retrieves all users within a tenant. Returns user details including names from auth metadata.
 
 - **Parameters:**
   - `p_tenant_id` (uuid): The tenant ID
-- **Returns:** Table of user data with email, role, created_at
+- **Returns:** Table of user data with email, role, created_at, first_name, last_name
 
 ### get_tenant_interviewers
 Retrieves all interviewers within a tenant.
