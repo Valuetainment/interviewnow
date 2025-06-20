@@ -317,12 +317,10 @@ const SessionList: React.FC<SessionListProps> = ({ filterStatus }) => {
                 "View cancelled interview sessions"}
             </CardDescription>
           </div>
-          {(statusFilter === "scheduled" || statusFilter === "all") && (
-            <Button onClick={handleCreateSession} className="mt-4 md:mt-0">
-              <Plus className="mr-2 h-4 w-4" />
-              New Session
-            </Button>
-          )}
+          <Button onClick={handleCreateSession} className="mt-4 md:mt-0">
+            <Plus className="mr-2 h-4 w-4" />
+            New Session
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -496,15 +494,6 @@ const SessionList: React.FC<SessionListProps> = ({ filterStatus }) => {
                               ? "Complete an interview to see it here"
                               : "Create your first interview session"}
                           </p>
-                          {!searchTerm && statusFilter === "scheduled" && (
-                            <Button
-                              onClick={handleCreateSession}
-                              className="mt-4"
-                            >
-                              <Plus className="mr-2 h-4 w-4" />
-                              New Session
-                            </Button>
-                          )}
                         </div>
                       </TableCell>
                     </TableRow>
