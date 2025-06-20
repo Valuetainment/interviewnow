@@ -80,9 +80,22 @@ export const SystemAdminInvitations: React.FC = () => {
   const fetchInvitations = async () => {
     try {
       setLoading(true);
+
+      // First get all system admin user IDs
+      const { data: systemAdmins, error: adminError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("role", "system_admin");
+
+      if (adminError) throw adminError;
+
+      const systemAdminIds = systemAdmins?.map((admin) => admin.id) || [];
+
+      // Then fetch invitations sent by system admins
       const { data, error } = await supabase
         .from("tenant_invitations")
         .select("*")
+        .in("invited_by", systemAdminIds) // Only show invitations sent by system admins
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -137,13 +150,15 @@ export const SystemAdminInvitations: React.FC = () => {
         return;
       }
 
-      // Also check if tenant name is already in a pending invitation
+      // Also check if tenant name is already in a pending system-level invitation
       const { data: pendingTenantInvitations } = await supabase
         .from("tenant_invitations")
         .select("*")
         .ilike("tenant_name", formData.tenant_name.trim())
         .is("accepted_at", null)
-        .gte("expires_at", new Date().toISOString());
+        .gte("expires_at", new Date().toISOString())
+        .is("tenant_id", null) // Only check system-level invitations
+        .is("role", null);
 
       if (pendingTenantInvitations && pendingTenantInvitations.length > 0) {
         const inv = pendingTenantInvitations[0];
@@ -156,11 +171,13 @@ export const SystemAdminInvitations: React.FC = () => {
         return;
       }
 
-      // Check if email already has any invitation (pending or accepted)
+      // Check if email already has any system-level invitation (pending or accepted)
       const { data: existingInvitations, error: checkError } = await supabase
         .from("tenant_invitations")
         .select("*")
-        .eq("email", formData.email.trim().toLowerCase());
+        .eq("email", formData.email.trim().toLowerCase())
+        .is("tenant_id", null) // Only check system-level invitations
+        .is("role", null);
 
       if (checkError) {
         console.error("Error checking existing invitations:", checkError);
@@ -373,9 +390,9 @@ export const SystemAdminInvitations: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Tenant Invitations</h1>
+          <h1 className="text-3xl font-bold">New Tenant Invitations</h1>
           <p className="text-gray-600 mt-2">
-            Invite new tenant organizations to InterviewNow
+            Invite new organizations to create their InterviewNow tenant
           </p>
         </div>
         <div className="flex gap-2">
@@ -457,9 +474,9 @@ export const SystemAdminInvitations: React.FC = () => {
       {/* Invitations List */}
       <Card>
         <CardHeader>
-          <CardTitle>All Invitations</CardTitle>
+          <CardTitle>New Tenant Invitations</CardTitle>
           <CardDescription>
-            Manage tenant invitations and track their status
+            Track invitations sent to create new tenant organizations
           </CardDescription>
         </CardHeader>
         <CardContent>

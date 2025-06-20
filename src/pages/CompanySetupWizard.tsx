@@ -313,6 +313,7 @@ export const CompanySetupWizard: React.FC = () => {
                   }
                   placeholder="e.g., Acme Corporation"
                   className="text-lg"
+                  autoFocus
                 />
               </div>
               <div className="space-y-2">
@@ -361,6 +362,7 @@ export const CompanySetupWizard: React.FC = () => {
                   }
                   placeholder="What is your company's core purpose? Why do you exist?"
                   rows={4}
+                  autoFocus
                 />
               </div>
               <div className="space-y-2">
@@ -423,6 +425,7 @@ export const CompanySetupWizard: React.FC = () => {
                     }
                     placeholder="Brief overview of your benefits package (e.g., 'We offer comprehensive benefits to support our employees' well-being and growth')"
                     rows={3}
+                    autoFocus
                   />
                 </div>
 
