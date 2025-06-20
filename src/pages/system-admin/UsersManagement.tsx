@@ -71,6 +71,8 @@ interface User {
   role: string;
   auth_email: string | null;
   auth_id: string | null;
+  first_name?: string;
+  last_name?: string;
 }
 
 export const SystemAdminUsersManagement: React.FC = () => {
@@ -116,6 +118,8 @@ export const SystemAdminUsersManagement: React.FC = () => {
           role: user.role || "user",
           auth_email: user.email,
           auth_id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
         })) || [];
 
       setUsers(transformedUsers);
@@ -248,11 +252,15 @@ export const SystemAdminUsersManagement: React.FC = () => {
 
   // Filter users based on search and filters
   const filteredUsers = users.filter((user) => {
+    const searchLower = searchTerm.toLowerCase();
     const matchesSearch =
       searchTerm === "" ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchLower) ||
       (user.tenant_name &&
-        user.tenant_name.toLowerCase().includes(searchTerm.toLowerCase()));
+        user.tenant_name.toLowerCase().includes(searchLower)) ||
+      (user.first_name &&
+        user.first_name.toLowerCase().includes(searchLower)) ||
+      (user.last_name && user.last_name.toLowerCase().includes(searchLower));
 
     const matchesTenant =
       selectedTenant === "all" ||
@@ -366,7 +374,7 @@ export const SystemAdminUsersManagement: React.FC = () => {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Search by email or tenant name..."
+                  placeholder="Search by name, email or tenant..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -437,7 +445,22 @@ export const SystemAdminUsersManagement: React.FC = () => {
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <div className="font-medium">{tableUser.email}</div>
+                            {(tableUser.first_name || tableUser.last_name) && (
+                              <div className="font-medium">
+                                {`${tableUser.first_name || ""} ${
+                                  tableUser.last_name || ""
+                                }`.trim()}
+                              </div>
+                            )}
+                            <div
+                              className={
+                                tableUser.first_name || tableUser.last_name
+                                  ? "text-sm text-gray-600"
+                                  : "font-medium"
+                              }
+                            >
+                              {tableUser.email}
+                            </div>
                             {tableUser.auth_id && (
                               <div className="text-xs text-gray-500">
                                 ID: {tableUser.id}
