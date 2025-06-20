@@ -29,12 +29,15 @@ ON CONFLICT (id) DO NOTHING;
 -- Note: The public.users entries are created by the setup script after auth users are created
 
 -- Create test companies
-INSERT INTO public.companies (id, tenant_id, name, culture, story, values_data, benefits_data, created_at, updated_at)
+INSERT INTO public.companies (id, tenant_id, name, about, mission, vision, culture, story, values_data, benefits_data, created_at, updated_at)
 VALUES 
   (
     'c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1',
     'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
     'TechCorp Solutions',
+    'TechCorp Solutions is a leading AI technology company that helps businesses leverage cutting-edge artificial intelligence and machine learning to transform their operations and drive innovation.',
+    'To democratize access to AI technology and empower every business to harness the power of machine learning for growth and efficiency.',
+    'To be the global leader in AI-powered business solutions, creating a world where artificial intelligence enhances human potential and drives sustainable progress.',
     'We foster a culture of innovation, collaboration, and continuous learning. Our team members are encouraged to take ownership, experiment with new ideas, and grow both personally and professionally.',
     'Founded in 2015, TechCorp Solutions started as a small startup with a big vision: to revolutionize how businesses leverage AI and machine learning. Today, we''re a leading provider of AI-powered solutions serving Fortune 500 companies worldwide.',
     '{
@@ -52,6 +55,9 @@ VALUES
     'c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2',
     'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
     'InnovateTech Labs',
+    'InnovateTech Labs is a cutting-edge R&D company specializing in emerging technologies including blockchain, IoT, and quantum computing. We partner with businesses to bring revolutionary ideas to life.',
+    'To push the boundaries of technology and accelerate innovation by transforming groundbreaking research into practical solutions that solve real-world problems.',
+    'To create a future where emerging technologies seamlessly integrate into everyday life, enabling unprecedented possibilities for humanity.',
     'At InnovateTech Labs, we believe in pushing boundaries and creating the future. Our diverse team thrives in an environment that values creativity, autonomy, and continuous experimentation.',
     'Started in 2018 as a small R&D lab, InnovateTech Labs has grown into a cutting-edge technology company specializing in emerging technologies like blockchain, IoT, and quantum computing. We partner with startups and enterprises to bring revolutionary ideas to life.',
     '{
@@ -507,14 +513,17 @@ ON CONFLICT (id) DO NOTHING;
 -- =====================================================
 
 -- Add third company - Climate Tech
-INSERT INTO public.companies (id, tenant_id, name, culture, story, values_data, benefits_data, created_at, updated_at)
+INSERT INTO public.companies (id, tenant_id, name, about, mission, vision, culture, story, values_data, benefits_data, created_at, updated_at)
 VALUES 
   (
     'c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3',
     'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0',
     'GreenFuture Technologies',
+    'GreenFuture Technologies develops cutting-edge carbon capture systems and renewable energy optimization platforms. We have already helped remove 100,000 tons of CO2 from the atmosphere and optimized energy usage for over 500 companies.',
+    'To combat climate change through innovative technology solutions that capture carbon and optimize renewable energy usage at scale.',
+    'To create a carbon-negative future where technology reverses climate change and ensures a sustainable planet for generations to come.',
     'We are on a mission to combat climate change through innovative technology solutions. Our team is passionate about sustainability and believes that technology can create a better future for our planet.',
-    'Founded in 2019 by former Tesla and SpaceX engineers, GreenFuture Technologies develops cutting-edge carbon capture systems and renewable energy optimization platforms. We have already helped remove 100,000 tons of CO2 from the atmosphere and optimized energy usage for over 500 companies.',
+    'Founded in 2019 by former Tesla and SpaceX engineers, GreenFuture Technologies started with a vision to make carbon capture economically viable. Today we are leading the charge in climate technology innovation.',
     '{
       "description": "Sustainability, Innovation, Transparency, Impact, Community",
       "items": ["Environmental Sustainability", "Technological Innovation", "Radical Transparency", "Measurable Impact", "Global Community"]

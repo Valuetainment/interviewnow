@@ -21,6 +21,9 @@ Table companies {
   id uuid [pk]
   tenant_id uuid [ref: > tenants.id]
   name text
+  about text
+  mission text
+  vision text
   culture text
   story text
   benefits_data jsonb [note: 'Structured as {description: string, items: string[]}']

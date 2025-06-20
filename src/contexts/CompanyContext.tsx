@@ -87,6 +87,9 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
       // Transform data to ensure compatibility with Company type
       const transformedData = (data || []).map((company) => ({
         ...company,
+        about: company.about || null,
+        mission: company.mission || null,
+        vision: company.vision || null,
         benefits_data: company.benefits_data || { description: "", items: [] },
         values_data: company.values_data || { description: "", items: [] },
         culture: company.culture || null,

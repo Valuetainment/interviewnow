@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/contexts/CompanyContext";
 import {
   Card,
   CardContent,
@@ -38,6 +39,7 @@ interface CompanyFormData {
 
 export const CompanySetupWizard: React.FC = () => {
   const navigate = useNavigate();
+  const { refetch } = useCompany();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [checkingExisting, setCheckingExisting] = useState(true);
@@ -165,6 +167,10 @@ export const CompanySetupWizard: React.FC = () => {
       if (error) throw error;
 
       toast.success("Company created successfully!");
+
+      // Refresh the company context to pick up the new company
+      await refetch();
+
       navigate("/dashboard");
     } catch (error) {
       console.error("Error creating company:", error);

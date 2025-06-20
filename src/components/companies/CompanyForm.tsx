@@ -23,6 +23,9 @@ import { CompanyBenefitsData, CompanyValuesData } from "@/types/company";
 // Form validation schema
 const formSchema = z.object({
   name: z.string().min(1, { message: "Company name is required" }),
+  about: z.string().optional().nullable(),
+  mission: z.string().optional().nullable(),
+  vision: z.string().optional().nullable(),
   culture: z.string().optional().nullable(),
   story: z.string().optional().nullable(),
   benefits_data: z.object({
@@ -53,6 +56,9 @@ const CompanyForm: React.FC<CompanyFormProps> = ({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
       name: "",
+      about: "",
+      mission: "",
+      vision: "",
       culture: "",
       story: "",
       benefits_data: {
@@ -68,7 +74,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({
 
   const handleAddCoreValue = () => {
     if (!newCoreValue.trim()) return;
-    
+
     const currentData = form.getValues("values_data");
     form.setValue("values_data", {
       ...currentData,
@@ -87,7 +93,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({
 
   const handleAddBenefit = () => {
     if (!newBenefit.trim()) return;
-    
+
     const currentData = form.getValues("benefits_data");
     form.setValue("benefits_data", {
       ...currentData,
@@ -121,6 +127,72 @@ const CompanyForm: React.FC<CompanyFormProps> = ({
                     </FormControl>
                     <FormDescription>
                       The official name of the organization
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="about"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>About</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Tell us about your company, what you do, and what makes you unique"
+                        className="min-h-[100px]"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Provide a general overview of your company
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="mission"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mission Statement</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="What is your company's core purpose? Why do you exist?"
+                        className="min-h-[100px]"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Define your company's core purpose and reason for being
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="vision"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Vision Statement</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Where do you see your company in the future? What are your aspirations?"
+                        className="min-h-[100px]"
+                        {...field}
+                        value={field.value || ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Describe your long-term goals and aspirations
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -239,7 +311,8 @@ const CompanyForm: React.FC<CompanyFormProps> = ({
                       ))}
                     </div>
                     <FormDescription>
-                      Add specific core values like "Innovation", "Teamwork", etc.
+                      Add specific core values like "Innovation", "Teamwork",
+                      etc.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -294,27 +367,30 @@ const CompanyForm: React.FC<CompanyFormProps> = ({
                       </Button>
                     </div>
                     <div className="flex flex-wrap gap-2 mt-3">
-                      {form.watch("benefits_data.items")?.map((benefit, index) => (
-                        <Badge
-                          key={`${benefit}-${index}`}
-                          className="flex items-center gap-1 py-1.5"
-                          variant="outline"
-                        >
-                          {benefit}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-4 w-4 ml-1 rounded-full"
-                            onClick={() => handleRemoveBenefit(index)}
+                      {form
+                        .watch("benefits_data.items")
+                        ?.map((benefit, index) => (
+                          <Badge
+                            key={`${benefit}-${index}`}
+                            className="flex items-center gap-1 py-1.5"
+                            variant="outline"
                           >
-                            <X className="h-3 w-3" />
-                            <span className="sr-only">Remove {benefit}</span>
-                          </Button>
-                        </Badge>
-                      ))}
+                            {benefit}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 ml-1 rounded-full"
+                              onClick={() => handleRemoveBenefit(index)}
+                            >
+                              <X className="h-3 w-3" />
+                              <span className="sr-only">Remove {benefit}</span>
+                            </Button>
+                          </Badge>
+                        ))}
                     </div>
                     <FormDescription>
-                      Add specific benefits like "Health Insurance", "Remote Work", etc.
+                      Add specific benefits like "Health Insurance", "Remote
+                      Work", etc.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -331,7 +407,11 @@ const CompanyForm: React.FC<CompanyFormProps> = ({
             </Button>
           </Link>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : initialData ? "Update Company" : "Create Company"}
+            {isSubmitting
+              ? "Saving..."
+              : initialData
+              ? "Update Company"
+              : "Create Company"}
           </Button>
         </div>
       </form>

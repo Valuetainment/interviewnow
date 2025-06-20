@@ -63,7 +63,9 @@ const CompanyCard: React.FC<CompanyCardProps> = ({ company }) => {
       </CardHeader>
       <CardContent className="space-y-4 pt-4">
         <p className="text-sm text-muted-foreground line-clamp-2">
-          {company.culture || "No company description available."}
+          {company.about ||
+            company.culture ||
+            "No company description available."}
         </p>
 
         <div className="flex flex-wrap gap-1.5">

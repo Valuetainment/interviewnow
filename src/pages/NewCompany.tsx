@@ -9,18 +9,21 @@ const NewCompany: React.FC = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const handleSubmit = async (data: Omit<Company, 'id' | 'tenant_id' | 'created_at' | 'updated_at'>) => {
+  const handleSubmit = async (
+    data: Omit<Company, "id" | "tenant_id" | "created_at" | "updated_at">
+  ) => {
     setIsSubmitting(true);
     try {
-      const { error } = await supabase
-        .from("companies")
-        .insert({
-          name: data.name,
-          culture: data.culture,
-          story: data.story,
-          benefits_data: data.benefits_data,
-          values_data: data.values_data,
-        });
+      const { error } = await supabase.from("companies").insert({
+        name: data.name,
+        about: data.about,
+        mission: data.mission,
+        vision: data.vision,
+        culture: data.culture,
+        story: data.story,
+        benefits_data: data.benefits_data,
+        values_data: data.values_data,
+      });
 
       if (error) throw error;
 
@@ -28,7 +31,7 @@ const NewCompany: React.FC = () => {
         title: "Success",
         description: "Company created successfully",
       });
-      
+
       navigate("/companies");
     } catch (error) {
       console.error("Error creating company:", error);

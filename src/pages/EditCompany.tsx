@@ -43,6 +43,9 @@ const EditCompany: React.FC = () => {
       // Transform the data to match the new structure if needed
       return {
         ...data,
+        about: data.about || null,
+        mission: data.mission || null,
+        vision: data.vision || null,
         benefits_data: data.benefits_data || {
           description: data.benefits || "",
           items: data.benefits_list || [],
@@ -64,6 +67,9 @@ const EditCompany: React.FC = () => {
         .from("companies")
         .update({
           name: data.name,
+          about: data.about,
+          mission: data.mission,
+          vision: data.vision,
           culture: data.culture,
           story: data.story,
           benefits_data: data.benefits_data,
@@ -178,6 +184,9 @@ const EditCompany: React.FC = () => {
         <CompanyForm
           initialData={{
             name: company.name,
+            about: company.about,
+            mission: company.mission,
+            vision: company.vision,
             culture: company.culture,
             story: company.story,
             benefits_data: company.benefits_data,

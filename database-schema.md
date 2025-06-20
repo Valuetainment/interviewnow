@@ -122,6 +122,9 @@ Records all payment transactions.
 - **id**: uuid (PK)
 - **tenant_id**: uuid (FK to tenants)
 - **name**: text
+- **about**: text
+- **mission**: text
+- **vision**: text
 - **culture**: text
 - **story**: text
 - **benefits_data**: jsonb (structured as {description: string, items: string[]})
