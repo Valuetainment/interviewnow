@@ -1,9 +1,11 @@
-
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { AuthForm } from '@/components/AuthForm';
+import React from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { AuthForm } from "@/components/AuthForm";
 
 const Signup: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const hasInvitationCode = searchParams.has("code");
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background/60 to-background flex flex-col justify-center">
       <div className="container mx-auto px-4 py-16 flex flex-col items-center">
@@ -12,7 +14,7 @@ const Signup: React.FC = () => {
             InterviewAI
           </h2>
         </Link>
-        
+
         <div className="w-full max-w-md mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold">Create an account</h1>
@@ -20,17 +22,22 @@ const Signup: React.FC = () => {
               Get started with InterviewAI today
             </p>
           </div>
-          
+
           <AuthForm mode="signup" />
-          
-          <div className="text-center mt-6">
-            <p className="text-muted-foreground">
-              Already have an account?{" "}
-              <Link to="/login" className="text-primary hover:underline font-medium">
-                Sign in
-              </Link>
-            </p>
-          </div>
+
+          {!hasInvitationCode && (
+            <div className="text-center mt-6">
+              <p className="text-muted-foreground">
+                Already have an account?{" "}
+                <Link
+                  to="/login"
+                  className="text-primary hover:underline font-medium"
+                >
+                  Sign in
+                </Link>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

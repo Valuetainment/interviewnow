@@ -50,6 +50,11 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
 
     try {
       setLoading(true);
+      console.log(
+        "CompanyContext: Starting fetch for user role:",
+        isTenantInterviewer ? "interviewer" : "admin/other"
+      );
+      console.log("CompanyContext: TenantId:", tenantId);
 
       let query = supabase
         .from("companies")
@@ -61,7 +66,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
       if (isTenantInterviewer) {
         const accessibleCompanyIds = getAccessibleCompanyIds();
         console.log(
-          "CompanyContext: Interviewer accessible companies:",
+          "CompanyContext: Interviewer accessible company IDs:",
           accessibleCompanyIds
         );
 
@@ -70,7 +75,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
         } else {
           // No accessible companies, return empty
           console.log(
-            "CompanyContext: No accessible companies for interviewer"
+            "CompanyContext: No accessible companies for interviewer - setting empty array"
           );
           setCompanies([]);
           setLoading(false);
@@ -80,9 +85,12 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error("CompanyContext: Error fetching companies:", error);
+        throw error;
+      }
 
-      console.log("CompanyContext: Fetched companies:", data);
+      console.log("CompanyContext: Raw companies data:", data);
 
       // Transform data to ensure compatibility with Company type
       const transformedData = (data || []).map((company) => ({

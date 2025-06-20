@@ -28,20 +28,26 @@ const loginSchema = z.object({
   rememberMe: z.boolean().optional(),
 });
 
-const signupSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email address"),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/[0-9]/, "Password must contain at least one number"),
-  companyCode: z.string().optional(),
-  acceptTerms: z.literal(true, {
-    errorMap: () => ({ message: "You must accept the terms and conditions" }),
-  }),
-});
+const signupSchema = z
+  .object({
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    email: z.string().email("Please enter a valid email address"),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+      .regex(/[0-9]/, "Password must contain at least one number"),
+    confirmPassword: z.string(),
+    companyCode: z.string().optional(),
+    acceptTerms: z.literal(true, {
+      errorMap: () => ({ message: "You must accept the terms and conditions" }),
+    }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -50,10 +56,20 @@ interface AuthFormProps {
   mode: "login" | "signup";
 }
 
+interface InvitationInfo {
+  tenant_name: string;
+  role: string;
+  expires_at: string;
+  email: string;
+}
+
 export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [invitationInfo, setInvitationInfo] = useState<InvitationInfo | null>(
+    null
+  );
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { signIn, signUp } = useAuth();
@@ -71,6 +87,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
             name: "",
             email: "",
             password: "",
+            confirmPassword: "",
             companyCode: urlCompanyCode || "",
             acceptTerms: false as any,
           },
@@ -81,6 +98,36 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
     if (mode === "signup" && urlCompanyCode) {
       form.setValue("companyCode", urlCompanyCode);
     }
+  }, [urlCompanyCode, mode, form]);
+
+  // Fetch invitation info when company code is provided
+  useEffect(() => {
+    const fetchInvitationInfo = async () => {
+      if (mode === "signup" && urlCompanyCode) {
+        try {
+          // Check if it's a tenant invitation
+          const { data: inviteData, error } = await supabase
+            .from("tenant_invitations")
+            .select("tenant_name, role, expires_at, email")
+            .eq("company_code", urlCompanyCode)
+            .gte("expires_at", new Date().toISOString())
+            .is("accepted_at", null)
+            .single();
+
+          if (inviteData && !error) {
+            setInvitationInfo(inviteData);
+            // Pre-fill the email if available
+            if (inviteData.email) {
+              form.setValue("email", inviteData.email);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching invitation info:", error);
+        }
+      }
+    };
+
+    fetchInvitationInfo();
   }, [urlCompanyCode, mode, form]);
 
   const togglePasswordVisibility = () => {
@@ -100,24 +147,58 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
       } else {
         const { email, password, name, companyCode } = data as SignupFormValues;
 
-        // If company code is provided, verify it exists
+        // If company code is provided, check both invitation types
         let tenantId: string | null = null;
+        let userRole: string = "tenant_admin"; // Default role
+        let invitationId: string | null = null;
 
         if (companyCode) {
-          const { data: codeData, error: codeError } = await supabase
-            .from("company_codes")
-            .select("tenant_id")
-            .eq("code", companyCode)
+          // First, check if it's a tenant invitation (from existing tenant admin)
+          const { data: inviteData, error: inviteError } = await supabase
+            .from("tenant_invitations")
+            .select("*")
+            .eq("company_code", companyCode)
+            .eq("email", email) // Email must match invitation
+            .gte("expires_at", new Date().toISOString())
+            .is("accepted_at", null) // Not already accepted
             .single();
 
-          if (codeError || !codeData) {
-            setAuthError(
-              "Invalid company code. Please check with your administrator."
-            );
-            return;
-          }
+          if (inviteData && !inviteError) {
+            // This is a tenant invitation
+            tenantId = inviteData.tenant_id;
+            userRole = inviteData.role || "tenant_interviewer";
+            invitationId = inviteData.id;
+          } else {
+            // If not a tenant invitation, check if it's a company code (system admin invitation)
+            const { data: codeData, error: codeError } = await supabase
+              .from("company_codes")
+              .select("tenant_id")
+              .eq("code", companyCode)
+              .single();
 
-          tenantId = codeData.tenant_id;
+            if (codeError || !codeData) {
+              // Check if invitation exists but email doesn't match
+              const { data: anyInvite } = await supabase
+                .from("tenant_invitations")
+                .select("email")
+                .eq("company_code", companyCode)
+                .single();
+
+              if (anyInvite) {
+                setAuthError(
+                  `This invitation is for ${anyInvite.email}. Please use the correct email address.`
+                );
+              } else {
+                setAuthError(
+                  "Invalid or expired invitation code. Please check with your administrator."
+                );
+              }
+              return;
+            }
+
+            tenantId = codeData.tenant_id;
+            // For company codes, keep default role as tenant_admin
+          }
         }
 
         // Create the auth user
@@ -134,25 +215,90 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
 
         if (signUpError) throw signUpError;
 
-        // Create user record in public.users table
-        if (authData.user) {
+        // For invited users, use the complete_tenant_onboarding function
+        if (authData.user && companyCode) {
+          // First, sign in the user so they're authenticated
+          const { error: signInError } = await supabase.auth.signInWithPassword(
+            {
+              email,
+              password,
+            }
+          );
+
+          if (signInError) {
+            console.error("Error signing in after signup:", signInError);
+            toast.success("Account created successfully! Please log in.");
+            navigate("/login");
+            return;
+          }
+
+          // Now that user is authenticated, complete the onboarding
+          console.log(
+            "Calling complete_tenant_onboarding with code:",
+            companyCode
+          );
+          const { data: onboardingResult, error: onboardingError } =
+            await supabase.rpc("complete_tenant_onboarding", {
+              p_company_code: companyCode,
+            });
+
+          if (onboardingError) {
+            console.error("Error completing onboarding:", onboardingError);
+            console.error("Onboarding error details:", {
+              code: onboardingError.code,
+              message: onboardingError.message,
+              details: onboardingError.details,
+              hint: onboardingError.hint,
+            });
+            // Fallback to manual creation
+            const { error: userError } = await supabase.from("users").insert([
+              {
+                id: authData.user.id,
+                tenant_id: tenantId,
+                role: userRole,
+              },
+            ]);
+
+            if (userError) {
+              console.error("Error creating user record:", userError);
+            }
+          } else {
+            console.log("Onboarding completed successfully:", onboardingResult);
+            if (onboardingResult && !onboardingResult.success) {
+              console.error(
+                "Onboarding returned error:",
+                onboardingResult.error
+              );
+            }
+          }
+
+          toast.success("Account created successfully!");
+          // Navigate based on role
+          if (userRole === "tenant_admin") {
+            navigate("/dashboard");
+          } else {
+            // For interviewers, go to dashboard
+            navigate("/dashboard");
+          }
+        } else if (authData.user) {
+          // No company code - regular signup
           const { error: userError } = await supabase.from("users").insert([
             {
               id: authData.user.id,
-              tenant_id: tenantId,
-              role: "tenant_admin", // Default role for invited users
+              tenant_id: null,
+              role: "user",
             },
           ]);
 
           if (userError) {
             console.error("Error creating user record:", userError);
           }
-        }
 
-        toast.success(
-          "Account created successfully! Please check your email to verify."
-        );
-        navigate("/login");
+          toast.success(
+            "Account created successfully! Please check your email to verify."
+          );
+          navigate("/login");
+        }
       }
     } catch (error: any) {
       console.error("Authentication error:", error);
@@ -172,6 +318,25 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
       {authError && (
         <Alert variant="destructive" className="mb-6">
           <AlertDescription>{authError}</AlertDescription>
+        </Alert>
+      )}
+
+      {invitationInfo && mode === "signup" && (
+        <Alert className="mb-6 bg-blue-50 border-blue-200">
+          <AlertDescription>
+            <div className="space-y-3">
+              <h3 className="font-semibold text-lg text-blue-900">
+                You've been invited to join {invitationInfo.tenant_name}
+              </h3>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                  {invitationInfo.role === "tenant_admin"
+                    ? "Administrator"
+                    : "Interviewer"}
+                </span>
+              </div>
+            </div>
+          </AlertDescription>
         </Alert>
       )}
 
@@ -200,32 +365,34 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="companyCode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Company Code (Optional)</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Enter company code if provided"
-                          className="pl-10"
-                          {...field}
-                          disabled={!!urlCompanyCode}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                    {urlCompanyCode && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Company code provided via invitation link
-                      </p>
-                    )}
-                  </FormItem>
-                )}
-              />
+              {!invitationInfo && (
+                <FormField
+                  control={form.control}
+                  name="companyCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Company Code (Optional)</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Building2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Enter company code if provided"
+                            className="pl-10"
+                            {...field}
+                            disabled={!!urlCompanyCode}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                      {urlCompanyCode && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Company code provided via invitation link
+                        </p>
+                      )}
+                    </FormItem>
+                  )}
+                />
+              )}
             </>
           )}
 
@@ -243,6 +410,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
                       placeholder="Enter your email"
                       className="pl-10"
                       {...field}
+                      disabled={mode === "signup" && !!invitationInfo?.email}
                     />
                   </div>
                 </FormControl>
@@ -296,6 +464,31 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
               </FormItem>
             )}
           />
+
+          {mode === "signup" && (
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirm Password</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Confirm your password"
+                        className="pl-10 pr-10"
+                        {...field}
+                        autoComplete="new-password"
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
 
           {mode === "login" ? (
             <div className="flex items-center justify-between">

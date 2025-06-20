@@ -21,7 +21,16 @@ export const useInterviewerAccess = () => {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    console.log(
+      "useInterviewerAccess: Effect triggered, user:",
+      user?.id,
+      "isTenantInterviewer:",
+      isTenantInterviewer
+    );
     if (!user || !isTenantInterviewer) {
+      console.log(
+        "useInterviewerAccess: No user or not interviewer, setting empty"
+      );
       setAccessibleCompanies([]);
       setIsLoading(false);
       return;
@@ -82,8 +91,18 @@ export const useInterviewerAccess = () => {
   };
 
   const getAccessibleCompanyIds = (): string[] => {
-    if (!isTenantInterviewer) return []; // Return empty array for non-interviewers (no filtering needed)
-    return accessibleCompanies.map((access) => access.company_id);
+    if (!isTenantInterviewer) {
+      console.log(
+        "useInterviewerAccess: getAccessibleCompanyIds - not interviewer, returning empty"
+      );
+      return [];
+    }
+    const ids = accessibleCompanies.map((access) => access.company_id);
+    console.log(
+      "useInterviewerAccess: getAccessibleCompanyIds returning:",
+      ids
+    );
+    return ids;
   };
 
   return {

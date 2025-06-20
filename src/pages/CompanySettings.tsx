@@ -51,12 +51,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface TenantUser {
   id: string;
   email: string;
   role: string;
   created_at: string;
+}
+
+interface PendingInvitation {
+  id: string;
+  email: string;
+  role: string;
+  created_at: string;
+  expires_at: string;
+  company_code: string;
 }
 
 const CompanySettings = () => {
@@ -66,6 +77,9 @@ const CompanySettings = () => {
   const [companyEmail, setCompanyEmail] = useState("contact@interviewai.com");
   const [loading, setLoading] = useState(false);
   const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<
+    PendingInvitation[]
+  >([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
 
   // Dialog states
@@ -76,18 +90,37 @@ const CompanySettings = () => {
 
   // Form states
   const [newUserEmail, setNewUserEmail] = useState("");
-  const [newUserRole, setNewUserRole] = useState("tenant_interviewer");
+  const [newUserRole, setNewUserRole] = useState<string>("tenant_interviewer");
   const [editUserRole, setEditUserRole] = useState("");
+  const [selectedCompanyIds, setSelectedCompanyIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [companies, setCompanies] = useState<{ id: string; name: string }[]>(
+    []
+  );
 
+  // Tab states
+  const [activeTab, setActiveTab] = useState("profile");
+
+  // Fetch tenant users when component mounts or when we're on the users tab
   useEffect(() => {
-    if (tenantId) {
-      fetchTenantUsers();
+    if (tenantId && activeTab === "users") {
+      // Fetch data once when tab becomes active
+      const fetchData = async () => {
+        await fetchTenantUsers();
+        await fetchPendingInvitations();
+        await fetchCompanies();
+      };
+
+      fetchData();
     }
-  }, [tenantId]);
+  }, [tenantId, activeTab]);
 
   const fetchTenantUsers = async () => {
+    if (!tenantId) return;
+
+    setLoadingUsers(true);
     try {
-      setLoadingUsers(true);
       // Use the secure function that handles RLS properly
       const { data, error } = await supabase.rpc("get_tenant_users", {
         p_tenant_id: tenantId,
@@ -102,9 +135,70 @@ const CompanySettings = () => {
         });
       } else {
         setTenantUsers(data || []);
+        return data || [];
       }
     } finally {
       setLoadingUsers(false);
+    }
+    return [];
+  };
+
+  const fetchPendingInvitations = async () => {
+    try {
+      // Get current tenant users using the secure function
+      const { data: currentUsers } = await supabase.rpc("get_tenant_users", {
+        p_tenant_id: tenantId,
+      });
+
+      const existingEmails =
+        currentUsers?.map((u) => u.email).filter(Boolean) || [];
+
+      // Now fetch invitations that are not accepted and email not in existing users
+      const { data, error } = await supabase
+        .from("tenant_invitations")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .is("accepted_at", null)
+        .gte("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching invitations:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load pending invitations",
+          variant: "destructive",
+        });
+      } else {
+        // Filter out invitations where the user already exists
+        const pendingOnly = (data || []).filter(
+          (invitation) => !existingEmails.includes(invitation.email)
+        );
+        setPendingInvitations(pendingOnly);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load pending invitations",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchCompanies = async () => {
+    if (!tenantId) return;
+
+    const { data, error } = await supabase
+      .from("companies")
+      .select("id, name")
+      .eq("tenant_id", tenantId)
+      .order("name");
+
+    if (error) {
+      console.error("Error fetching companies:", error);
+    } else {
+      setCompanies(data || []);
     }
   };
 
@@ -131,25 +225,94 @@ const CompanySettings = () => {
       return;
     }
 
+    // For interviewers, at least one company must be selected
+    if (newUserRole === "tenant_interviewer" && selectedCompanyIds.size === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one company for the interviewer",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setLoading(true);
+
+      // Get tenant name for email
+      const { data: tenantData } = await supabase
+        .from("tenants")
+        .select("name")
+        .eq("id", tenantId)
+        .single();
+
+      // Get user's name
+      const { data: userData } = await supabase.auth.getUser();
+
+      // Convert selected company IDs to array
+      const companyIdsArray =
+        newUserRole === "tenant_interviewer"
+          ? Array.from(selectedCompanyIds)
+          : null;
+
+      // Call the updated add_tenant_user function with company IDs
       const { data, error } = await supabase.rpc("add_tenant_user", {
         p_email: newUserEmail,
         p_role: newUserRole,
         p_send_invite: true,
+        p_company_ids: companyIdsArray,
       });
 
       if (error) throw error;
 
       if (data.success) {
-        toast({
-          title: "Success",
-          description: data.message || "User added successfully",
-        });
+        // Generate the invitation link
+        const invitationLink = `${window.location.origin}/signup?code=${data.invitation_code}`;
+
+        // Get company names for the email
+        const selectedCompanyNames = companies
+          .filter((company) => selectedCompanyIds.has(company.id))
+          .map((company) => company.name);
+
+        // Send invitation email
+        const { error: emailError } = await supabase.functions.invoke(
+          "send-tenant-user-invitation",
+          {
+            body: {
+              to: newUserEmail,
+              inviterName:
+                userData?.user?.user_metadata?.full_name ||
+                userData?.user?.email ||
+                "A team member",
+              tenantName: tenantData?.name || "your organization",
+              invitationUrl: invitationLink,
+              companyCode: data.invitation_code,
+              role: newUserRole,
+              companyNames: selectedCompanyNames,
+            },
+          }
+        );
+
+        if (emailError) {
+          console.error("Error sending email:", emailError);
+          toast({
+            title: "Warning",
+            description:
+              "Invitation created but email could not be sent. You can copy the link to share manually.",
+            duration: 10000,
+          });
+        } else {
+          toast({
+            title: "Success",
+            description: "Invitation sent successfully via email!",
+          });
+        }
+
         setShowAddDialog(false);
         setNewUserEmail("");
         setNewUserRole("tenant_interviewer");
+        setSelectedCompanyIds(new Set());
         fetchTenantUsers();
+        fetchPendingInvitations();
       } else {
         toast({
           title: "Error",
@@ -323,6 +486,53 @@ const CompanySettings = () => {
     }, 1000);
   };
 
+  const copyInvitationLink = (code: string) => {
+    const link = `${window.location.origin}/signup?code=${code}`;
+    navigator.clipboard.writeText(link).then(() => {
+      toast({
+        title: "Link copied!",
+        description: "The invitation link has been copied to your clipboard.",
+      });
+    });
+  };
+
+  const cancelInvitation = async (invitationId: string) => {
+    try {
+      const { error } = await supabase
+        .from("tenant_invitations")
+        .delete()
+        .eq("id", invitationId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Invitation cancelled",
+      });
+
+      // Refresh both lists in case the invitation was partially accepted
+      fetchPendingInvitations();
+      fetchTenantUsers();
+    } catch (error) {
+      console.error("Error cancelling invitation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel invitation",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleCompanySelection = (companyId: string) => {
+    const newSelection = new Set(selectedCompanyIds);
+    if (newSelection.has(companyId)) {
+      newSelection.delete(companyId);
+    } else {
+      newSelection.add(companyId);
+    }
+    setSelectedCompanyIds(newSelection);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
@@ -330,7 +540,11 @@ const CompanySettings = () => {
           Company Settings
         </h1>
 
-        <Tabs defaultValue="profile" className="space-y-6">
+        <Tabs
+          defaultValue="profile"
+          className="space-y-6"
+          onValueChange={setActiveTab}
+        >
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <Building size={16} />
@@ -426,11 +640,11 @@ const CompanySettings = () => {
                 <CardContent className="space-y-4">
                   <div className="rounded-md border">
                     <div className="p-4">
-                      <div className="grid grid-cols-4 font-medium">
-                        <div>Email</div>
-                        <div>Role</div>
-                        <div>Joined</div>
-                        <div className="text-right">Actions</div>
+                      <div className="grid grid-cols-12 font-medium">
+                        <div className="col-span-5">Email</div>
+                        <div className="col-span-3">Role</div>
+                        <div className="col-span-2">Joined</div>
+                        <div className="col-span-2 text-right">Actions</div>
                       </div>
                     </div>
                     <Separator />
@@ -446,17 +660,22 @@ const CompanySettings = () => {
                       <div className="divide-y">
                         {tenantUsers.map((tenantUser) => (
                           <div key={tenantUser.id} className="p-4">
-                            <div className="grid grid-cols-4 items-center">
-                              <div className="font-medium">
+                            <div className="grid grid-cols-12 items-center">
+                              <div
+                                className="col-span-5 font-medium truncate pr-4"
+                                title={tenantUser.email}
+                              >
                                 {tenantUser.email || "No email"}
                               </div>
-                              <div>{getRoleBadge(tenantUser.role)}</div>
-                              <div className="text-sm text-muted-foreground">
+                              <div className="col-span-3">
+                                {getRoleBadge(tenantUser.role)}
+                              </div>
+                              <div className="col-span-2 text-sm text-muted-foreground">
                                 {new Date(
                                   tenantUser.created_at
                                 ).toLocaleDateString()}
                               </div>
-                              <div className="text-right space-x-2">
+                              <div className="col-span-2 text-right space-x-2">
                                 {isTenantAdmin && (
                                   <>
                                     <Button
@@ -492,6 +711,76 @@ const CompanySettings = () => {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Pending Invitations */}
+              {isTenantAdmin && pendingInvitations.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Pending Invitations</CardTitle>
+                    <CardDescription>
+                      Users who have been invited but haven't created their
+                      account yet
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="rounded-md border">
+                      <div className="p-4">
+                        <div className="grid grid-cols-12 font-medium">
+                          <div className="col-span-5">Email</div>
+                          <div className="col-span-3">Role</div>
+                          <div className="col-span-2">Expires</div>
+                          <div className="col-span-2 text-right">Actions</div>
+                        </div>
+                      </div>
+                      <Separator />
+                      <div className="divide-y">
+                        {pendingInvitations.map((invitation) => (
+                          <div key={invitation.id} className="p-4">
+                            <div className="grid grid-cols-12 items-center">
+                              <div
+                                className="col-span-5 font-medium truncate pr-4"
+                                title={invitation.email}
+                              >
+                                {invitation.email}
+                              </div>
+                              <div className="col-span-3">
+                                {getRoleBadge(invitation.role)}
+                              </div>
+                              <div className="col-span-2 text-sm text-muted-foreground">
+                                {new Date(
+                                  invitation.expires_at
+                                ).toLocaleDateString()}
+                              </div>
+                              <div className="col-span-2 text-right space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    copyInvitationLink(invitation.company_code)
+                                  }
+                                  title="Copy invitation link"
+                                >
+                                  Copy Link
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    cancelInvitation(invitation.id)
+                                  }
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Interviewer Access Management - Only visible to Tenant Admins */}
               {isTenantAdmin && <InterviewerAccessManagement />}
@@ -806,12 +1095,65 @@ const CompanySettings = () => {
                 </SelectContent>
               </Select>
             </div>
+            {newUserRole === "tenant_interviewer" && (
+              <div className="space-y-2">
+                <Label>
+                  Company Access <span className="text-red-500">*</span>
+                </Label>
+                <div className="text-sm text-muted-foreground mb-2">
+                  Select which companies this interviewer can access (required)
+                </div>
+                <div className="border rounded-lg p-4 max-h-60 overflow-y-auto space-y-2">
+                  {companies.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-4">
+                      No companies found. Create a company first.
+                    </p>
+                  ) : (
+                    companies.map((company) => (
+                      <div
+                        key={company.id}
+                        className="flex items-center space-x-2"
+                      >
+                        <Checkbox
+                          id={`company-${company.id}`}
+                          checked={selectedCompanyIds.has(company.id)}
+                          onCheckedChange={() =>
+                            toggleCompanySelection(company.id)
+                          }
+                        />
+                        <label
+                          htmlFor={`company-${company.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {company.name}
+                        </label>
+                      </div>
+                    ))
+                  )}
+                </div>
+                {selectedCompanyIds.size === 0 && (
+                  <Alert className="mt-2">
+                    <AlertDescription className="text-sm">
+                      You must select at least one company for the interviewer
+                      to access.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddUser} disabled={loading}>
+            <Button
+              onClick={handleAddUser}
+              disabled={
+                loading ||
+                (newUserRole === "tenant_interviewer" &&
+                  selectedCompanyIds.size === 0)
+              }
+            >
               {loading ? "Adding..." : "Add User"}
             </Button>
           </DialogFooter>

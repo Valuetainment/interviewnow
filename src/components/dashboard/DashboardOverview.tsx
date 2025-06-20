@@ -221,13 +221,18 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({
   useEffect(() => {
     if (tenantId) {
       fetchDashboardData();
+    } else {
+      // If no tenantId, set loading to false to prevent infinite loading
+      setLoading(false);
     }
   }, [tenantId, selectedCompany]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      await Promise.all([
+      console.log("Fetching dashboard data for tenant:", tenantId);
+
+      const results = await Promise.allSettled([
         fetchMetrics(),
         fetchRecentActivities(),
         fetchUpcomingInterviews(),
@@ -235,6 +240,21 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({
         fetchTopPositions(),
         fetchRecentTranscripts(),
       ]);
+
+      // Log any failures
+      results.forEach((result, index) => {
+        if (result.status === "rejected") {
+          const functionNames = [
+            "fetchMetrics",
+            "fetchRecentActivities",
+            "fetchUpcomingInterviews",
+            "fetchMonthlyStats",
+            "fetchTopPositions",
+            "fetchRecentTranscripts",
+          ];
+          console.error(`${functionNames[index]} failed:`, result.reason);
+        }
+      });
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
     } finally {
@@ -253,7 +273,10 @@ const DashboardOverview: React.FC<{ onNavigateToStatistics?: () => void }> = ({
       totalQuery = totalQuery.eq("positions.company_id", selectedCompany.id);
     }
 
-    const { count: totalCount } = await totalQuery;
+    const { count: totalCount, error: totalError } = await totalQuery;
+    if (totalError) {
+      console.error("Error fetching total interviews:", totalError);
+    }
 
     // Upcoming interviews (next 7 days)
     const nextWeek = new Date();

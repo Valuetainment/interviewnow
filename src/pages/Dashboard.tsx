@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import DashboardInterviews from "@/components/dashboard/DashboardInterviews";
 import DashboardInvitations from "@/components/dashboard/DashboardInvitations";
 import DashboardStatistics from "@/components/dashboard/DashboardStatistics";
@@ -131,8 +132,11 @@ const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [checkingCompanies, setCheckingCompanies] = useState(true);
   const navigate = useNavigate();
+  const { role, tenantId } = useAuth();
 
   useEffect(() => {
+    console.log("Dashboard mounted - Role:", role, "TenantId:", tenantId);
+
     // Wait for auth to be ready before checking companies
     const checkAuth = async () => {
       const {
@@ -147,20 +151,22 @@ const Dashboard: React.FC = () => {
     };
 
     checkAuth();
-  }, [navigate]);
+  }, [navigate, role, tenantId]);
 
   const checkForCompanies = async () => {
     try {
       // First check if user is a system admin
       const { data: userData, error: userError } = await supabase
         .from("users")
-        .select("role, tenant_id")
+        .select("role, tenant_id, id")
         .single();
 
       console.log("User data:", userData);
 
       if (userError) {
         console.error("Error checking user role:", userError);
+        setCheckingCompanies(false);
+        return;
       }
 
       // System admins don't need companies
@@ -170,7 +176,30 @@ const Dashboard: React.FC = () => {
         return;
       }
 
-      // Check if the user has any companies in their tenant
+      // For tenant interviewers, check if they have access to any companies
+      if (userData?.role === "tenant_interviewer") {
+        const { data: accessData, error: accessError } = await supabase
+          .from("interviewer_company_access")
+          .select("company_id")
+          .eq("user_id", userData.id)
+          .limit(1);
+
+        if (accessError) {
+          console.error("Error checking interviewer access:", accessError);
+          setCheckingCompanies(false);
+          return;
+        }
+
+        if (!accessData || accessData.length === 0) {
+          console.log("Interviewer has no company access");
+          // Don't redirect interviewers to company setup, they can't create companies
+          // The dashboard will show but with limited/no data
+        }
+        setCheckingCompanies(false);
+        return;
+      }
+
+      // For tenant admins, check if the tenant has any companies
       let query = supabase.from("companies").select("id");
 
       // Filter by tenant_id if user has one
@@ -193,12 +222,16 @@ const Dashboard: React.FC = () => {
       }
 
       if (!companies || companies.length === 0) {
-        // No companies found, redirect to company setup wizard
-        console.log(
-          "No companies found for tenant, redirecting to setup wizard..."
-        );
-        setCheckingCompanies(false); // Set this before navigating
-        navigate("/company-setup", { replace: true });
+        // Only redirect tenant admins to company setup
+        if (userData?.role === "tenant_admin") {
+          console.log(
+            "No companies found for tenant admin, redirecting to setup wizard..."
+          );
+          setCheckingCompanies(false);
+          navigate("/company-setup", { replace: true });
+        } else {
+          setCheckingCompanies(false);
+        }
       } else {
         // User has companies, continue with dashboard
         console.log("Companies found:", companies);
